@@ -1738,7 +1738,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:12px">
       <div>
         <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Monthly burn</div>
-        <div id="subsTotal" style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">CHF 0 <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
+        <div id="subsTotal" style="font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px">AUD 0 <span style="font-size:13px;color:var(--text-tertiary);font-weight:500">/ mo</span></div>
         <div id="subsYearly" style="font-size:11px;color:var(--text-tertiary);margin-top:2px"></div>
       </div>
       <div id="subsCount" style="font-size:11px;color:var(--text-tertiary)"></div>
@@ -1825,7 +1825,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <div class="wish-hero-top">
       <div>
         <div class="wish-hero-eyebrow">WISHLIST TOTAL</div>
-        <div class="wish-hero-num" id="wishTotal">CHF 0</div>
+        <div class="wish-hero-num" id="wishTotal">AUD 0</div>
       </div>
       <div class="wish-hero-pct-wrap">
         <div class="wish-hero-pct-label">% OF NET WORTH</div>
@@ -1953,18 +1953,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   const netWorthTotal = document.getElementById('netWorthTotal');
   const netWorthBreakdown = document.getElementById('netWorthBreakdown');
 
-  let exchangeRates = { CHF: 1, USD: 1, EUR: 1, GBP: 1, AUD: 1 };
+  let exchangeRates = { AUD: 1, USD: 1, EUR: 1, GBP: 1, CHF: 1 };
   async function loadExchangeRates() {
     try {
-      const res = await fetch('https://open.er-api.com/v6/latest/CHF');
+      const res = await fetch('https://open.er-api.com/v6/latest/AUD');
       const data = await res.json();
       if (data && data.rates) {
         exchangeRates = {
-          CHF: 1,
+          AUD: 1,
           USD: data.rates.USD || 1,
           EUR: data.rates.EUR || 1,
           GBP: data.rates.GBP || 1,
-          AUD: data.rates.AUD || 1
+          CHF: data.rates.CHF || 1
         };
         renderAllNetWorth();
         if (typeof renderSubs === 'function') renderSubs();
@@ -2525,7 +2525,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const cost = document.createElement('div');
       cost.style.cssText = 'text-align:right;line-height:1.1';
       const bigNum = fmtMoney(m);
-      const origHint = (it.entered_currency && it.entered_currency !== 'CHF' && it.entered_amount != null)
+      const origHint = (it.entered_currency && it.entered_currency !== 'AUD' && it.entered_amount != null)
         ? '<div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">billed ' + it.entered_currency + ' ' + Number(it.entered_amount).toLocaleString('en-US', { minimumFractionDigits: it.entered_amount % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 }) + ' / ' + it.period + '</div>'
         : (it.period !== 'monthly'
             ? '<div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">billed ' + fmtMoney(it.amount) + ' / ' + it.period + '</div>'
@@ -2653,7 +2653,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const rows = subsList.querySelectorAll('.sub-row');
     const row = rows[idx];
     if (!row) return;
-    const enteredCcy = it.entered_currency || 'CHF';
+    const enteredCcy = it.entered_currency || 'AUD';
     const enteredAmt = it.entered_amount != null ? it.entered_amount : it.amount;
     const periodOpts = ['monthly','yearly','weekly'].map(p =>
       '<option value="' + p + '"' + (p === it.period ? ' selected' : '') + '>' + p.charAt(0).toUpperCase() + p.slice(1) + '</option>'
@@ -2732,7 +2732,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const n = (nEl.value || '').trim();
       const aRaw = parseFloat(aEl.value);
       if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const enteredCcy = ccEl ? ccEl.value : 'CHF';
+      const enteredCcy = ccEl ? ccEl.value : 'AUD';
       const rate = exchangeRates[enteredCcy] || 1;
       const amountCHF = aRaw / rate;
       // Parse "From" selection — value is "catKey::accountName"
@@ -2844,7 +2844,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           '<div class="wish-row-h">'
         + '<div class="wish-row-info">'
         +   '<div class="wish-row-name">' + escapeHtml(it.name) + '</div>'
-        +   '<div class="wish-row-meta">' + (it.entered_currency || 'CHF') + ' ' + Number(it.entered_amount != null ? it.entered_amount : it.amount).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' · added ' + fmtActivityDate(it.ts || Date.now()) + '</div>'
+        +   '<div class="wish-row-meta">' + (it.entered_currency || 'AUD') + ' ' + Number(it.entered_amount != null ? it.entered_amount : it.amount).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' · added ' + fmtActivityDate(it.ts || Date.now()) + '</div>'
         + '</div>'
         + '<div class="wish-row-amt-wrap">'
         +   '<div class="wish-row-amt">' + fmtMoney(cost) + '</div>'
@@ -2874,7 +2874,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const n = (nEl.value || '').trim();
       const aRaw = parseFloat(aEl.value);
       if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const enteredCcy = cEl ? cEl.value : 'CHF';
+      const enteredCcy = cEl ? cEl.value : 'AUD';
       const rate = exchangeRates[enteredCcy] || 1;
       const amountCHF = aRaw / rate;
       const arr = storeGet('wishlist') || [];
@@ -3186,7 +3186,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       prev.className = 'ord-add-preview';
       return;
     }
-    const ccy = ccyEl ? ccyEl.value : 'CHF';
+    const ccy = ccyEl ? ccyEl.value : 'AUD';
     const rate = exchangeRates[ccy] || 1;
     const amountCHF = aRaw / rate;
     const grand = nwGrandCHF();
@@ -3213,7 +3213,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const n = (nEl.value || '').trim();
       const aRaw = parseFloat(aEl.value);
       if (!n || isNaN(aRaw)) { nEl.focus(); return; }
-      const ccy = cEl ? cEl.value : 'CHF';
+      const ccy = cEl ? cEl.value : 'AUD';
       const rate = exchangeRates[ccy] || 1;
       const amountCHF = aRaw / rate;
       const parsed = parseFromValue(fEl ? fEl.value : '');
