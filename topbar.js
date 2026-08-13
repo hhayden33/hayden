@@ -124,7 +124,7 @@
   .topbar-pill, .topbar-water-pill { padding: 6px 8px; gap: 4px; flex-shrink: 0; }
   .topbar-water-wrap { flex-shrink: 0; min-width: 0; }
   .topbar-pill-label { font-size: 8px; letter-spacing: 0.08em; }
-  .topbar-pill-count { font-size: 10px; }
+  .topbar-pill-count { display: none; }
   .topbar-water-add { width: 30px; font-size: 15px; padding: 6px 0; flex-shrink: 0; }
 }
 @media (max-width: 380px) {
