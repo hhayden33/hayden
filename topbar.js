@@ -73,11 +73,11 @@
   white-space: nowrap;
 }
 .topbar-water-wrap {
-  flex: 1 1 0; min-width: 0;
+  flex: 1 0 auto; min-width: 0;
   display: flex;
 }
 .topbar-water-pill {
-  flex: 1; min-width: 0;
+  flex: 1 0 auto; min-width: 0;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 12px;
   background: rgba(125, 211, 252, 0.07);
@@ -122,6 +122,7 @@
     scroll-behavior: smooth;
   }
   .topbar-pill, .topbar-water-pill { padding: 6px 8px; gap: 4px; flex-shrink: 0; }
+  .topbar-water-wrap { flex-shrink: 0; min-width: 0; }
   .topbar-pill-label { font-size: 8px; letter-spacing: 0.08em; }
   .topbar-pill-count { font-size: 10px; }
   .topbar-water-add { width: 30px; font-size: 15px; padding: 6px 0; flex-shrink: 0; }
@@ -130,6 +131,7 @@
   .topbar-pill-count { display: none; }
   .topbar-pill-label { display: none; }
   .topbar-pill, .topbar-water-pill { padding: 5px 6px; }
+  .topbar-water-wrap { flex-shrink: 0; }
   .topbar-water-add { width: 28px; font-size: 14px; }
 }
 
