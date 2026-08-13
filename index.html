@@ -198,7 +198,7 @@ body::after {
   transform-origin: 60px 60px;
   transition: stroke 0.7s cubic-bezier(0.22, 1, 0.36, 1),
               stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.3));
+  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5)) drop-shadow(0 0 12px rgba(56, 189, 248, 0.22));
 }
 .day-ring-overlay {
   position: absolute; inset: 0;
@@ -619,20 +619,8 @@ body::after {
   <div class="day-ring-wrap">
     <div class="day-ring">
       <svg viewBox="0 0 120 120">
-        <defs>
-          <filter id="dayRingGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feFlood flood-color="#38BDF8" flood-opacity="0.6" result="c" />
-            <feComposite in="c" in2="b" operator="in" result="d" />
-            <feMerge>
-              <feMergeNode in="d"/>
-              <feMergeNode in="d"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
         <circle class="day-ring-track" cx="60" cy="60" r="52" />
-        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" filter="url(#dayRingGlow)" />
+        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" />
       </svg>
       <div class="day-ring-overlay">
         <div class="day-ring-percent" id="dayRingPercent">—</div>
