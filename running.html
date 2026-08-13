@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Running · Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger:  #FF6B6B;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --run-accent: #FB923C;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes drift {
+  0%   { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-22px, 14px, 0); }
+}
+
+.page { max-width: 1100px; margin: 0 auto; }
+
+.dash-title {
+  margin: 0 0 14px;
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+.section { margin-top: 8px; }
+.section-title {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.section-title::before {
+  content: ''; width: 18px; height: 1px;
+  background: var(--text-tertiary); opacity: 0.6;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+}
+
+.gm-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.gm-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+}
+.gm-header-left { display: flex; flex-direction: column; }
+.gm-eyebrow {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 6px;
+}
+.gm-progress-row { display: flex; align-items: baseline; gap: 6px; }
+.gm-progress-num {
+  font-size: 42px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em; color: var(--text-primary); line-height: 1;
+}
+.gm-progress-total { font-family: var(--font-mono); font-size: 18px; color: var(--text-tertiary); }
+.gm-progress-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-left: 4px;
+}
+.gm-streak {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text-tertiary);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.stat {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; padding: 14px;
+}
+.stat-num {
+  font-size: 22px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.15;
+}
+.stat-label {
+  margin-top: 6px;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.empty-state {
+  text-align: center; font-size: 12px; font-style: italic;
+  color: var(--text-tertiary); padding: 14px 0;
+}
+
+.gm-input {
+  flex: 1; min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; background: rgba(0,0,0,0.28);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 14px; outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.gm-input::placeholder { color: var(--text-tertiary); }
+.gm-input:focus { border-color: rgba(255,255,255,0.28); background: rgba(0,0,0,0.36); }
+
+.gm-add {
+  padding: 11px 20px; border: 0; border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+  color: #0A0A0B; font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 2px 8px rgba(0,0,0,0.35),
+    0 8px 22px rgba(0,0,0,0.25);
+  transition: transform 0.1s, filter 0.15s;
+}
+.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.gm-add:active { transform: translateY(0); }
+
+.gm-ghost {
+  padding: 11px 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px; background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gm-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
+
+/* ===== Running page — header row ===== */
+.run-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 16px;
+}
+.run-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ===== Status badge ===== */
+.run-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.run-badge.good { background: rgba(107,227,164,0.12); color: var(--success); }
+.run-badge.warn { background: rgba(242,192,99,0.12); color: var(--warning); }
+.run-badge.bad  { background: rgba(255,107,107,0.12); color: var(--danger); }
+.run-badge.idle { background: rgba(255,255,255,0.06); color: var(--text-tertiary); }
+
+/* ===== Today's Training — primary card ===== */
+.run-today-card {
+  border-color: rgba(251,146,60,0.28);
+  background: linear-gradient(180deg, rgba(251,146,60,0.08), rgba(255,255,255,0.04));
+  padding: 24px;
+}
+.run-today-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.run-today-type { font-size: 23px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
+.run-today-purpose { font-size: 13px; color: var(--text-secondary); margin-top: 5px; max-width: 480px; line-height: 1.45; }
+
+/* ===== Weekly calendar ===== */
+.run-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
+.run-day {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; padding: 10px 5px; text-align: center;
+}
+.run-day-dow { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.run-day-icon { font-size: 15px; margin-bottom: 4px; line-height: 1; }
+.run-day-dist { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-secondary); }
+.run-day.today { border-color: var(--run-accent); box-shadow: 0 0 0 1px var(--run-accent) inset; }
+.run-day.completed { background: rgba(107,227,164,0.08); border-color: rgba(107,227,164,0.25); }
+.run-day.missed { background: rgba(255,107,107,0.06); border-color: rgba(255,107,107,0.20); }
+.run-day.rest { opacity: 0.5; }
+
+.run-progress-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; margin: 4px 0 16px; }
+.run-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--run-accent), #FDBA74); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+
+/* ===== Performance ===== */
+.run-perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.run-perf-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; }
+.run-perf-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.run-perf-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.run-perf-row:last-child { border-bottom: 0; }
+.run-perf-row .label { color: var(--text-tertiary); }
+.run-perf-row .val { font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); }
+.run-perf-row.goal .val { color: var(--run-accent); }
+
+/* ===== Charts ===== */
+.run-chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.run-chart-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; }
+.run-chart-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.run-chart-wrap { position: relative; }
+.run-chart-yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 34px; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0; }
+.run-chart-yaxis span { font-size: 9px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.run-chart-svg { height: 100px; display: block; margin-left: 34px; width: calc(100% - 34px); }
+.run-chart-grid-line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
+.run-chart-meta { text-align: center; font-size: 10.5px; color: var(--text-tertiary); margin-top: 8px; }
+@media (max-width: 720px) { .run-chart-grid { grid-template-columns: 1fr; } }
+
+/* ===== Recent runs ===== */
+.run-list { list-style: none; margin: 0; padding: 0; }
+.run-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; margin-bottom: 6px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; cursor: pointer;
+  transition: background 0.2s;
+}
+.run-row:hover { background: rgba(255,255,255,0.06); }
+.run-row-icon { font-size: 18px; flex-shrink: 0; }
+.run-row-main { flex: 1; min-width: 0; }
+.run-row-type { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.run-row-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.run-row-stats { text-align: right; flex-shrink: 0; }
+.run-row-dist { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.run-row-pace { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+
+/* ===== Modal (generic — shares mobile/lock handling with topbar.js) ===== */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+  z-index: 100; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  width: 100%; max-width: 440px;
+  background: #111114; border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px; padding: 22px; max-height: 88vh; overflow-y: auto;
+}
+.modal h3 { margin: 0 0 16px; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.run-field { margin-bottom: 12px; }
+.run-field label {
+  display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px;
+}
+.run-field input, .run-field select {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary);
+  font-family: inherit; font-size: 14px; outline: none;
+}
+.run-field-row { display: flex; gap: 10px; }
+.run-field-row .run-field { flex: 1; min-width: 0; }
+.run-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.run-modal-actions button { flex: 1; }
+.run-set-section { margin-bottom: 18px; }
+.run-set-section h4 { margin: 0 0 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); }
+.run-plan-row {
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 10px; margin-bottom: 8px;
+}
+.run-plan-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.run-plan-dow { font-size: 11.5px; font-weight: 700; color: var(--text-primary); }
+.run-plan-rest-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-tertiary); }
+.run-plan-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.run-plan-fields input, .run-plan-fields select {
+  width: 100%; padding: 7px 9px; font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 7px;
+  background: rgba(0,0,0,0.25); color: var(--text-primary); font-family: inherit; outline: none;
+}
+.run-plan-fields .full { grid-column: 1 / -1; }
+.run-detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.run-detail-row:last-child { border-bottom: 0; }
+.run-detail-row .label { color: var(--text-tertiary); }
+.run-detail-row .val { font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); }
+
+@media (max-width: 480px) {
+  .run-week-grid { gap: 5px; }
+  .run-day { padding: 7px 3px; }
+  .run-day-dow { font-size: 8.5px; }
+  .run-chart-grid { grid-template-columns: 1fr; }
+  .run-today-card { padding: 18px; }
+  .gm-progress-num { font-size: 34px; }
+  .run-plan-fields { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="run-header-row">
+    <h1 class="dash-title" style="margin:0">Running</h1>
+    <div class="run-header-actions">
+      <button class="gm-add" id="runLogBtn" type="button">+ Log Run</button>
+      <button class="gm-ghost" id="runSettingsBtn" type="button" aria-label="Settings">⚙️ Settings</button>
+    </div>
+  </div>
+
+  <!-- ===== 1. Overview ===== -->
+  <div class="section">
+    <div class="section-title">Overview</div>
+    <div class="gm-card">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow" id="runRaceEyebrow">Melbourne Marathon</div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="runCountdown">—</span>
+            <span class="gm-progress-label">days to go</span>
+          </div>
+        </div>
+        <span class="run-badge idle" id="runStatusBadge">—</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="runStatPB">—</div><div class="stat-label">Marathon PB</div></div>
+        <div class="stat"><div class="stat-num" id="runStatTarget">—</div><div class="stat-label">Target Time</div></div>
+        <div class="stat"><div class="stat-num" id="runStatPredicted">—</div><div class="stat-label">Predicted</div></div>
+        <div class="stat"><div class="stat-num" id="runStatWeek">—</div><div class="stat-label">Training Week</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 2. Today's Training (primary) ===== -->
+  <div class="section">
+    <div class="section-title">Today's Training</div>
+    <div class="gm-card run-today-card">
+      <div class="run-today-head">
+        <div>
+          <div class="run-today-type" id="runTodayType">—</div>
+          <div class="run-today-purpose" id="runTodayPurpose"></div>
+        </div>
+        <span class="run-badge idle" id="runTodayBadge">—</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="runTodayDist">—</div><div class="stat-label">Distance</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayPace">—</div><div class="stat-label">Target Pace</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayHr">—</div><div class="stat-label">HR Zone</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayDur">—</div><div class="stat-label">Est. Duration</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3. Weekly Training ===== -->
+  <div class="section">
+    <div class="section-title">Weekly Training</div>
+    <div class="gm-card">
+      <div class="run-week-grid" id="runWeekGrid"></div>
+      <div class="run-progress-track"><div class="run-progress-fill" id="runWeekFill" style="width:0%"></div></div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="runWeekDist">—</div><div class="stat-label">Distance</div></div>
+        <div class="stat"><div class="stat-num" id="runWeekPct">—</div><div class="stat-label">of Target</div></div>
+        <div class="stat"><div class="stat-num" id="runWeekRuns">—</div><div class="stat-label">Runs</div></div>
+        <div class="stat"><div class="stat-num" id="runWeekTime">—</div><div class="stat-label">Total Time</div></div>
+        <div class="stat"><div class="stat-num" id="runWeekElev">—</div><div class="stat-label">Elevation</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 4. Performance ===== -->
+  <div class="section">
+    <div class="section-title">Performance</div>
+    <div class="gm-card">
+      <div class="run-perf-grid" id="runPerfGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== 5. Training Analytics ===== -->
+  <div class="section">
+    <div class="section-title">Training Analytics</div>
+    <div class="run-chart-grid">
+
+      <div class="run-chart-card">
+        <div class="run-chart-title">Weekly Mileage</div>
+        <div class="run-chart-wrap" id="runChartMileageWrap">
+          <div class="run-chart-yaxis"><span id="runChartMileageMax">—</span><span id="runChartMileageMin">—</span></div>
+          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
+            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
+            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <g id="runChartMileageContent"></g>
+          </svg>
+          <div class="empty-state" id="runChartMileageEmpty" style="display:none">Log runs to see weekly mileage.</div>
+        </div>
+        <div class="run-chart-meta" id="runChartMileageMeta"></div>
+      </div>
+
+      <div class="run-chart-card">
+        <div class="run-chart-title">Pace Over Time</div>
+        <div class="run-chart-wrap" id="runChartPaceWrap">
+          <div class="run-chart-yaxis"><span id="runChartPaceMax">—</span><span id="runChartPaceMin">—</span></div>
+          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+            <defs><linearGradient id="runGradPace" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#7DD3FC" stop-opacity="0.22"/><stop offset="100%" stop-color="#7DD3FC" stop-opacity="0"/>
+            </linearGradient></defs>
+            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
+            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
+            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <g id="runChartPaceContent"></g>
+          </svg>
+          <div class="empty-state" id="runChartPaceEmpty" style="display:none">Log at least 2 runs to see your pace trend.</div>
+        </div>
+        <div class="run-chart-meta" id="runChartPaceMeta"></div>
+      </div>
+
+      <div class="run-chart-card">
+        <div class="run-chart-title">Heart Rate Over Time</div>
+        <div class="run-chart-wrap" id="runChartHrWrap">
+          <div class="run-chart-yaxis"><span id="runChartHrMax">—</span><span id="runChartHrMin">—</span></div>
+          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+            <defs><linearGradient id="runGradHr" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FF8A8A" stop-opacity="0.22"/><stop offset="100%" stop-color="#FF8A8A" stop-opacity="0"/>
+            </linearGradient></defs>
+            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
+            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
+            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <g id="runChartHrContent"></g>
+          </svg>
+          <div class="empty-state" id="runChartHrEmpty" style="display:none">Log runs with heart rate to see this trend.</div>
+        </div>
+        <div class="run-chart-meta" id="runChartHrMeta"></div>
+      </div>
+
+      <div class="run-chart-card">
+        <div class="run-chart-title">Aerobic Efficiency</div>
+        <div class="run-chart-wrap" id="runChartEffWrap">
+          <div class="run-chart-yaxis"><span id="runChartEffMax">—</span><span id="runChartEffMin">—</span></div>
+          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+            <defs><linearGradient id="runGradEff" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#6BE3A4" stop-opacity="0.22"/><stop offset="100%" stop-color="#6BE3A4" stop-opacity="0"/>
+            </linearGradient></defs>
+            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
+            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
+            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <g id="runChartEffContent"></g>
+          </svg>
+          <div class="empty-state" id="runChartEffEmpty" style="display:none">Log runs with heart rate to see pace-vs-HR efficiency.</div>
+        </div>
+        <div class="run-chart-meta" id="runChartEffMeta">Speed per heart-beat — trending up means the same effort is going further.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 6. Recent Runs ===== -->
+  <div class="section">
+    <div class="section-title">Recent Runs</div>
+    <div class="gm-card">
+      <ul class="run-list" id="runList"></ul>
+    </div>
+  </div>
+
+  <!-- ===== 7. Race Goal ===== -->
+  <div class="section">
+    <div class="section-title">Race Goal</div>
+    <div class="gm-card">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow" id="runGoalName">Melbourne Marathon</div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="runGoalCountdown">—</span>
+            <span class="gm-progress-label">days to go</span>
+          </div>
+        </div>
+        <span class="gm-streak" id="runGoalDate">—</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="runGoalTarget">—</div><div class="stat-label">Target Time</div></div>
+        <div class="stat"><div class="stat-num" id="runGoalPace">—</div><div class="stat-label">Required Pace</div></div>
+        <div class="stat"><div class="stat-num" id="runGoalPredicted">—</div><div class="stat-label">Predicted</div></div>
+        <div class="stat"><div class="stat-num" id="runGoalDiff">—</div><div class="stat-label">Vs Target</div></div>
+      </div>
+      <div class="run-progress-track" style="margin-top:16px"><div class="run-progress-fill" id="runGoalProgFill" style="width:0%"></div></div>
+      <div style="text-align:center;font-size:11px;color:var(--text-tertiary)" id="runGoalProgLabel">—</div>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<!-- ===== Log Run Modal ===== -->
+<div class="modal-bg" id="runLogModalBg">
+  <div class="modal">
+    <h3>Log a Run</h3>
+    <div class="run-field"><label>Date</label><input type="date" id="runLogDate"></div>
+    <div class="run-field-row">
+      <div class="run-field">
+        <label>Type</label>
+        <select id="runLogType">
+          <option>Easy Run</option><option>Tempo</option><option>Intervals</option>
+          <option>Long Run</option><option>Recovery</option><option>Race</option>
+        </select>
+      </div>
+      <div class="run-field"><label>Distance (km)</label><input type="number" step="0.01" id="runLogDist" placeholder="10"></div>
+    </div>
+    <div class="run-field-row">
+      <div class="run-field"><label>Duration (h:mm:ss)</label><input type="text" id="runLogDur" placeholder="45:30"></div>
+      <div class="run-field"><label>Avg HR (optional)</label><input type="number" id="runLogHr" placeholder="152"></div>
+    </div>
+    <div class="run-field"><label>Elevation gain — m (optional)</label><input type="number" id="runLogElev" placeholder="0"></div>
+    <div class="run-modal-actions">
+      <button class="gm-ghost" id="runLogCancel" type="button">Cancel</button>
+      <button class="gm-add" id="runLogSave" type="button">Save Run</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Run Detail Modal ===== -->
+<div class="modal-bg" id="runDetailModalBg">
+  <div class="modal">
+    <h3 id="runDetailTitle">Run</h3>
+    <div id="runDetailBody"></div>
+    <div class="run-modal-actions">
+      <button class="gm-ghost" id="runDetailDelete" type="button" style="color:var(--danger)">Delete</button>
+      <button class="gm-add" id="runDetailClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Settings Modal ===== -->
+<div class="modal-bg" id="runSettingsModalBg">
+  <div class="modal" style="max-width:540px">
+    <h3>Running Settings</h3>
+
+    <div class="run-set-section">
+      <h4>Race Goal</h4>
+      <div class="run-field"><label>Race Name</label><input type="text" id="setRaceName"></div>
+      <div class="run-field-row">
+        <div class="run-field"><label>Race Date</label><input type="date" id="setRaceDate"></div>
+        <div class="run-field"><label>Target Time (h:mm:ss)</label><input type="text" id="setTargetTime" placeholder="3:30:00"></div>
+      </div>
+      <div class="run-field-row">
+        <div class="run-field"><label>Plan Start Date</label><input type="date" id="setPlanStart"></div>
+        <div class="run-field"><label>Plan Length (weeks)</label><input type="number" id="setPlanWeeks" placeholder="18"></div>
+      </div>
+    </div>
+
+    <div class="run-set-section">
+      <h4>Personal Bests (h:mm:ss)</h4>
+      <div class="run-field-row">
+        <div class="run-field"><label>5K</label><input type="text" id="setPb5k" placeholder="22:30"></div>
+        <div class="run-field"><label>10K</label><input type="text" id="setPb10k" placeholder="47:00"></div>
+      </div>
+      <div class="run-field-row">
+        <div class="run-field"><label>Half Marathon</label><input type="text" id="setPbHalf" placeholder="1:45:00"></div>
+        <div class="run-field"><label>Marathon</label><input type="text" id="setPbMarathon" placeholder="3:45:00"></div>
+      </div>
+    </div>
+
+    <div class="run-set-section">
+      <h4>Weekly Distance Target (km)</h4>
+      <div class="run-field"><input type="number" id="setWeeklyTarget" placeholder="47"></div>
+    </div>
+
+    <div class="run-set-section">
+      <h4>Training Status</h4>
+      <select id="setStatusOverride">
+        <option value="auto">Auto (based on weekly progress)</option>
+        <option value="good">On Track</option>
+        <option value="warn">Needs Attention</option>
+        <option value="idle">Recovering</option>
+      </select>
+    </div>
+
+    <div class="run-set-section">
+      <h4>Weekly Plan Template</h4>
+      <div id="setWeekPlan"></div>
+    </div>
+
+    <div class="run-modal-actions">
+      <button class="gm-ghost" id="runSettingsCancel" type="button">Cancel</button>
+      <button class="gm-add" id="runSettingsSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // =============================================================
+  // DATA MODEL
+  // All keys are prefixed 'run:' so sync.js can mirror them with
+  // syncedPrefixes:['run:']. This is deliberately shaped so a future
+  // Garmin import can populate run:runs (source:'garmin') and richer
+  // recovery signals without changing any rendering code below —
+  // V1 just reads whatever is in these keys, manual or not.
+  // =============================================================
+  const DOW_LABELS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const DIST_KM = { fiveK: 5, tenK: 10, half: 21.0975, marathon: 42.195 };
+
+  function load(key, fallback) {
+    try {
+      const v = JSON.parse(localStorage.getItem(key));
+      return (v == null) ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  function defaultGoal() {
+    return {
+      raceName: 'Melbourne Marathon',
+      raceDate: '2026-10-11',        // placeholder — edit in Settings to the real date
+      targetTimeSec: 3 * 3600 + 30 * 60,
+      planStartDate: '2026-06-14',
+      planTotalWeeks: 18
+    };
+  }
+  function defaultPbs() {
+    return { fiveK: null, tenK: null, half: null, marathon: null };
+  }
+  function defaultSettings() {
+    return { weeklyDistanceTargetKm: 47, trainingStatusOverride: 'auto' };
+  }
+  function defaultWeekPlan() {
+    // dow: 0=Mon .. 6=Sun. A repeating weekly template — edit anytime in Settings.
+    return [
+      { dow: 0, rest: false, type: 'Easy Run',  distanceKm: 8,  paceTargetSecPerKm: 340, hrZone: 'Z2 · 135–150', durationEstMin: 45, purpose: 'Aerobic base' },
+      { dow: 1, rest: true,  type: 'Rest',      distanceKm: 0,  paceTargetSecPerKm: 0,   hrZone: '',             durationEstMin: 0,  purpose: 'Recovery' },
+      { dow: 2, rest: false, type: 'Intervals', distanceKm: 10, paceTargetSecPerKm: 290, hrZone: 'Z4 · 165–178', durationEstMin: 55, purpose: 'VO2max / speed' },
+      { dow: 3, rest: false, type: 'Easy Run',  distanceKm: 6,  paceTargetSecPerKm: 340, hrZone: 'Z2 · 135–150', durationEstMin: 34, purpose: 'Active recovery' },
+      { dow: 4, rest: true,  type: 'Rest',      distanceKm: 0,  paceTargetSecPerKm: 0,   hrZone: '',             durationEstMin: 0,  purpose: 'Recovery' },
+      { dow: 5, rest: false, type: 'Long Run',  distanceKm: 18, paceTargetSecPerKm: 355, hrZone: 'Z2 · 140–155', durationEstMin: 110,purpose: 'Endurance / fat adaptation' },
+      { dow: 6, rest: false, type: 'Recovery',  distanceKm: 5,  paceTargetSecPerKm: 380, hrZone: 'Z1 · 120–135', durationEstMin: 30, purpose: 'Shakeout' }
+    ];
+  }
+
+  function goal()     { return Object.assign(defaultGoal(), load('run:goal', {})); }
+  function pbs()      { return Object.assign(defaultPbs(), load('run:pbs', {})); }
+  function settings() { return Object.assign(defaultSettings(), load('run:settings', {})); }
+  function weekPlan() {
+    const wp = load('run:weekPlan', null);
+    return Array.isArray(wp) && wp.length === 7 ? wp : defaultWeekPlan();
+  }
+  function runs() { return load('run:runs', []); }
+
+  // =============================================================
+  // FORMAT HELPERS
+  // =============================================================
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fmtDuration(sec) {
+    if (!sec && sec !== 0) return '—';
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0 ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+  function fmtClock(sec) {
+    if (!sec && sec !== 0) return '—';
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0 ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+  function fmtPace(secPerKm) {
+    if (!secPerKm || !isFinite(secPerKm)) return '—';
+    const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
+    return m + ':' + pad2(s) + '/km';
+  }
+  function fmtKm(km) {
+    if (km == null || !isFinite(km)) return '—';
+    const r = Math.round(km * 10) / 10;
+    return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)) + ' km';
+  }
+  function fmtDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function parseClockToSec(str) {
+    if (!str) return null;
+    const parts = String(str).trim().split(':').map(Number);
+    if (parts.some(isNaN)) return null;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+    return null;
+  }
+
+  function pad2Date(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2Date(d.getMonth() + 1) + '-' + pad2Date(d.getDate()); }
+  function todayKey() { return dateKey(new Date()); }
+  function mondayOf(d) {
+    const date = new Date(d);
+    const day = (date.getDay() + 6) % 7; // 0 = Monday
+    date.setDate(date.getDate() - day);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+  function daysBetween(fromKey, toKey) {
+    const a = new Date(fromKey + 'T00:00:00'), b = new Date(toKey + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+
+  // =============================================================
+  // RUNNING MATH
+  // Riegel's formula scales a known performance to another distance.
+  // Used both for "current predicted" times and for the Performance
+  // card's PB → Current progression. Swappable later for a Garmin-
+  // fed race predictor without touching any render function.
+  // =============================================================
+  function riegel(t1, d1, d2) { return t1 * Math.pow(d2 / d1, 1.06); }
+
+  function predictFor(targetKey, pbData) {
+    const order = {
+      fiveK:    ['tenK', 'half', 'marathon'],
+      tenK:     ['fiveK', 'half', 'marathon'],
+      half:     ['tenK', 'marathon', 'fiveK'],
+      marathon: ['half', 'tenK', 'fiveK']
+    }[targetKey];
+    for (const key of order) {
+      if (pbData[key]) return riegel(pbData[key], DIST_KM[key], DIST_KM[targetKey]);
+    }
+    return pbData[targetKey] || null;
+  }
+
+  // =============================================================
+  // COMPUTED STATE FOR THE CURRENT WEEK
+  // =============================================================
+  function weekRunsAndStats() {
+    const monday = mondayOf(new Date());
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    const startKey = dateKey(days[0]), endKey = dateKey(days[6]);
+    const allRuns = runs();
+    const weekRuns = allRuns.filter(r => r.date >= startKey && r.date <= endKey);
+    const distanceKm = weekRuns.reduce((s, r) => s + (r.distanceKm || 0), 0);
+    const totalSec = weekRuns.reduce((s, r) => s + (r.durationSec || 0), 0);
+    const elevationM = weekRuns.reduce((s, r) => s + (r.elevationM || 0), 0);
+    return { days, weekRuns, distanceKm, totalSec, elevationM, runsCount: weekRuns.length };
+  }
+
+  function trainingStatus(weekStats) {
+    const s = settings();
+    if (s.trainingStatusOverride && s.trainingStatusOverride !== 'auto') return s.trainingStatusOverride;
+    const dow = (new Date().getDay() + 6) % 7; // 0=Mon
+    const expectedFrac = (dow + 1) / 7;
+    const target = s.weeklyDistanceTargetKm || 1;
+    const actualFrac = weekStats.distanceKm / target;
+    const ratio = expectedFrac > 0 ? actualFrac / expectedFrac : 0;
+    if (ratio >= 0.8) return 'good';
+    return 'warn';
+  }
+  const STATUS_LABEL = { good: 'On Track', warn: 'Needs Attention', idle: 'Recovering', bad: 'Behind' };
+
+  function currentTrainingWeek(g) {
+    const start = g.planStartDate, total = g.planTotalWeeks || 1;
+    const diffDays = daysBetween(start, todayKey());
+    const wk = Math.floor(diffDays / 7) + 1;
+    return Math.max(1, Math.min(total, wk));
+  }
+
+  // =============================================================
+  // RENDER — Overview
+  // =============================================================
+  function renderOverview() {
+    const g = goal(), p = pbs();
+    document.getElementById('runRaceEyebrow').textContent = g.raceName;
+    const daysLeft = daysBetween(todayKey(), g.raceDate);
+    document.getElementById('runCountdown').textContent = daysLeft >= 0 ? daysLeft : '0';
+
+    document.getElementById('runStatPB').textContent = p.marathon ? fmtClock(p.marathon) : '—';
+    document.getElementById('runStatTarget').textContent = g.targetTimeSec ? fmtClock(g.targetTimeSec) : '—';
+    const predicted = predictFor('marathon', p);
+    document.getElementById('runStatPredicted').textContent = predicted ? fmtClock(predicted) : '—';
+    document.getElementById('runStatWeek').textContent = 'Week ' + currentTrainingWeek(g) + ' / ' + (g.planTotalWeeks || '—');
+
+    const stats = weekRunsAndStats();
+    const status = trainingStatus(stats);
+    const badge = document.getElementById('runStatusBadge');
+    badge.className = 'run-badge ' + status;
+    badge.textContent = STATUS_LABEL[status] || status;
+  }
+
+  // =============================================================
+  // RENDER — Today's Training
+  // =============================================================
+  function renderToday() {
+    const plan = weekPlan();
+    const dow = (new Date().getDay() + 6) % 7;
+    const today = plan[dow];
+    const typeEl = document.getElementById('runTodayType');
+    const purposeEl = document.getElementById('runTodayPurpose');
+    const badge = document.getElementById('runTodayBadge');
+
+    if (!today || today.rest) {
+      typeEl.textContent = '😴 Rest Day';
+      purposeEl.textContent = (today && today.purpose) || 'Recovery — no run scheduled today.';
+      badge.className = 'run-badge idle';
+      badge.textContent = 'Rest';
+      document.getElementById('runTodayDist').textContent = '—';
+      document.getElementById('runTodayPace').textContent = '—';
+      document.getElementById('runTodayHr').textContent = '—';
+      document.getElementById('runTodayDur').textContent = '—';
+      return;
+    }
+
+    typeEl.textContent = today.type;
+    purposeEl.textContent = today.purpose || '';
+    document.getElementById('runTodayDist').textContent = fmtKm(today.distanceKm);
+    document.getElementById('runTodayPace').textContent = fmtPace(today.paceTargetSecPerKm);
+    document.getElementById('runTodayHr').textContent = today.hrZone || '—';
+    document.getElementById('runTodayDur').textContent = today.durationEstMin ? today.durationEstMin + ' min' : '—';
+
+    const hasRunToday = runs().some(r => r.date === todayKey());
+    if (hasRunToday) { badge.className = 'run-badge good'; badge.textContent = 'Completed'; }
+    else { badge.className = 'run-badge warn'; badge.textContent = 'Planned'; }
+  }
+
+  // =============================================================
+  // RENDER — Weekly Training
+  // =============================================================
+  function renderWeek() {
+    const plan = weekPlan();
+    const stats = weekRunsAndStats();
+    const s = settings();
+    const grid = document.getElementById('runWeekGrid');
+    grid.innerHTML = '';
+
+    const tKey = todayKey();
+    const runsByDate = {};
+    stats.weekRuns.forEach(r => { (runsByDate[r.date] = runsByDate[r.date] || []).push(r); });
+
+    stats.days.forEach((d, i) => {
+      const key = dateKey(d);
+      const dayPlan = plan[i];
+      const hasRun = !!runsByDate[key];
+      let statusClass = '';
+      let icon = '·';
+      if (dayPlan && dayPlan.rest) { statusClass = 'rest'; icon = '—'; }
+      else if (hasRun) { statusClass = 'completed'; icon = '✓'; }
+      else if (key < tKey) { statusClass = 'missed'; icon = '✕'; }
+      else { icon = '○'; }
+      const isToday = key === tKey;
+
+      const dayDist = hasRun ? runsByDate[key].reduce((s2, r) => s2 + (r.distanceKm || 0), 0) : (dayPlan ? dayPlan.distanceKm : 0);
+
+      const cell = document.createElement('div');
+      cell.className = 'run-day' + (statusClass ? ' ' + statusClass : '') + (isToday ? ' today' : '');
+      cell.innerHTML =
+        '<div class="run-day-dow">' + DOW_LABELS[i] + '</div>' +
+        '<div class="run-day-icon">' + icon + '</div>' +
+        '<div class="run-day-dist">' + (dayDist ? fmtKm(dayDist) : '—') + '</div>';
+      grid.appendChild(cell);
+    });
+
+    const target = s.weeklyDistanceTargetKm || 0;
+    const pct = target ? Math.min(100, (stats.distanceKm / target) * 100) : 0;
+    document.getElementById('runWeekFill').style.width = pct + '%';
+    document.getElementById('runWeekDist').textContent = fmtKm(stats.distanceKm);
+    document.getElementById('runWeekPct').textContent = target ? Math.round((stats.distanceKm / target) * 100) + '%' : '—';
+    document.getElementById('runWeekRuns').textContent = stats.runsCount;
+    document.getElementById('runWeekTime').textContent = stats.totalSec ? fmtDuration(stats.totalSec) : '—';
+    document.getElementById('runWeekElev').textContent = stats.elevationM ? Math.round(stats.elevationM) + ' m' : '—';
+  }
+
+  // =============================================================
+  // RENDER — Performance
+  // =============================================================
+  function renderPerformance() {
+    const p = pbs(), g = goal();
+    const rows = [
+      { key: 'fiveK',    label: '5K' },
+      { key: 'tenK',     label: '10K' },
+      { key: 'half',     label: 'Half Marathon' },
+      { key: 'marathon', label: 'Marathon' }
+    ];
+    const grid = document.getElementById('runPerfGrid');
+    grid.innerHTML = rows.map(r => {
+      const pb = p[r.key];
+      const current = predictFor(r.key, p);
+      const goalVal = (r.key === 'marathon') ? g.targetTimeSec : null;
+      return (
+        '<div class="run-perf-card">' +
+        '  <div class="run-perf-title">' + r.label + '</div>' +
+        '  <div class="run-perf-row"><span class="label">PB</span><span class="val">' + (pb ? fmtClock(pb) : '—') + '</span></div>' +
+        '  <div class="run-perf-row"><span class="label">Current Est.</span><span class="val">' + (current ? fmtClock(current) : '—') + '</span></div>' +
+        (goalVal ? '  <div class="run-perf-row goal"><span class="label">Goal</span><span class="val">' + fmtClock(goalVal) + '</span></div>' : '') +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // =============================================================
+  // RENDER — Analytics (charts)
+  // =============================================================
+  function runSmoothPath(points) {
+    if (!points.length) return '';
+    if (points.length === 1) return 'M ' + points[0].x + ' ' + points[0].y;
+    let d = 'M ' + points[0].x.toFixed(2) + ' ' + points[0].y.toFixed(2);
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1], curr = points[i];
+      const cx = (prev.x + curr.x) / 2;
+      d += ' Q ' + cx.toFixed(2) + ' ' + prev.y.toFixed(2) + ', ' + cx.toFixed(2) + ' ' + ((prev.y + curr.y) / 2).toFixed(2);
+      d += ' T ' + curr.x.toFixed(2) + ' ' + curr.y.toFixed(2);
+    }
+    return d;
+  }
+
+  function renderLineChart(prefix, data, color, gradId, fmtY) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const empty = document.getElementById(prefix + 'Empty');
+    const content = document.getElementById(prefix + 'Content');
+    if (!content) return;
+    if (data.length < 2) {
+      empty.style.display = 'block';
+      content.innerHTML = '';
+      wrap.querySelector('svg').style.display = 'none';
+      wrap.querySelector('.run-chart-yaxis').style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    wrap.querySelector('svg').style.display = 'block';
+    wrap.querySelector('.run-chart-yaxis').style.display = 'flex';
+
+    const min = Math.min.apply(null, data), max = Math.max.apply(null, data);
+    const pad = Math.max((max - min) * 0.15, max * 0.02, 0.01);
+    const yMin = min - pad, yMax = max + pad;
+    const xLeft = 8, xRight = 312, yTop = 20, yBot = 110;
+    const xFor = (i) => data.length === 1 ? xRight : xLeft + (i / (data.length - 1)) * (xRight - xLeft);
+    const yFor = (v) => yBot - ((v - yMin) / (yMax - yMin)) * (yBot - yTop);
+    const points = data.map((v, i) => ({ x: xFor(i), y: yFor(v) }));
+    const linePath = runSmoothPath(points);
+    const areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(2) + ' ' + yBot + ' L ' + points[0].x.toFixed(2) + ' ' + yBot + ' Z';
+
+    let html = '<path fill="url(#' + gradId + ')" d="' + areaPath + '"></path>'
+             + '<path fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="' + linePath + '"></path>';
+    points.forEach((pt, i) => {
+      const r = (i === points.length - 1) ? 4.5 : 2.5;
+      html += '<circle cx="' + pt.x.toFixed(2) + '" cy="' + pt.y.toFixed(2) + '" r="' + r + '" fill="' + color + '" stroke="#111114" stroke-width="1.5"></circle>';
+    });
+    content.innerHTML = html;
+    document.getElementById(prefix.replace('Wrap', '') + 'Max').textContent = fmtY(yMax);
+    document.getElementById(prefix.replace('Wrap', '') + 'Min').textContent = fmtY(yMin);
+  }
+
+  function renderBarChart(prefix, data, color) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const empty = document.getElementById(prefix + 'Empty');
+    const content = document.getElementById(prefix + 'Content');
+    const nonZero = data.filter(v => v > 0);
+    if (nonZero.length === 0) {
+      empty.style.display = 'block';
+      content.innerHTML = '';
+      wrap.querySelector('svg').style.display = 'none';
+      wrap.querySelector('.run-chart-yaxis').style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    wrap.querySelector('svg').style.display = 'block';
+    wrap.querySelector('.run-chart-yaxis').style.display = 'flex';
+
+    const max = Math.max.apply(null, data) || 1;
+    const xLeft = 8, xRight = 312, yTop = 20, yBot = 110;
+    const n = data.length;
+    const gap = 6;
+    const barW = (xRight - xLeft - gap * (n - 1)) / n;
+    let html = '';
+    data.forEach((v, i) => {
+      const h = (v / max) * (yBot - yTop);
+      const x = xLeft + i * (barW + gap);
+      const y = yBot - h;
+      html += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + Math.max(1, h).toFixed(2) + '" rx="3" fill="' + color + '" opacity="' + (i === n - 1 ? '1' : '0.55') + '"></rect>';
+    });
+    content.innerHTML = html;
+    document.getElementById(prefix.replace('Wrap', '') + 'Max').textContent = fmtKm(max);
+    document.getElementById(prefix.replace('Wrap', '') + 'Min').textContent = '0 km';
+  }
+
+  function weeklyMileageSeries(n) {
+    const monday = mondayOf(new Date());
+    const allRuns = runs();
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const wkStart = new Date(monday); wkStart.setDate(wkStart.getDate() - 7 * i);
+      const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
+      const startKey = dateKey(wkStart), endKey = dateKey(wkEnd);
+      const total = allRuns.filter(r => r.date >= startKey && r.date <= endKey).reduce((s, r) => s + (r.distanceKm || 0), 0);
+      out.push(total);
+    }
+    return out;
+  }
+  function sortedRuns() { return runs().slice().sort((a, b) => a.date.localeCompare(b.date)); }
+  function paceSeries(n) {
+    return sortedRuns().filter(r => r.distanceKm > 0 && r.durationSec > 0).slice(-n).map(r => r.durationSec / r.distanceKm);
+  }
+  function hrSeries(n) {
+    return sortedRuns().filter(r => r.avgHr).slice(-n).map(r => r.avgHr);
+  }
+  function efficiencySeries(n) {
+    return sortedRuns().filter(r => r.avgHr && r.distanceKm > 0 && r.durationSec > 0).slice(-n).map(r => {
+      const speedMPerMin = (r.distanceKm * 1000) / (r.durationSec / 60);
+      return speedMPerMin / r.avgHr;
+    });
+  }
+
+  function renderCharts() {
+    renderBarChart('runChartMileage', weeklyMileageSeries(8), '#FB923C');
+    document.getElementById('runChartMileageMeta').textContent = 'Last 8 weeks';
+
+    renderLineChart('runChartPace', paceSeries(12), '#7DD3FC', 'runGradPace', fmtPace);
+    document.getElementById('runChartPaceMeta').textContent = 'Last ' + Math.min(12, paceSeries(12).length) + ' runs';
+
+    renderLineChart('runChartHr', hrSeries(12), '#FF8A8A', 'runGradHr', (v) => Math.round(v) + ' bpm');
+    document.getElementById('runChartHrMeta').textContent = 'Last ' + Math.min(12, hrSeries(12).length) + ' runs with HR';
+
+    renderLineChart('runChartEff', efficiencySeries(12), '#6BE3A4', 'runGradEff', (v) => v.toFixed(1));
+  }
+
+  // =============================================================
+  // RENDER — Recent Runs
+  // =============================================================
+  const TYPE_ICON = { 'Easy Run': '🏃', 'Tempo': '⚡', 'Intervals': '🔁', 'Long Run': '🛣️', 'Recovery': '🌿', 'Race': '🏁' };
+
+  function renderRecentRuns() {
+    const list = document.getElementById('runList');
+    const all = sortedRuns().reverse().slice(0, 10);
+    if (all.length === 0) {
+      list.innerHTML = '<li class="empty-state">No runs logged yet — tap "+ Log Run" to add your first one.</li>';
+      return;
+    }
+    list.innerHTML = '';
+    all.forEach(r => {
+      const li = document.createElement('li');
+      li.className = 'run-row';
+      const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
+      li.innerHTML =
+        '<span class="run-row-icon">' + (TYPE_ICON[r.type] || '🏃') + '</span>' +
+        '<div class="run-row-main">' +
+        '  <div class="run-row-type">' + r.type + '</div>' +
+        '  <div class="run-row-meta">' + fmtDate(r.date) + (r.avgHr ? ' · ' + r.avgHr + ' bpm' : '') + (r.elevationM ? ' · ' + Math.round(r.elevationM) + ' m' : '') + '</div>' +
+        '</div>' +
+        '<div class="run-row-stats">' +
+        '  <div class="run-row-dist">' + fmtKm(r.distanceKm) + '</div>' +
+        '  <div class="run-row-pace">' + (pace ? fmtPace(pace) : fmtDuration(r.durationSec)) + '</div>' +
+        '</div>';
+      li.addEventListener('click', () => openRunDetail(r.id));
+      list.appendChild(li);
+    });
+  }
+
+  // =============================================================
+  // RENDER — Race Goal
+  // =============================================================
+  function renderRaceGoal() {
+    const g = goal(), p = pbs();
+    document.getElementById('runGoalName').textContent = g.raceName;
+    document.getElementById('runGoalDate').textContent = new Date(g.raceDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const daysLeft = daysBetween(todayKey(), g.raceDate);
+    document.getElementById('runGoalCountdown').textContent = daysLeft >= 0 ? daysLeft : '0';
+    document.getElementById('runGoalTarget').textContent = g.targetTimeSec ? fmtClock(g.targetTimeSec) : '—';
+    document.getElementById('runGoalPace').textContent = g.targetTimeSec ? fmtPace(g.targetTimeSec / DIST_KM.marathon) : '—';
+
+    const predicted = predictFor('marathon', p);
+    document.getElementById('runGoalPredicted').textContent = predicted ? fmtClock(predicted) : '—';
+
+    const diffEl = document.getElementById('runGoalDiff');
+    if (predicted && g.targetTimeSec) {
+      const diff = predicted - g.targetTimeSec;
+      diffEl.textContent = (diff >= 0 ? '+' : '−') + fmtDuration(Math.abs(diff));
+      diffEl.style.color = diff <= 0 ? 'var(--success)' : 'var(--warning)';
+    } else {
+      diffEl.textContent = '—';
+      diffEl.style.color = '';
+    }
+
+    const wk = currentTrainingWeek(g), total = g.planTotalWeeks || 1;
+    const pct = Math.min(100, Math.round((wk / total) * 100));
+    document.getElementById('runGoalProgFill').style.width = pct + '%';
+    document.getElementById('runGoalProgLabel').textContent = 'Week ' + wk + ' of ' + total + ' — ' + pct + '% through the plan';
+  }
+
+  // =============================================================
+  // RENDER — everything
+  // =============================================================
+  function renderAll() {
+    renderOverview();
+    renderToday();
+    renderWeek();
+    renderPerformance();
+    renderCharts();
+    renderRecentRuns();
+    renderRaceGoal();
+  }
+
+  // =============================================================
+  // MODALS — Log Run
+  // =============================================================
+  function openModal(bg) { bg.classList.add('show'); }
+  function closeModal(bg) { bg.classList.remove('show'); }
+
+  const runLogModalBg = document.getElementById('runLogModalBg');
+  document.getElementById('runLogBtn').addEventListener('click', () => {
+    document.getElementById('runLogDate').value = todayKey();
+    document.getElementById('runLogType').value = 'Easy Run';
+    document.getElementById('runLogDist').value = '';
+    document.getElementById('runLogDur').value = '';
+    document.getElementById('runLogHr').value = '';
+    document.getElementById('runLogElev').value = '';
+    openModal(runLogModalBg);
+  });
+  document.getElementById('runLogCancel').addEventListener('click', () => closeModal(runLogModalBg));
+  runLogModalBg.addEventListener('click', (e) => { if (e.target === runLogModalBg) closeModal(runLogModalBg); });
+  document.getElementById('runLogSave').addEventListener('click', () => {
+    const dateEl = document.getElementById('runLogDate');
+    const distEl = document.getElementById('runLogDist');
+    const durEl = document.getElementById('runLogDur');
+    const date = dateEl.value;
+    const dist = parseFloat(distEl.value);
+    const durSec = parseClockToSec(durEl.value);
+    if (!date) { dateEl.focus(); return; }
+    if (!dist || dist <= 0) { distEl.focus(); return; }
+    if (!durSec || durSec <= 0) { durEl.focus(); return; }
+    const hr = parseFloat(document.getElementById('runLogHr').value) || null;
+    const elev = parseFloat(document.getElementById('runLogElev').value) || 0;
+    const list = runs();
+    list.push({
+      id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, type: document.getElementById('runLogType').value,
+      distanceKm: dist, durationSec: durSec, avgHr: hr, elevationM: elev,
+      source: 'manual', notes: ''
+    });
+    save('run:runs', list);
+    closeModal(runLogModalBg);
+    renderAll();
+  });
+
+  // =============================================================
+  // MODALS — Run Detail
+  // =============================================================
+  const runDetailModalBg = document.getElementById('runDetailModalBg');
+  let activeDetailId = null;
+  function openRunDetail(id) {
+    const r = runs().find(x => x.id === id);
+    if (!r) return;
+    activeDetailId = id;
+    document.getElementById('runDetailTitle').textContent = r.type + ' · ' + fmtDate(r.date);
+    const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
+    document.getElementById('runDetailBody').innerHTML =
+      '<div class="run-detail-row"><span class="label">Date</span><span class="val">' + fmtDate(r.date) + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Distance</span><span class="val">' + fmtKm(r.distanceKm) + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Duration</span><span class="val">' + fmtDuration(r.durationSec) + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Avg Pace</span><span class="val">' + (pace ? fmtPace(pace) : '—') + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Avg Heart Rate</span><span class="val">' + (r.avgHr ? r.avgHr + ' bpm' : '—') + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Elevation Gain</span><span class="val">' + (r.elevationM ? Math.round(r.elevationM) + ' m' : '—') + '</span></div>' +
+      '<div class="run-detail-row"><span class="label">Source</span><span class="val">' + (r.source || 'manual') + '</span></div>';
+    openModal(runDetailModalBg);
+  }
+  document.getElementById('runDetailClose').addEventListener('click', () => closeModal(runDetailModalBg));
+  runDetailModalBg.addEventListener('click', (e) => { if (e.target === runDetailModalBg) closeModal(runDetailModalBg); });
+  document.getElementById('runDetailDelete').addEventListener('click', () => {
+    if (!activeDetailId) return;
+    const list = runs().filter(r => r.id !== activeDetailId);
+    save('run:runs', list);
+    closeModal(runDetailModalBg);
+    renderAll();
+  });
+
+  // =============================================================
+  // MODAL — Settings
+  // =============================================================
+  const runSettingsModalBg = document.getElementById('runSettingsModalBg');
+
+  function secToClockInput(sec) { return sec ? fmtClock(sec) : ''; }
+
+  function buildWeekPlanEditor(plan) {
+    const wrap = document.getElementById('setWeekPlan');
+    wrap.innerHTML = '';
+    plan.forEach((day, i) => {
+      const row = document.createElement('div');
+      row.className = 'run-plan-row';
+      row.dataset.dow = i;
+      row.innerHTML =
+        '<div class="run-plan-row-head">' +
+        '  <span class="run-plan-dow">' + DOW_LABELS[i] + '</span>' +
+        '  <label class="run-plan-rest-toggle"><input type="checkbox" class="pr-rest" ' + (day.rest ? 'checked' : '') + '> Rest day</label>' +
+        '</div>' +
+        '<div class="run-plan-fields">' +
+        '  <select class="pr-type"><option' + (day.type === 'Easy Run' ? ' selected' : '') + '>Easy Run</option><option' + (day.type === 'Tempo' ? ' selected' : '') + '>Tempo</option><option' + (day.type === 'Intervals' ? ' selected' : '') + '>Intervals</option><option' + (day.type === 'Long Run' ? ' selected' : '') + '>Long Run</option><option' + (day.type === 'Recovery' ? ' selected' : '') + '>Recovery</option></select>' +
+        '  <input class="pr-dist" type="number" step="0.1" placeholder="Distance km" value="' + (day.distanceKm || '') + '">' +
+        '  <input class="pr-pace" type="text" placeholder="Pace mm:ss" value="' + (day.paceTargetSecPerKm ? fmtPace(day.paceTargetSecPerKm).replace('/km', '') : '') + '">' +
+        '  <input class="pr-dur" type="number" placeholder="Duration min" value="' + (day.durationEstMin || '') + '">' +
+        '  <input class="pr-hr full" type="text" placeholder="HR zone label (e.g. Z2 · 135–150)" value="' + (day.hrZone || '').replace(/"/g, '&quot;') + '">' +
+        '  <input class="pr-purpose full" type="text" placeholder="Purpose" value="' + (day.purpose || '').replace(/"/g, '&quot;') + '">' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function readWeekPlanEditor() {
+    const rows = document.querySelectorAll('#setWeekPlan .run-plan-row');
+    const out = [];
+    rows.forEach((row, i) => {
+      const rest = row.querySelector('.pr-rest').checked;
+      const paceParts = row.querySelector('.pr-pace').value.split(':').map(Number);
+      const paceSec = paceParts.length === 2 && !paceParts.some(isNaN) ? paceParts[0] * 60 + paceParts[1] : 0;
+      out.push({
+        dow: i,
+        rest: rest,
+        type: rest ? 'Rest' : row.querySelector('.pr-type').value,
+        distanceKm: rest ? 0 : (parseFloat(row.querySelector('.pr-dist').value) || 0),
+        paceTargetSecPerKm: rest ? 0 : paceSec,
+        hrZone: rest ? '' : row.querySelector('.pr-hr').value,
+        durationEstMin: rest ? 0 : (parseFloat(row.querySelector('.pr-dur').value) || 0),
+        purpose: row.querySelector('.pr-purpose').value
+      });
+    });
+    return out;
+  }
+
+  document.getElementById('runSettingsBtn').addEventListener('click', () => {
+    const g = goal(), p = pbs(), s = settings();
+    document.getElementById('setRaceName').value = g.raceName;
+    document.getElementById('setRaceDate').value = g.raceDate;
+    document.getElementById('setTargetTime').value = secToClockInput(g.targetTimeSec);
+    document.getElementById('setPlanStart').value = g.planStartDate;
+    document.getElementById('setPlanWeeks').value = g.planTotalWeeks;
+    document.getElementById('setPb5k').value = secToClockInput(p.fiveK);
+    document.getElementById('setPb10k').value = secToClockInput(p.tenK);
+    document.getElementById('setPbHalf').value = secToClockInput(p.half);
+    document.getElementById('setPbMarathon').value = secToClockInput(p.marathon);
+    document.getElementById('setWeeklyTarget').value = s.weeklyDistanceTargetKm;
+    document.getElementById('setStatusOverride').value = s.trainingStatusOverride || 'auto';
+    buildWeekPlanEditor(weekPlan());
+    openModal(runSettingsModalBg);
+  });
+  document.getElementById('runSettingsCancel').addEventListener('click', () => closeModal(runSettingsModalBg));
+  runSettingsModalBg.addEventListener('click', (e) => { if (e.target === runSettingsModalBg) closeModal(runSettingsModalBg); });
+  document.getElementById('runSettingsSave').addEventListener('click', () => {
+    save('run:goal', {
+      raceName: document.getElementById('setRaceName').value.trim() || 'Race',
+      raceDate: document.getElementById('setRaceDate').value || defaultGoal().raceDate,
+      targetTimeSec: parseClockToSec(document.getElementById('setTargetTime').value) || null,
+      planStartDate: document.getElementById('setPlanStart').value || defaultGoal().planStartDate,
+      planTotalWeeks: parseInt(document.getElementById('setPlanWeeks').value, 10) || 18
+    });
+    save('run:pbs', {
+      fiveK: parseClockToSec(document.getElementById('setPb5k').value),
+      tenK: parseClockToSec(document.getElementById('setPb10k').value),
+      half: parseClockToSec(document.getElementById('setPbHalf').value),
+      marathon: parseClockToSec(document.getElementById('setPbMarathon').value)
+    });
+    save('run:settings', {
+      weeklyDistanceTargetKm: parseFloat(document.getElementById('setWeeklyTarget').value) || 0,
+      trainingStatusOverride: document.getElementById('setStatusOverride').value
+    });
+    save('run:weekPlan', readWeekPlanEditor());
+    closeModal(runSettingsModalBg);
+    renderAll();
+  });
+
+  // =============================================================
+  // BOOT
+  // =============================================================
+  renderAll();
+  window.addEventListener('storage', renderAll);
+
+  if (window.initCloudSync) {
+    window.initCloudSync({
+      appKey: 'running',
+      syncedPrefixes: ['run:'],
+      onApplied: renderAll
+    });
+  }
+})();
+</script>
+</body>
+</html>
