@@ -192,6 +192,7 @@ body::after {
 .day-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
 .day-ring-fill {
   fill: none;
+  stroke: #38BDF8;
   stroke-width: 8;
   stroke-linecap: round;
   transform: rotate(-90deg);
@@ -632,7 +633,7 @@ body::after {
           </filter>
         </defs>
         <circle class="day-ring-track" cx="60" cy="60" r="52" />
-        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" filter="url(#dayRingGlow)" />
+        <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" stroke="#38BDF8" filter="url(#dayRingGlow)" />
       </svg>
       <div class="day-ring-overlay">
         <div class="day-ring-percent" id="dayRingPercent">—</div>
