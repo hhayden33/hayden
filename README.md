@@ -22,6 +22,7 @@ Open any `.html` file directly in your browser — no build step, no install.
 | [gym.html](gym.html) | Progressive overload gym tracker |
 | [topbar.js](topbar.js) | Shared top bar — auto-injected into pages that `<script src="topbar.js">` |
 | [lock.js](lock.js) | Passcode gate for the hub — light deterrent, not real security |
+| [template.html](template.html) | Starter template for a new page/section — copy it to match the dashboard's design + cloud sync |
 
 Each app stores its own state in browser `localStorage`. No accounts, no server.
 
