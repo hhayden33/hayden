@@ -29,7 +29,9 @@
   background: #0a0a0b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  scrollbar-width: none;
 }
+.topbar::-webkit-scrollbar { display: none; }
 .topbar-pill {
   flex: 1 1 0; min-width: 0;
   display: inline-flex; align-items: center; gap: 8px;
@@ -110,14 +112,25 @@
 }
 
 @media (max-width: 480px) {
-  .topbar { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); gap: 4px; }
-  .topbar-pill, .topbar-water-pill { padding: 7px 9px; gap: 5px; }
-  .topbar-pill-label { font-size: 9px; letter-spacing: 0.10em; }
-  .topbar-pill-count { font-size: 11px; }
-  .topbar-water-add { width: 32px; font-size: 16px; }
+  .topbar { 
+    padding-left: max(8px, env(safe-area-inset-left)); 
+    padding-right: max(8px, env(safe-area-inset-right)); 
+    gap: 3px; 
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scroll-behavior: smooth;
+  }
+  .topbar-pill, .topbar-water-pill { padding: 6px 8px; gap: 4px; flex-shrink: 0; }
+  .topbar-pill-label { font-size: 8px; letter-spacing: 0.08em; }
+  .topbar-pill-count { font-size: 10px; }
+  .topbar-water-add { width: 30px; font-size: 15px; padding: 6px 0; flex-shrink: 0; }
 }
 @media (max-width: 380px) {
+  .topbar-pill-count { display: none; }
   .topbar-pill-label { display: none; }
+  .topbar-pill, .topbar-water-pill { padding: 5px 6px; }
+  .topbar-water-add { width: 28px; font-size: 14px; }
 }
 
 /* === Global mobile lockdown ===
