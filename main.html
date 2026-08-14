@@ -16,6 +16,7 @@
   --success: #6BE3A4;
   --warning: #F2C063;
   --danger: #FF6B6B;
+  --run: #FF8F5E;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -65,11 +66,33 @@ body::after {
   margin: 0 auto;
 }
 
+/* ===== Hero greeting ===== */
+.hero-greeting {
+  margin: -6px 0 14px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+  opacity: 0;
+  animation: hero-greeting-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.1s;
+}
+.hero-greeting-name { color: var(--text-secondary); font-weight: 600; }
+@keyframes hero-greeting-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-greeting { animation: none; opacity: 1; }
+}
+
 /* ===== Component 1: page title ===== */
 .dash-title {
   margin: 0 0 14px;
   font-size: 28px;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: -0.025em;
   background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
   -webkit-background-clip: text;
@@ -680,6 +703,7 @@ body::after {
 .wk-day-tag[data-split="push"] { background: rgba(107,227,164,0.14); color: #6BE3A4; }
 .wk-day-tag[data-split="pull"] { background: rgba(107,180,227,0.14); color: #6BB3E3; }
 .wk-day-tag[data-split="legs"] { background: rgba(242,192,99,0.14); color: #F2C063; }
+.wk-day-tag[data-split="run"]  { background: rgba(255,143,94,0.14); color: var(--run); }
 .wk-day-done { color: #6BE3A4; margin-left: 2px; }
 
 .wk-seg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
@@ -718,6 +742,7 @@ body::after {
 .wk-chart-svg { width: 110px; height: 158px; flex-shrink: 0; }
 .wk-muscle { fill: rgba(255,255,255,0.07); transition: fill 0.3s, filter 0.3s; }
 .wk-muscle.is-lit { fill: var(--success); filter: drop-shadow(0 0 6px rgba(107,227,164,0.55)); }
+.wk-muscle.is-lit-run { fill: var(--run); filter: drop-shadow(0 0 6px rgba(255,143,94,0.55)); }
 .wk-chart-body-outline { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1.5; }
 .wk-chart-meta { flex: 1; min-width: 160px; }
 .wk-chart-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
@@ -730,6 +755,7 @@ body::after {
   .gm-progress-num { font-size: 36px; }
   .wk-day { width: 76px; }
   .wk-chart-svg { width: 92px; height: 132px; }
+  .wk-seg-btn { padding: 8px 3px; font-size: 10.5px; }
 }
 </style>
 </head>
@@ -737,6 +763,7 @@ body::after {
 <div class="page">
 
   <h1 class="dash-title">88YYDS Dashboard</h1>
+  <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
 
   <div class="ticker-row">
     <div class="goal-ticker" id="goalTicker" aria-live="polite" aria-atomic="true">
@@ -819,6 +846,7 @@ body::after {
           <button type="button" class="wk-seg-btn" data-split="push">Push</button>
           <button type="button" class="wk-seg-btn" data-split="pull">Pull</button>
           <button type="button" class="wk-seg-btn" data-split="legs">Legs</button>
+          <button type="button" class="wk-seg-btn" data-split="run">Run</button>
           <button type="button" class="wk-seg-btn" data-split="rest">Rest</button>
         </div>
       </div>
@@ -884,6 +912,27 @@ body::after {
   </div>
 
 </div>
+
+<script>
+(function () {
+  'use strict';
+  // Time-of-day hero greeting — reads the browser's local clock, so it's
+  // always correct for whoever has the page open, not when it was built.
+  const subEl = document.getElementById('heroGreetingSub');
+  if (!subEl) return;
+
+  function greetingForHour(h) {
+    if (h >= 5 && h < 12) return 'Good morning';
+    if (h >= 12 && h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+  function renderGreeting() {
+    subEl.textContent = greetingForHour(new Date().getHours()) + ',';
+  }
+  renderGreeting();
+  setInterval(renderGreeting, 60 * 1000);
+})();
+</script>
 
 <script>
 (function () {
@@ -1501,10 +1550,16 @@ document.addEventListener('DOMContentLoaded', function () {
       pull: { view: 'back', regions: ['back', 'biceps'],
               title: 'Pull day', sub: 'Back · Lats · Biceps',
               fallback: ['Pull-ups', 'Barbell row', 'Bicep curl'] },
-      legs: { view: 'front', regions: ['quads', 'calves'],
+      legs: { view: 'front', regions: ['quads', 'calves'], accent: 'success',
               title: 'Legs day', sub: 'Quads · Hamstrings · Glutes · Calves',
-              fallback: ['Back squat', 'Romanian deadlift', 'Leg press'] }
+              fallback: ['Back squat', 'Romanian deadlift', 'Leg press'] },
+      run:  { view: 'front', regions: ['quads', 'calves'], accent: 'run',
+              title: 'Run day', sub: 'Quads · Calves · Cardio',
+              fallback: ['Easy run', 'Tempo run', 'Long run'] }
     };
+    ['push', 'pull', 'legs'].forEach(function (k) {
+      if (!MUSCLE_CONFIG[k].accent) MUSCLE_CONFIG[k].accent = 'success';
+    });
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
     function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -1561,6 +1616,33 @@ document.addEventListener('DOMContentLoaded', function () {
           .filter(function (e) { return e.day === split; })
           .map(function (e) { return e.name; });
         return names.length ? names : null;
+      } catch (e) { return null; }
+    }
+    function fmtKm(km) {
+      if (km == null || !isFinite(km) || km <= 0) return null;
+      const r = Math.round(km * 10) / 10;
+      return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)) + ' km';
+    }
+    function fmtPace(secPerKm) {
+      if (!secPerKm || !isFinite(secPerKm)) return null;
+      const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
+      return m + ':' + (s < 10 ? '0' + s : s) + '/km';
+    }
+    function loadRunPlanParts(dateKey) {
+      try {
+        const raw = localStorage.getItem('run:weekPlan');
+        if (!raw) return null;
+        const wp = JSON.parse(raw);
+        if (!Array.isArray(wp) || wp.length !== 7) return null;
+        const dow = weekDates.indexOf(dateKey);
+        const entry = wp.find(function (e) { return e.dow === dow; });
+        if (!entry) return null;
+        const parts = [entry.type];
+        const km = fmtKm(entry.distanceKm);
+        const pace = fmtPace(entry.paceTargetSecPerKm);
+        if (km) parts.push(km);
+        if (pace) parts.push(pace);
+        return parts;
       } catch (e) { return null; }
     }
     function loadDoneDays() {
@@ -1643,7 +1725,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!split) {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
-        chartRestEl.textContent = "Pick Push, Pull, or Legs to see the day's focus.";
+        chartRestEl.textContent = "Pick Push, Pull, Legs, or Run to see the day's focus.";
         return;
       }
       if (split === 'rest') {
@@ -1654,6 +1736,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const cfg = MUSCLE_CONFIG[split];
+      const litClass = cfg.accent === 'run' ? 'is-lit-run' : 'is-lit';
       chartRestEl.style.display = 'none';
       chartBodyWrap.style.display = 'flex';
       frontSvg.style.display = cfg.view === 'front' ? 'block' : 'none';
@@ -1661,17 +1744,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const activeSvg = cfg.view === 'front' ? frontSvg : backSvg;
       [frontSvg, backSvg].forEach(function (svg) {
-        svg.querySelectorAll('.wk-muscle').forEach(function (el) { el.classList.remove('is-lit'); });
+        svg.querySelectorAll('.wk-muscle').forEach(function (el) {
+          el.classList.remove('is-lit', 'is-lit-run');
+        });
       });
       cfg.regions.forEach(function (region) {
         activeSvg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
-          el.classList.add('is-lit');
+          el.classList.add(litClass);
         });
       });
 
       chartTitleEl.textContent = cfg.title;
       chartSubEl.textContent = cfg.sub;
-      chartExEl.textContent = (loadGymExercises(split) || cfg.fallback).join(' · ');
+      const parts = (split === 'run') ? loadRunPlanParts(activeDate) : loadGymExercises(split);
+      chartExEl.textContent = (parts || cfg.fallback).join(' · ');
     }
 
     function renderWeekLabel() {
