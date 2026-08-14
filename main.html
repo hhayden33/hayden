@@ -590,10 +590,146 @@ body::after {
 }
 .gm-status.gm-status-error { color: var(--danger); }
 
+/* ---------- 7-Day Planner ---------- */
+.wk-nav-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wk-nav-btn {
+  width: 30px; height: 30px; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 9px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  font-size: 16px; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.wk-nav-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: var(--text-primary);
+}
+.wk-week-label {
+  font-family: var(--font-mono);
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.wk-week-label:hover { color: var(--text-primary); }
+.wk-week-label.is-current { color: var(--text-secondary); cursor: default; }
+
+.wk-strip {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  cursor: grab;
+}
+.wk-strip::-webkit-scrollbar { display: none; }
+.wk-strip.is-dragging { cursor: grabbing; }
+
+.wk-day {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  width: 88px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.wk-day:hover { background: rgba(255,255,255,0.06); }
+.wk-day.is-today { border-color: rgba(255,255,255,0.22); }
+.wk-day.is-active {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.30);
+  transform: translateY(-1px);
+}
+.wk-day-name {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+.wk-day.is-today .wk-day-name { color: var(--text-primary); }
+.wk-day-num {
+  font-family: var(--font-mono);
+  font-size: 17px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.wk-day-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-tertiary);
+}
+.wk-day-tag[data-split="push"] { background: rgba(107,227,164,0.14); color: #6BE3A4; }
+.wk-day-tag[data-split="pull"] { background: rgba(107,180,227,0.14); color: #6BB3E3; }
+.wk-day-tag[data-split="legs"] { background: rgba(242,192,99,0.14); color: #F2C063; }
+.wk-day-done { color: #6BE3A4; margin-left: 2px; }
+
+.wk-seg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.wk-seg-label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.wk-seg-control {
+  display: flex; flex: 1; gap: 3px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; padding: 4px;
+}
+.wk-seg-btn {
+  flex: 1; padding: 9px 6px;
+  border: 0; background: transparent;
+  color: var(--text-tertiary); border-radius: 8px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.wk-seg-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.wk-seg-btn.active {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+  color: #0A0A0B;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.35);
+}
+
+.wk-chart-rest {
+  font-size: 12px; color: var(--text-tertiary);
+  font-style: italic; text-align: center;
+  padding: 22px 0;
+}
+.wk-chart-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.wk-chart-svg { width: 110px; height: 158px; flex-shrink: 0; }
+.wk-muscle { fill: rgba(255,255,255,0.07); transition: fill 0.3s, filter 0.3s; }
+.wk-muscle.is-lit { fill: var(--success); filter: drop-shadow(0 0 6px rgba(107,227,164,0.55)); }
+.wk-chart-body-outline { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1.5; }
+.wk-chart-meta { flex: 1; min-width: 160px; }
+.wk-chart-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.wk-chart-sub { font-size: 11px; color: var(--text-tertiary); margin-bottom: 10px; }
+.wk-chart-exlist { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
   .gm-card { padding: 16px; }
   .gm-progress-num { font-size: 36px; }
+  .wk-day { width: 76px; }
+  .wk-chart-svg { width: 92px; height: 132px; }
 }
 </style>
 </head>
@@ -664,6 +800,66 @@ body::after {
         <button type="button" id="goalAddBtn"    class="gm-add">+ Add</button>
         <button type="button" id="goalPolishBtn" class="gm-polish">✨ Polish</button>
         <div class="gm-status" id="polishStatus"></div>
+      </div>
+    </div>
+
+    <!-- 7-DAY PLANNER -->
+    <div class="section-title">7-Day Planner</div>
+    <div class="gm-card" id="wkCard">
+      <div class="wk-nav-row">
+        <button type="button" class="wk-nav-btn" id="wkPrevWeek" aria-label="Previous week">‹</button>
+        <div class="wk-week-label" id="wkWeekLabel">This Week</div>
+        <button type="button" class="wk-nav-btn" id="wkNextWeek" aria-label="Next week">›</button>
+      </div>
+      <div class="wk-strip" id="wkStrip"></div>
+
+      <div class="wk-seg-row">
+        <span class="wk-seg-label">Split</span>
+        <div class="wk-seg-control" id="wkSegControl">
+          <button type="button" class="wk-seg-btn" data-split="push">Push</button>
+          <button type="button" class="wk-seg-btn" data-split="pull">Pull</button>
+          <button type="button" class="wk-seg-btn" data-split="legs">Legs</button>
+          <button type="button" class="wk-seg-btn" data-split="rest">Rest</button>
+        </div>
+      </div>
+
+      <div class="wk-chart-rest" id="wkChartRest">Pick Push, Pull, or Legs to see the day's focus.</div>
+      <div class="wk-chart-wrap" id="wkChartBodyWrap" style="display:none;">
+        <svg id="wkChartFront" class="wk-chart-svg" viewBox="0 0 100 180" xmlns="http://www.w3.org/2000/svg">
+          <circle class="wk-chart-body-outline" cx="50" cy="14" r="10"/>
+          <rect class="wk-chart-body-outline" x="44" y="22" width="12" height="10" rx="3"/>
+          <rect class="wk-chart-body-outline" x="30" y="30" width="40" height="60" rx="12"/>
+          <ellipse class="wk-muscle" data-region="shoulders" cx="26" cy="37" rx="9" ry="7"/>
+          <ellipse class="wk-muscle" data-region="shoulders" cx="74" cy="37" rx="9" ry="7"/>
+          <rect class="wk-muscle" data-region="chest" x="35" y="34" width="30" height="22" rx="6"/>
+          <rect class="wk-muscle" data-region="arms" x="17" y="42" width="10" height="32" rx="5"/>
+          <rect class="wk-muscle" data-region="arms" x="73" y="42" width="10" height="32" rx="5"/>
+          <rect class="wk-chart-body-outline" x="38" y="58" width="24" height="26" rx="6"/>
+          <rect class="wk-muscle" data-region="quads" x="32" y="92" width="14" height="42" rx="7"/>
+          <rect class="wk-muscle" data-region="quads" x="54" y="92" width="14" height="42" rx="7"/>
+          <rect class="wk-muscle" data-region="calves" x="33" y="136" width="12" height="32" rx="6"/>
+          <rect class="wk-muscle" data-region="calves" x="55" y="136" width="12" height="32" rx="6"/>
+        </svg>
+        <svg id="wkChartBack" class="wk-chart-svg" viewBox="0 0 100 180" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+          <circle class="wk-chart-body-outline" cx="50" cy="14" r="10"/>
+          <rect class="wk-chart-body-outline" x="44" y="22" width="12" height="10" rx="3"/>
+          <rect class="wk-chart-body-outline" x="30" y="30" width="40" height="60" rx="12"/>
+          <ellipse class="wk-chart-body-outline" cx="26" cy="37" rx="9" ry="7"/>
+          <ellipse class="wk-chart-body-outline" cx="74" cy="37" rx="9" ry="7"/>
+          <path class="wk-muscle" data-region="back" d="M50 33 L64 44 L60 62 L40 62 L36 44 Z"/>
+          <rect class="wk-muscle" data-region="biceps" x="17" y="42" width="10" height="32" rx="5"/>
+          <rect class="wk-muscle" data-region="biceps" x="73" y="42" width="10" height="32" rx="5"/>
+          <rect class="wk-muscle" data-region="glutes" x="36" y="86" width="28" height="18" rx="9"/>
+          <rect class="wk-muscle" data-region="hamstrings" x="32" y="106" width="14" height="30" rx="7"/>
+          <rect class="wk-muscle" data-region="hamstrings" x="54" y="106" width="14" height="30" rx="7"/>
+          <rect class="wk-muscle" data-region="calves" x="33" y="138" width="12" height="30" rx="6"/>
+          <rect class="wk-muscle" data-region="calves" x="55" y="138" width="12" height="30" rx="6"/>
+        </svg>
+        <div class="wk-chart-meta">
+          <div class="wk-chart-title" id="wkChartTitle">—</div>
+          <div class="wk-chart-sub" id="wkChartSub">—</div>
+          <div class="wk-chart-exlist" id="wkChartEx"></div>
+        </div>
       </div>
     </div>
 
@@ -1289,6 +1485,274 @@ document.addEventListener('DOMContentLoaded', function () {
       window.dispatchEvent(new Event('storage'));
     }
   });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  (function () {
+    'use strict';
+
+    const WK_PREFIX = 'weekplan:';
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const MUSCLE_CONFIG = {
+      push: { view: 'front', regions: ['shoulders', 'chest', 'arms'],
+              title: 'Push day', sub: 'Chest · Shoulders · Triceps',
+              fallback: ['Bench press', 'Overhead press', 'Tricep pushdown'] },
+      pull: { view: 'back', regions: ['back', 'biceps'],
+              title: 'Pull day', sub: 'Back · Lats · Biceps',
+              fallback: ['Pull-ups', 'Barbell row', 'Bicep curl'] },
+      legs: { view: 'front', regions: ['quads', 'calves'],
+              title: 'Legs day', sub: 'Quads · Hamstrings · Glutes · Calves',
+              fallback: ['Back squat', 'Romanian deadlift', 'Leg press'] }
+    };
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+    function mondayOf(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    function isoWeekKey(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      return d.getUTCFullYear() + '-W' + pad(weekNo);
+    }
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const today = new Date();
+    const todayKey = ymd(today);
+
+    let weekOffset = 0;
+    let monday, weekDates, STORE_KEY;
+    let activeDate = todayKey;
+
+    function computeWeekState() {
+      monday = mondayOf(today);
+      monday.setDate(monday.getDate() + weekOffset * 7);
+      weekDates = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        weekDates.push(ymd(d));
+      }
+      STORE_KEY = WK_PREFIX + isoWeekKey(monday);
+    }
+    computeWeekState();
+
+    function loadPlan() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; }
+    }
+    function savePlan(plan) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(plan)); } catch (e) {}
+    }
+    function loadGymExercises(split) {
+      try {
+        const raw = localStorage.getItem('po_coach_v1');
+        if (!raw) return null;
+        const state = JSON.parse(raw);
+        const names = (state.exercises || [])
+          .filter(function (e) { return e.day === split; })
+          .map(function (e) { return e.name; });
+        return names.length ? names : null;
+      } catch (e) { return null; }
+    }
+    function loadDoneDays() {
+      try { return JSON.parse(localStorage.getItem('po_coach_workout_done')) || {}; } catch (e) { return {}; }
+    }
+
+    const stripEl        = document.getElementById('wkStrip');
+    const prevWeekBtn      = document.getElementById('wkPrevWeek');
+    const nextWeekBtn       = document.getElementById('wkNextWeek');
+    const weekLabelEl        = document.getElementById('wkWeekLabel');
+    const segEl           = document.getElementById('wkSegControl');
+    const frontSvg         = document.getElementById('wkChartFront');
+    const backSvg           = document.getElementById('wkChartBack');
+    const chartTitleEl       = document.getElementById('wkChartTitle');
+    const chartSubEl         = document.getElementById('wkChartSub');
+    const chartExEl           = document.getElementById('wkChartEx');
+    const chartRestEl         = document.getElementById('wkChartRest');
+    const chartBodyWrap       = document.getElementById('wkChartBodyWrap');
+    if (!stripEl) return;
+
+    function renderStrip() {
+      const plan = loadPlan();
+      const done = loadDoneDays();
+      stripEl.innerHTML = '';
+      weekDates.forEach(function (dateKey, i) {
+        const d = parseYMD(dateKey);
+        const split = plan[dateKey];
+        const card = document.createElement('div');
+        card.className = 'wk-day'
+          + (dateKey === todayKey ? ' is-today' : '')
+          + (dateKey === activeDate ? ' is-active' : '');
+        card.dataset.date = dateKey;
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'wk-day-name';
+        nameEl.textContent = DAY_NAMES[i];
+
+        const numEl = document.createElement('div');
+        numEl.className = 'wk-day-num';
+        numEl.textContent = d.getDate();
+
+        const tagEl = document.createElement('div');
+        tagEl.className = 'wk-day-tag';
+        if (split) {
+          tagEl.dataset.split = split;
+          tagEl.textContent = split.charAt(0).toUpperCase() + split.slice(1);
+        } else {
+          tagEl.textContent = '—';
+        }
+        if (done[dateKey]) {
+          const chk = document.createElement('span');
+          chk.className = 'wk-day-done';
+          chk.textContent = '✓';
+          tagEl.appendChild(chk);
+        }
+
+        card.append(nameEl, numEl, tagEl);
+        card.addEventListener('click', function () {
+          activeDate = dateKey;
+          renderStrip();
+          renderSeg();
+          renderChart();
+        });
+        stripEl.appendChild(card);
+      });
+    }
+
+    function renderSeg() {
+      const plan = loadPlan();
+      const current = plan[activeDate];
+      segEl.querySelectorAll('.wk-seg-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.split === current);
+      });
+    }
+
+    function renderChart() {
+      const plan = loadPlan();
+      const split = plan[activeDate];
+
+      if (!split) {
+        chartBodyWrap.style.display = 'none';
+        chartRestEl.style.display = 'block';
+        chartRestEl.textContent = "Pick Push, Pull, or Legs to see the day's focus.";
+        return;
+      }
+      if (split === 'rest') {
+        chartBodyWrap.style.display = 'none';
+        chartRestEl.style.display = 'block';
+        chartRestEl.textContent = 'Rest day — recovery in progress.';
+        return;
+      }
+
+      const cfg = MUSCLE_CONFIG[split];
+      chartRestEl.style.display = 'none';
+      chartBodyWrap.style.display = 'flex';
+      frontSvg.style.display = cfg.view === 'front' ? 'block' : 'none';
+      backSvg.style.display  = cfg.view === 'back'  ? 'block' : 'none';
+
+      const activeSvg = cfg.view === 'front' ? frontSvg : backSvg;
+      [frontSvg, backSvg].forEach(function (svg) {
+        svg.querySelectorAll('.wk-muscle').forEach(function (el) { el.classList.remove('is-lit'); });
+      });
+      cfg.regions.forEach(function (region) {
+        activeSvg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
+          el.classList.add('is-lit');
+        });
+      });
+
+      chartTitleEl.textContent = cfg.title;
+      chartSubEl.textContent = cfg.sub;
+      chartExEl.textContent = (loadGymExercises(split) || cfg.fallback).join(' · ');
+    }
+
+    function renderWeekLabel() {
+      const start = parseYMD(weekDates[0]);
+      const end = parseYMD(weekDates[6]);
+      const startStr = MONTH_NAMES[start.getMonth()] + ' ' + start.getDate();
+      const endStr = (end.getMonth() === start.getMonth())
+        ? String(end.getDate())
+        : MONTH_NAMES[end.getMonth()] + ' ' + end.getDate();
+      weekLabelEl.textContent = startStr + ' – ' + endStr + (weekOffset === 0 ? ' · this week' : '');
+      weekLabelEl.classList.toggle('is-current', weekOffset === 0);
+    }
+
+    function renderAll() {
+      renderWeekLabel();
+      renderStrip();
+      renderSeg();
+      renderChart();
+    }
+
+    function goToWeek(offset) {
+      weekOffset = offset;
+      computeWeekState();
+      activeDate = (weekOffset === 0) ? todayKey : weekDates[0];
+      renderAll();
+    }
+
+    prevWeekBtn.addEventListener('click', function () { goToWeek(weekOffset - 1); });
+    nextWeekBtn.addEventListener('click', function () { goToWeek(weekOffset + 1); });
+    weekLabelEl.addEventListener('click', function () {
+      if (weekOffset !== 0) goToWeek(0);
+    });
+
+    segEl.addEventListener('click', function (e) {
+      const btn = e.target.closest('.wk-seg-btn');
+      if (!btn) return;
+      const plan = loadPlan();
+      const split = btn.dataset.split;
+      if (plan[activeDate] === split) delete plan[activeDate];
+      else plan[activeDate] = split;
+      savePlan(plan);
+      renderStrip();
+      renderSeg();
+      renderChart();
+    });
+
+    // Pointer-drag-to-scroll for desktop/mouse users (touch already scrolls natively).
+    (function enableDragScroll() {
+      let isDown = false, startX = 0, startScroll = 0, moved = false;
+      stripEl.addEventListener('mousedown', function (e) {
+        isDown = true; moved = false;
+        startX = e.pageX; startScroll = stripEl.scrollLeft;
+        stripEl.classList.add('is-dragging');
+      });
+      window.addEventListener('mouseup', function () {
+        isDown = false;
+        stripEl.classList.remove('is-dragging');
+      });
+      window.addEventListener('mousemove', function (e) {
+        if (!isDown) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > 4) moved = true;
+        stripEl.scrollLeft = startScroll - dx;
+      });
+      stripEl.addEventListener('click', function (e) {
+        if (moved) { e.stopPropagation(); moved = false; }
+      }, true);
+    })();
+
+    renderAll();
+    const activeCard = stripEl.querySelector('.wk-day.is-active');
+    if (activeCard) activeCard.scrollIntoView({ inline: 'center', block: 'nearest' });
+
+    if (typeof initCloudSync === 'function') {
+      initCloudSync({
+        appKey: 'weekplan',
+        syncedPrefixes: [WK_PREFIX],
+        onApplied: renderAll
+      });
+    }
+  })();
 });
 </script>
 </body>
