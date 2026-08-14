@@ -1070,13 +1070,22 @@ body::after {
   }
 
   let firstTick = true;
+  let currentTickerRow = null;
   function tick() {
     const { items, done, total } = buildTickerItems();
     if (cycleIdx >= items.length) cycleIdx = 0;
     const item = items[cycleIdx];
     cycleIdx = (cycleIdx + 1) % items.length;
 
-    const oldRow = tickerStage.querySelector('.goal-ticker-row');
+    // Defensive cleanup: if tick() fired again before the previous row's
+    // leave animation finished (e.g. several rapid goals-changed events
+    // during rollover), strip any stray rows so they can't pile up and
+    // sit stacked on top of each other permanently.
+    tickerStage.querySelectorAll('.goal-ticker-row').forEach(el => {
+      if (el !== currentTickerRow) el.remove();
+    });
+
+    const oldRow = currentTickerRow;
     const newRow = document.createElement('div');
     newRow.className = 'goal-ticker-row';
     const status = document.createElement('span');
@@ -1097,6 +1106,7 @@ body::after {
       oldRow.remove();
     }
     tickerStage.appendChild(newRow);
+    currentTickerRow = newRow;
     firstTick = false;
 
     tickerMeta.textContent = done + '/' + total;
@@ -1108,9 +1118,16 @@ body::after {
     tickerTimer = setInterval(tick, 5000);
   }
 
+  // Debounce bursts of goals-changed (e.g. rollover touching several
+  // day-keys in a tight loop) into a single re-render instead of firing
+  // a transition per storeSet call.
+  let goalsChangedDebounce = null;
   window.addEventListener('goals-changed', () => {
-    cycleIdx = 0;
-    tick();
+    if (goalsChangedDebounce) clearTimeout(goalsChangedDebounce);
+    goalsChangedDebounce = setTimeout(() => {
+      cycleIdx = 0;
+      tick();
+    }, 30);
   });
 
   // ---------- Day Ring ----------
