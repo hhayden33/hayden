@@ -1339,13 +1339,18 @@ body::after {
   renderAll();
   window.addEventListener('storage', renderAll);
 
-  if (window.initCloudSync) {
-    window.initCloudSync({
+  // sync.js is loaded with `defer`, so it hasn't run yet at this point in
+  // parsing — window.initCloudSync would always be undefined here. Wait
+  // for DOMContentLoaded (fires after deferred scripts) like every other
+  // page's cloud-sync registration does.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
       appKey: 'running',
       syncedPrefixes: ['run:'],
       onApplied: renderAll
     });
-  }
+  });
 })();
 </script>
 </body>
