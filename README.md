@@ -15,9 +15,8 @@ Open any `.html` file directly in your browser — no build step, no install.
 | File | What it is |
 |---|---|
 | [index.html](index.html) | Bento grid hub — the home page, gated by a passcode ([lock.js](lock.js)) |
-| [main.html](main.html) | Goals tracker (Day Ring, Goal Ticker, To Do list) |
-| [health.html](health.html) | Supplement / daily stack tracker |
-| [po-water.html](po-water.html) | Water intake tracker |
+| [main.html](main.html) | Goals tracker, 7-Day Planner, Daily Stack (supplements), Water Tracker (Day Ring, Goal Ticker, To Do list) |
+| [po-water.html](po-water.html) | Water intake tracker — embedded in main.html, also usable standalone |
 | [finance.html](finance.html) | Finances |
 | [gym.html](gym.html) | Progressive overload gym tracker |
 | [running.html](running.html) | Running command centre — training plan, PBs, race goal, analytics (manual data entry for now; built for a future Garmin import) |

@@ -151,7 +151,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
   <div class="topbar-water-wrap">
-    <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
+    <a href="main.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
       <span class="topbar-pill-dot"></span>
       <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
     </a>
@@ -167,8 +167,8 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   <a href="main.html" class="bottombar-tab" data-page="main">
     <span class="bottombar-tab-icon">🏠</span><span>Main</span>
   </a>
-  <a href="health.html" class="bottombar-tab" data-page="health">
-    <span class="bottombar-tab-icon">💊</span><span>Health</span>
+  <a href="running.html" class="bottombar-tab" data-page="running">
+    <span class="bottombar-tab-icon">🏃</span><span>Running</span>
   </a>
   <a href="gym.html" class="bottombar-tab" data-page="fitness">
     <span class="bottombar-tab-icon">💪</span><span>Fitness</span>
@@ -185,7 +185,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   function shouldShowChrome() { return !isFinancePage() && !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
-    if (p.endsWith('health.html')) return 'health';
+    if (p.endsWith('running.html')) return 'running';
     if (p.endsWith('gym.html')) return 'fitness';
     return 'main';
   }
