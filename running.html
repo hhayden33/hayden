@@ -606,8 +606,15 @@ body::after {
         <div class="run-field"><label>10K</label><input type="text" id="setPb10k" placeholder="47:00"></div>
       </div>
       <div class="run-field-row">
+        <div class="run-field"><label>15K</label><input type="text" id="setPb15k" placeholder="1:11:00"></div>
         <div class="run-field"><label>Half Marathon</label><input type="text" id="setPbHalf" placeholder="1:45:00"></div>
+      </div>
+      <div class="run-field-row">
         <div class="run-field"><label>Marathon</label><input type="text" id="setPbMarathon" placeholder="3:45:00"></div>
+        <div class="run-field"><label>30K</label><input type="text" id="setPb30k" placeholder="2:40:00"></div>
+      </div>
+      <div class="run-field-row">
+        <div class="run-field"><label>50K</label><input type="text" id="setPb50k" placeholder="5:25:00"></div>
       </div>
     </div>
 
@@ -651,7 +658,7 @@ body::after {
   // V1 just reads whatever is in these keys, manual or not.
   // =============================================================
   const DOW_LABELS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
-  const DIST_KM = { fiveK: 5, tenK: 10, half: 21.0975, marathon: 42.195 };
+  const DIST_KM = { fiveK: 5, tenK: 10, fifteenK: 15, half: 21.0975, marathon: 42.195, thirtyK: 30, fiftyK: 50 };
 
   function load(key, fallback) {
     try {
@@ -671,7 +678,7 @@ body::after {
     };
   }
   function defaultPbs() {
-    return { fiveK: null, tenK: null, half: null, marathon: null };
+    return { fiveK: null, tenK: null, fifteenK: null, half: null, marathon: null, thirtyK: null, fiftyK: null };
   }
   function defaultSettings() {
     return { weeklyDistanceTargetKm: 47, trainingStatusOverride: 'auto' };
@@ -763,12 +770,15 @@ body::after {
   function riegel(t1, d1, d2) { return t1 * Math.pow(d2 / d1, 1.06); }
 
   function predictFor(targetKey, pbData) {
+    // Riegel cross-distance prediction is only meaningful across common
+    // road-race distances — 15K/30K/50K aren't wired in here since ultra
+    // pacing/fueling breaks the formula's assumptions. They're PB-only.
     const order = {
       fiveK:    ['tenK', 'half', 'marathon'],
       tenK:     ['fiveK', 'half', 'marathon'],
       half:     ['tenK', 'marathon', 'fiveK'],
       marathon: ['half', 'tenK', 'fiveK']
-    }[targetKey];
+    }[targetKey] || [];
     for (const key of order) {
       if (pbData[key]) return riegel(pbData[key], DIST_KM[key], DIST_KM[targetKey]);
     }
@@ -927,8 +937,11 @@ body::after {
     const rows = [
       { key: 'fiveK',    label: '5K' },
       { key: 'tenK',     label: '10K' },
+      { key: 'fifteenK', label: '15K' },
       { key: 'half',     label: 'Half Marathon' },
-      { key: 'marathon', label: 'Marathon' }
+      { key: 'marathon', label: 'Marathon' },
+      { key: 'thirtyK',  label: '30K' },
+      { key: 'fiftyK',   label: '50K' }
     ];
     const grid = document.getElementById('runPerfGrid');
     grid.innerHTML = rows.map(r => {
@@ -1282,8 +1295,11 @@ body::after {
     document.getElementById('setPlanWeeks').value = g.planTotalWeeks;
     document.getElementById('setPb5k').value = secToClockInput(p.fiveK);
     document.getElementById('setPb10k').value = secToClockInput(p.tenK);
+    document.getElementById('setPb15k').value = secToClockInput(p.fifteenK);
     document.getElementById('setPbHalf').value = secToClockInput(p.half);
     document.getElementById('setPbMarathon').value = secToClockInput(p.marathon);
+    document.getElementById('setPb30k').value = secToClockInput(p.thirtyK);
+    document.getElementById('setPb50k').value = secToClockInput(p.fiftyK);
     document.getElementById('setWeeklyTarget').value = s.weeklyDistanceTargetKm;
     document.getElementById('setStatusOverride').value = s.trainingStatusOverride || 'auto';
     buildWeekPlanEditor(weekPlan());
@@ -1302,8 +1318,11 @@ body::after {
     save('run:pbs', {
       fiveK: parseClockToSec(document.getElementById('setPb5k').value),
       tenK: parseClockToSec(document.getElementById('setPb10k').value),
+      fifteenK: parseClockToSec(document.getElementById('setPb15k').value),
       half: parseClockToSec(document.getElementById('setPbHalf').value),
-      marathon: parseClockToSec(document.getElementById('setPbMarathon').value)
+      marathon: parseClockToSec(document.getElementById('setPbMarathon').value),
+      thirtyK: parseClockToSec(document.getElementById('setPb30k').value),
+      fiftyK: parseClockToSec(document.getElementById('setPb50k').value)
     });
     save('run:settings', {
       weeklyDistanceTargetKm: parseFloat(document.getElementById('setWeeklyTarget').value) || 0,
