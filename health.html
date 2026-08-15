@@ -1033,6 +1033,11 @@ main {
     render();
   }, 60 * 1000);
 
+  // Cloud sync writes straight to localStorage and dispatches 'storage'
+  // (see the initCloudSync call below) — pick that up so a stack change
+  // made on another device shows up here without a manual reload.
+  window.addEventListener('storage', render);
+
   render();
   startTicker();
 })();
@@ -1042,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'health',
-    syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+    syncedKeys: ['stack:items', 'stack:version', 'stack:low'],
     syncedPrefixes: ['stack:taken:'],
     onApplied: function () { window.dispatchEvent(new Event('storage')); }
   });

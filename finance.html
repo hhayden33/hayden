@@ -3257,6 +3257,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   renderOrders();
   updateOrdPreview();
 
+  // Cloud sync writes straight to localStorage and dispatches 'storage'
+  // (see the initCloudSync call below) — pick that up so a change made
+  // on another device shows up here without a manual reload.
+  window.addEventListener('storage', () => {
+    renderAllNetWorth();
+    renderSubs();
+    renderWishlist();
+    renderOrders();
+  });
+
   // ============================================================
   // FINANCE TICKER — rotates through upcoming subscription renewals
   // every 5 seconds. Flashes red whenever the currently displayed sub

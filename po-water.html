@@ -1091,6 +1091,14 @@ html, body {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // Cloud sync writes straight to localStorage and dispatches 'storage'
+  // (see the initCloudSync call below) — pick that up so a change made
+  // on another device actually shows up here without a manual reload.
+  window.addEventListener('storage', () => {
+    state = loadState();
+    renderAll();
+  });
+
   // BOOT
   renderAll();
 })();
@@ -1121,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function () {
   try { if (window.self !== window.top) return; } catch (e) { return; }
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
-    appKey: 'health',
+    appKey: 'water',
     syncedKeys: ['po_water_v1'],
     onApplied: function () { window.dispatchEvent(new Event('storage')); }
   });

@@ -272,18 +272,19 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     };
   }
   async function pushWaterMergedToSupabase(localWater) {
-    if (window.location.pathname.endsWith('/health.html') ||
-        window.location.pathname.endsWith('health.html')) return;
     if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) return;
     if (TOPBAR_SUPABASE_URL.indexOf('PASTE-') === 0) return;
     try {
       const supa = window.supabase.createClient(TOPBAR_SUPABASE_URL, TOPBAR_SUPABASE_KEY);
+      // Water lives in its own 'water' row (see po-water.html's
+      // initCloudSync) — merge-read-write here just in case anything
+      // else ever gets added to it, same as before.
       const { data } = await supa
-        .from('app_state').select('data').eq('key', 'health').maybeSingle();
+        .from('app_state').select('data').eq('key', 'water').maybeSingle();
       const current = (data && data.data) || {};
       const merged = Object.assign({}, current, { po_water_v1: localWater });
       await supa.from('app_state').upsert(
-        { key: 'health', data: merged, updated_at: new Date().toISOString() },
+        { key: 'water', data: merged, updated_at: new Date().toISOString() },
         { onConflict: 'key' }
       );
     } catch (e) {}
