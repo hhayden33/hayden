@@ -585,6 +585,21 @@ html, body {
     </div>
 
     <div class="set-section">
+      <h4>Daily Target</h4>
+      <div class="field">
+        <label>Target mode</label>
+        <div class="seg" id="setTargetMode">
+          <button data-tm="auto">Auto (calculated)</button>
+          <button data-tm="manual">Manual</button>
+        </div>
+      </div>
+      <div class="field" id="setManualTargetField">
+        <label>Manual daily target (ml)</label>
+        <input type="number" id="setManualTargetMl" min="500" max="10000" step="100">
+      </div>
+    </div>
+
+    <div class="set-section">
       <h4>Caffeine</h4>
       <div class="field">
         <label>Average caffeine per day (mg)</label>
@@ -704,6 +719,10 @@ html, body {
     s.caffeineMgPerDay = (s.caffeineMgPerDay != null) ? s.caffeineMgPerDay : (CONFIG.caffeineMgPerDay || 200);
     s.substances = Array.isArray(s.substances) ? s.substances : (CONFIG.defaultSubstances || []);
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};  // {YYYY-MM-DD: number_of_servings}
+    // Manual target lets you skip the weight/activity/caffeine calculator
+    // and just set a flat daily goal in ml (e.g. "3 litres, full stop").
+    s.useManualTarget = !!s.useManualTarget;
+    s.manualTargetMl = (s.manualTargetMl != null) ? s.manualTargetMl : 3000;
     return s;
   }
   function saveState() {
@@ -735,6 +754,10 @@ html, body {
   //   adjustments: +200 ml male, +100 ml age 50+
   // ============================================================
   function computeTargetMl() {
+    if (state.useManualTarget) {
+      const manual = state.manualTargetMl || 0;
+      return { manual: true, base: manual, exercise: 0, caffeine: 0, subs: 0, adjust: 0, total: manual };
+    }
     const p = state.profile;
     const wKg = state.weightUnit === 'lb' ? p.weightKg / 2.20462 : p.weightKg;
     const base = wKg * 35;
@@ -824,6 +847,12 @@ html, body {
 
   function renderWhy(calc, targetUnits) {
     const wrap = $('whyBody');
+    if (calc.manual) {
+      wrap.innerHTML =
+        '<div class="why-row"><span class="why-label">Manual daily target</span><span class="why-val">' + fmtMl(calc.total) + '</span></div>'
+        + '<div class="why-row total"><span class="why-label">Daily target</span><span class="why-val">' + fmtMl(calc.total) + ' ≈ ' + targetUnits + ' ' + unitLabelPlural() + '</span></div>';
+      return;
+    }
     const u = state.weightUnit;
     const wDisp = u === 'lb' ? (state.profile.weightKg).toFixed(0) : state.profile.weightKg.toFixed(0);
     let html = '';
@@ -928,16 +957,22 @@ html, body {
     $('setCaffeine').value = state.caffeineMgPerDay;
     $('setBottleMl').value = state.bottleMl;
     $('setGlassMl').value = state.glassMl;
+    $('setManualTargetMl').value = state.manualTargetMl;
 
     setSegActive('setUnit', state.unit);
     setSegActive('setWeightUnit', state.weightUnit);
     setSegActive('setSex', state.profile.sex);
+    setSegActive('setTargetMode', state.useManualTarget ? 'manual' : 'auto');
+    updateManualTargetVisibility();
 
     renderSubsList();
   }
+  function updateManualTargetVisibility() {
+    $('setManualTargetField').style.display = state.useManualTarget ? '' : 'none';
+  }
   function setSegActive(segId, value) {
     $(segId).querySelectorAll('button').forEach(b => {
-      const v = b.dataset.u || b.dataset.s;
+      const v = b.dataset.u || b.dataset.s || b.dataset.tm;
       b.classList.toggle('active', v === value);
     });
   }
@@ -954,8 +989,14 @@ html, body {
   bindSeg('setUnit', 'u', (v) => { state.unit = v; saveState(); renderWater(); });
   bindSeg('setWeightUnit', 'u', (v) => { state.weightUnit = v; saveState(); renderWater(); });
   bindSeg('setSex', 's', (v) => { state.profile.sex = v; saveState(); renderWater(); });
+  bindSeg('setTargetMode', 'tm', (v) => {
+    state.useManualTarget = (v === 'manual');
+    saveState();
+    updateManualTargetVisibility();
+    renderWater();
+  });
 
-  ['setWeight','setAge','setActivity','setCaffeine','setBottleMl','setGlassMl'].forEach(id => {
+  ['setWeight','setAge','setActivity','setCaffeine','setBottleMl','setGlassMl','setManualTargetMl'].forEach(id => {
     $(id).addEventListener('input', () => {
       const v = parseFloat($(id).value);
       if (id === 'setWeight') state.profile.weightKg = v || 0;
@@ -964,6 +1005,7 @@ html, body {
       else if (id === 'setCaffeine') state.caffeineMgPerDay = v || 0;
       else if (id === 'setBottleMl') state.bottleMl = v || 500;
       else if (id === 'setGlassMl') state.glassMl = v || 250;
+      else if (id === 'setManualTargetMl') state.manualTargetMl = v || 0;
       saveState(); renderWater();
     });
   });

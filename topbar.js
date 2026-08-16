@@ -223,18 +223,23 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const todayKey = calendarDateKey();
     const done = (state.logs || {})[todayKey] || 0;
     const p = state.profile || { weightKg: 75 };
-    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-    const base = wKg * 35;
-    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
-    const subs = (state.substances || []).reduce((s, x) => {
-      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
-      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
-    }, 0);
-    let adjust = 0;
-    if (p.sex === 'm') adjust += 200;
-    if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
+    let totalMl;
+    if (state.useManualTarget) {
+      totalMl = state.manualTargetMl || 0;
+    } else {
+      const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
+      const base = wKg * 35;
+      const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
+      const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
+      const subs = (state.substances || []).reduce((s, x) => {
+        const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
+        return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
+      }, 0);
+      let adjust = 0;
+      if (p.sex === 'm') adjust += 200;
+      if ((p.age || 0) >= 50) adjust += 100;
+      totalMl = base + exercise + caffeine + subs + adjust;
+    }
     let unitVol;
     if (state.unit === 'glass') unitVol = state.glassMl || 250;
     else if (state.unit === 'oz') unitVol = 30;
