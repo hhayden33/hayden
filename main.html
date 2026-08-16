@@ -766,6 +766,28 @@ body::after {
 .wk-chart-sub { font-size: 11px; color: var(--text-tertiary); margin-bottom: 10px; }
 .wk-chart-exlist { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
 
+.wk-todo-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.wk-todo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.wk-todo-label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.wk-todo-count {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+}
+
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
   .gm-card { padding: 16px; }
@@ -1269,6 +1291,19 @@ body::after {
           <div class="wk-chart-title" id="wkChartTitle">—</div>
           <div class="wk-chart-sub" id="wkChartSub">—</div>
           <div class="wk-chart-exlist" id="wkChartEx"></div>
+        </div>
+      </div>
+
+      <div class="wk-todo-section">
+        <div class="wk-todo-header">
+          <span class="wk-todo-label">To Do List</span>
+          <span class="wk-todo-count" id="wkTodoCount">0/0</span>
+        </div>
+        <ul id="wkTodoList" class="goal-list gm-list"></ul>
+        <div id="wkTodoEmpty" class="empty-state">No goals for this day yet.</div>
+        <div class="goal-input-wrap gm-input-wrap">
+          <input id="wkTodoInput" class="gm-input" type="text" placeholder="Add a goal for this day…" autocomplete="off">
+          <button type="button" id="wkTodoAddBtn" class="gm-add">+ Add</button>
         </div>
       </div>
     </div>
@@ -2112,7 +2147,106 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartExEl           = document.getElementById('wkChartEx');
     const chartRestEl         = document.getElementById('wkChartRest');
     const chartBodyWrap       = document.getElementById('wkChartBodyWrap');
+    const todoListEl            = document.getElementById('wkTodoList');
+    const todoEmptyEl            = document.getElementById('wkTodoEmpty');
+    const todoCountEl             = document.getElementById('wkTodoCount');
+    const todoInputEl              = document.getElementById('wkTodoInput');
+    const todoAddBtn                = document.getElementById('wkTodoAddBtn');
     if (!stripEl) return;
+
+    // ---------- per-day To Do list (same 'goals:<date>' storage the main
+    // To Do List / Plan Tomorrow cards use, so it's the same synced data) ----------
+    function loadTodoGoals(dateKey) {
+      try { return JSON.parse(localStorage.getItem('goals:' + dateKey)) || []; }
+      catch (e) { return []; }
+    }
+    function saveTodoGoals(dateKey, list) {
+      localStorage.setItem('goals:' + dateKey, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('goals-changed'));
+    }
+
+    function renderTodoList() {
+      const goals = loadTodoGoals(activeDate);
+      const done = goals.filter(function (g) { return g.done; }).length;
+      todoCountEl.textContent = done + '/' + goals.length;
+      todoListEl.innerHTML = '';
+      todoEmptyEl.style.display = goals.length === 0 ? 'block' : 'none';
+
+      goals.forEach(function (g, idx) {
+        const li = document.createElement('li');
+        li.className = 'gm-row' + (g.done ? ' gm-row-done' : '');
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'gm-check';
+        cb.checked = !!g.done;
+        cb.addEventListener('change', function () {
+          const list = loadTodoGoals(activeDate);
+          if (!list[idx]) return;
+          list[idx].done = cb.checked;
+          saveTodoGoals(activeDate, list);
+          renderTodoList();
+        });
+
+        const text = document.createElement('div');
+        text.className = 'gm-text';
+        text.textContent = g.text;
+        text.addEventListener('click', function () {
+          if (text.getAttribute('contenteditable') === 'true') return;
+          text.contentEditable = 'true';
+          text.focus();
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        });
+        text.addEventListener('blur', function () {
+          text.removeAttribute('contenteditable');
+          const v = text.textContent.trim();
+          const list = loadTodoGoals(activeDate);
+          if (!list[idx]) return;
+          if (v) { list[idx].text = v; saveTodoGoals(activeDate, list); }
+          else { list.splice(idx, 1); saveTodoGoals(activeDate, list); renderTodoList(); }
+        });
+        text.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); text.blur(); }
+        });
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'goal-delete';
+        del.textContent = '×';
+        del.addEventListener('click', function () {
+          const list = loadTodoGoals(activeDate);
+          list.splice(idx, 1);
+          saveTodoGoals(activeDate, list);
+          renderTodoList();
+        });
+
+        li.append(cb, text, del);
+        todoListEl.appendChild(li);
+      });
+    }
+
+    function addTodoGoal() {
+      const v = todoInputEl.value.trim();
+      if (!v) return;
+      const list = loadTodoGoals(activeDate);
+      list.push({ text: v, done: false });
+      saveTodoGoals(activeDate, list);
+      todoInputEl.value = '';
+      renderTodoList();
+    }
+    todoAddBtn.addEventListener('click', addTodoGoal);
+    todoInputEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') addTodoGoal();
+    });
+    // Pick up goals added/edited from the main To Do List / Plan Tomorrow
+    // cards (and remote changes applied by the 'goals' cloud sync above).
+    window.addEventListener('goals-changed', renderTodoList);
+    window.addEventListener('storage', renderTodoList);
 
     function renderStrip() {
       const plan = loadPlan();
@@ -2156,6 +2290,7 @@ document.addEventListener('DOMContentLoaded', function () {
           renderStrip();
           renderSeg();
           renderChart();
+          renderTodoList();
         });
         stripEl.appendChild(card);
       });
@@ -2227,6 +2362,7 @@ document.addEventListener('DOMContentLoaded', function () {
       renderStrip();
       renderSeg();
       renderChart();
+      renderTodoList();
     }
 
     function goToWeek(offset) {
