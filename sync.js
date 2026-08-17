@@ -8,6 +8,18 @@
   const SUPABASE_URL = 'https://itidzioouqjbwnyvekkw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Eb38zFsU1V6OUxXzFd8ysg_AgMn6Zzt';
 
+  // Pages that track several independent app_state rows (e.g. main.html's
+  // goals/weekplan/health) call initCloudSync() more than once. Each call
+  // used to spin up its own supabase.createClient(), which meant multiple
+  // GoTrueClient auth instances fighting over the same storage key
+  // ("Multiple GoTrueClient instances detected" console warning). Share one
+  // client per page instead — every initCloudSync() call reuses it.
+  let sharedClient = null;
+  function getClient() {
+    if (!sharedClient) sharedClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    return sharedClient;
+  }
+
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
     const syncedKeys = (config && config.syncedKeys) || [];
@@ -106,7 +118,7 @@
       } catch (e) {}
     }
     (async function init() {
-      supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      supa = getClient();
       try {
         const { data, error } = await supa.from('app_state').select('data').eq('key', appKey).maybeSingle();
         if (!error && data && data.data && Object.keys(data.data).length > 0) {
