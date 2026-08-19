@@ -232,7 +232,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .finance-line strong { color: var(--text-primary); }
 
 /* Streaks row */
-.streak-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.streak-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .streak-pill {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   background: rgba(255,255,255,0.035);
@@ -301,20 +301,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     </div>
   </div>
 
-  <!-- 4. SUPPLEMENT STACK -->
-  <div class="section">
-    <div class="section-title">Supplement Stack</div>
-    <div class="gm-card">
-      <div class="gm-header" style="margin-bottom: 12px;">
-        <div class="gm-eyebrow">TAKEN TODAY</div>
-        <span class="gm-progress-total" id="stackCount" style="font-size: 14px; color: var(--text-primary);">— / —</span>
-      </div>
-      <div id="stackList"></div>
-      <a class="card-footer-link" href="main.html">Manage stack →</a>
-    </div>
-  </div>
-
-  <!-- 5. TO-DO -->
+  <!-- 4. TO-DO -->
   <div class="section">
     <div class="section-title">To Do</div>
     <div class="gm-card">
@@ -327,7 +314,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     </div>
   </div>
 
-  <!-- 6. FINANCE -->
+  <!-- 5. FINANCE -->
   <div class="section">
     <div class="section-title">Finance</div>
     <a class="gm-card card-link" href="finance.html">
@@ -338,7 +325,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     </a>
   </div>
 
-  <!-- 7. STREAKS -->
+  <!-- 6. STREAKS -->
   <div class="section">
     <div class="section-title">Streaks</div>
     <div class="gm-card">
@@ -347,11 +334,6 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
           <span class="streak-pill-icon">💧</span>
           <span class="streak-pill-num" id="streakWater">0</span>
           <span class="streak-pill-label">Water</span>
-        </a>
-        <a class="streak-pill" href="main.html">
-          <span class="streak-pill-icon">💊</span>
-          <span class="streak-pill-num" id="streakStack">0</span>
-          <span class="streak-pill-label">Stack</span>
         </a>
         <a class="streak-pill" href="gym.html">
           <span class="streak-pill-icon">💪</span>
@@ -394,7 +376,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   var todayKey = ymd(today);
 
   // 6am-rollover "active date" — matches main.html's getActiveDateString(),
-  // used by the To Do list, goal streak, and supplement stack keys.
+  // used by the To Do list and goal streak keys.
   function activeDateKey() {
     var now = new Date();
     if (now.getHours() < 6) { var d = new Date(now); d.setDate(d.getDate() - 1); return ymd(d); }
@@ -566,30 +548,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   }
 
   // ------------------------------------------------------------
-  // 4. SUPPLEMENT STACK
-  // ------------------------------------------------------------
-  function renderStack() {
-    var items = storeGet('stack:items') || [];
-    var taken = storeGet('stack:taken:' + activeKey) || {};
-    var total = items.length;
-    var takenCount = items.filter(function (i) { return taken[i.id]; }).length;
-
-    document.getElementById('stackCount').textContent = takenCount + ' / ' + total;
-    var listEl = document.getElementById('stackList');
-    if (!total) {
-      listEl.innerHTML = '<div class="empty-state">No supplements set up yet.</div>';
-      return;
-    }
-    listEl.innerHTML = items.map(function (i) {
-      var isTaken = !!taken[i.id];
-      return '<div class="gm-row' + (isTaken ? ' gm-row-done' : '') + '">' +
-        '<span class="ro-check' + (isTaken ? ' is-on' : '') + '">' + (isTaken ? '✓' : '') + '</span>' +
-        '<div class="gm-text">' + escapeHtml(i.name) + '</div></div>';
-    }).join('');
-  }
-
-  // ------------------------------------------------------------
-  // 5. TO-DO — top 3–5 items, undone first.
+  // 4. TO-DO — top 3–5 items, undone first.
   // ------------------------------------------------------------
   function renderTodos() {
     var list = storeGet('goals:' + activeKey) || [];
@@ -652,7 +611,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   }
 
   // ------------------------------------------------------------
-  // 7. STREAKS — consecutive days ending today (or yesterday if
+  // 6. STREAKS — consecutive days ending today (or yesterday if
   //    today isn't logged yet), matching gym.html's wtRenderStreak
   //    pattern applied to each source's own log.
   // ------------------------------------------------------------
@@ -665,17 +624,6 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     while (logs[cursor] > 0) { streak++; cursor = addDaysKey(cursor, -1); }
     return streak;
   }
-  function suppStreak() {
-    function hasTaken(key) {
-      var t = storeGet('stack:taken:' + key);
-      return !!(t && Object.keys(t).length > 0);
-    }
-    var cursor = activeKey;
-    if (!hasTaken(cursor)) cursor = addDaysKey(cursor, -1);
-    var streak = 0;
-    while (hasTaken(cursor)) { streak++; cursor = addDaysKey(cursor, -1); }
-    return streak;
-  }
   function workoutStreak() {
     var done = storeGet('po_coach_workout_done') || {};
     var cursor = todayKey;
@@ -686,14 +634,12 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   }
   function renderStreaks() {
     document.getElementById('streakWater').textContent = waterStreak();
-    document.getElementById('streakStack').textContent = suppStreak();
     document.getElementById('streakWorkout').textContent = workoutStreak();
   }
 
   // ------------------------------------------------------------
   renderHeader();
   renderWater();
-  renderStack();
   renderTodos();
   renderFinance();
   renderStreaks();
