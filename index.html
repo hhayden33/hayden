@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#10151A">
 <title>88YYDS Dashboard</title>
 <script src="lock.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<link rel="stylesheet" href="theme.css">
 <style>
 :root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --success: #6BE3A4;
+  --text-primary: #F2F2F2;
+  --text-secondary: #AEB7C0;
+  --text-tertiary: #687580;
+  --success: #20A5A0;
   --warning: #F2C063;
   --danger: #FF6B6B;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -24,7 +25,7 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #050506;
+  background: #10151A;
   color: var(--text-secondary);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -41,8 +42,8 @@ body::before {
   content: '';
   position: fixed; inset: 0;
   background:
-    radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
+    radial-gradient(circle at 82% 14%, rgba(8, 124, 163, 0.14), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(85, 32, 128, 0.16), transparent 50%);
   filter: blur(40px);
   pointer-events: none;
   z-index: -2;
@@ -72,7 +73,7 @@ body::after {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -95,18 +96,16 @@ body::after {
   flex-direction: column;
   padding: 20px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   text-decoration: none;
   color: inherit;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease;
 }
-.bento-tile:hover { transform: translateY(-3px); border-color: var(--accent); }
+.bento-tile:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 24px -8px var(--accent); }
 
 .bento-tile.big  { grid-column: span 2; grid-row: span 2; }
 .bento-tile.wide { grid-column: span 2; grid-row: span 1; }
@@ -170,7 +169,7 @@ body::after {
   <h1 class="dash-title">Dashboard</h1>
 
   <div class="bento-grid">
-    <a href="main.html" class="bento-tile big" style="--accent:#6BE3A4">
+    <a href="main.html" class="bento-tile big" style="--accent:#20A5A0">
       <div class="bento-top">
         <span class="bento-num">·01</span>
         <span class="bento-emoji">🏠</span>
@@ -183,7 +182,7 @@ body::after {
       </div>
     </a>
 
-    <a href="gym.html" class="bento-tile wide" style="--accent:#7DD3FC">
+    <a href="gym.html" class="bento-tile wide" style="--accent:#087CA3">
       <div class="bento-top">
         <span class="bento-num">·02</span>
         <span class="bento-emoji">💪</span>
@@ -196,7 +195,7 @@ body::after {
       </div>
     </a>
 
-    <a href="po-water.html" class="bento-tile" style="--accent:#60A5FA">
+    <a href="po-water.html" class="bento-tile" style="--accent:#B98AE0">
       <div class="bento-top">
         <span class="bento-num">·03</span>
         <span class="bento-emoji">💧</span>
@@ -209,7 +208,7 @@ body::after {
       </div>
     </a>
 
-    <a href="finance.html" class="bento-tile wide" style="--accent:#F2C063">
+    <a href="finance.html" class="bento-tile wide" style="--accent:#552080">
       <div class="bento-top">
         <span class="bento-num">·04</span>
         <span class="bento-emoji">📊</span>
@@ -222,7 +221,7 @@ body::after {
       </div>
     </a>
 
-    <a href="running.html" class="bento-tile" style="--accent:#FB923C">
+    <a href="running.html" class="bento-tile" style="--accent:#A83FAF">
       <div class="bento-top">
         <span class="bento-num">·05</span>
         <span class="bento-emoji">🏃</span>
@@ -235,7 +234,7 @@ body::after {
       </div>
     </a>
 
-    <a href="today.html" class="bento-tile" style="--accent:#B794F4">
+    <a href="today.html" class="bento-tile" style="--accent:#087CA3">
       <div class="bento-top">
         <span class="bento-num">·06</span>
         <span class="bento-emoji">🗓️</span>

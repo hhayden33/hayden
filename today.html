@@ -3,27 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#10151A">
 <title>Today · Dashboard</title>
+<link rel="stylesheet" href="theme.css">
 <style>
 /* ============================================================= */
 /*  Shared dashboard design tokens — matches main.html/index.html */
+/*  (values mirror theme.css)                                    */
 /* ============================================================= */
 :root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --success: #6BE3A4;
+  --text-primary: #F2F2F2;
+  --text-secondary: #AEB7C0;
+  --text-tertiary: #687580;
+  --success: #20A5A0;
   --warning: #F2C063;
   --danger:  #FF6B6B;
-  --run:     #FF8F5E;
+  --run:     #A83FAF;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  background: #050506;
+  background: #10151A;
   color: var(--text-secondary);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
@@ -40,8 +42,8 @@ body::before {
   content: '';
   position: fixed; inset: 0;
   background:
-    radial-gradient(circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 50%);
+    radial-gradient(circle at 82% 14%, rgba(8, 124, 163, 0.14), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(85, 32, 128, 0.16), transparent 50%);
   filter: blur(40px);
   pointer-events: none;
   z-index: -2;
@@ -67,8 +69,8 @@ body::after {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px 8px 10px;
   margin: 0 0 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--surface, #19232D);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   border-radius: 999px;
   color: var(--text-secondary);
   text-decoration: none;
@@ -76,13 +78,13 @@ body::after {
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s, color 0.15s;
 }
-.back-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+.back-btn:hover { background: var(--surface-hover, #202B35); color: var(--text-primary); }
 
 .dash-title {
   margin: 0 0 18px;
   font-size: 28px; font-weight: 700;
   letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
 }
@@ -107,21 +109,19 @@ body::after {
 
 .gm-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface, #19232D);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 14px;
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   overflow: hidden;
 }
 a.gm-card.card-link {
   display: block; text-decoration: none; color: inherit;
-  border: 1px solid transparent;
   transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), border-color 0.2s;
 }
-a.gm-card.card-link:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.12); }
+a.gm-card.card-link:hover { transform: translateY(-2px); border-color: var(--accent-cyan, #087CA3); }
 
 .gm-header {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -158,8 +158,8 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   gap: 10px; margin-top: 4px;
 }
 .stat {
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   border-radius: 12px; padding: 12px;
 }
 .stat-num {
@@ -184,8 +184,8 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .gm-row {
   display: flex; align-items: center; gap: 12px;
   padding: 11px 14px; margin-bottom: 6px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   border-radius: 12px;
 }
 .gm-row:last-child { margin-bottom: 0; }
@@ -193,7 +193,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .gm-row.gm-row-done .gm-text { text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.4); }
 .ro-check {
   width: 20px; height: 20px; flex-shrink: 0;
-  border: 1.5px solid rgba(255,255,255,0.18);
+  border: 1.5px solid var(--border-strong, rgba(120, 160, 180, 0.28));
   background: rgba(0,0,0,0.28); border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; color: #0A0A0B; font-weight: 700;
@@ -210,12 +210,12 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .card-footer-link {
   display: flex; align-items: center; justify-content: flex-end; gap: 6px;
   margin-top: 14px; padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   text-decoration: none; color: var(--text-primary);
   font-size: 12px; font-weight: 600;
   -webkit-tap-highlight-color: transparent;
 }
-.card-footer-link:hover { color: var(--success); }
+.card-footer-link:hover { color: var(--accent-cyan, #087CA3); }
 
 /* Header card */
 .today-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
@@ -235,11 +235,13 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .streak-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .streak-pill {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
   border-radius: 12px; padding: 12px 8px;
   text-decoration: none;
+  transition: border-color 0.15s;
 }
+.streak-pill:hover { border-color: var(--accent-cyan, #087CA3); }
 .streak-pill-icon { font-size: 16px; }
 .streak-pill-num {
   font-size: 18px; font-weight: 700; color: var(--text-primary);
@@ -411,7 +413,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   }
 
   var SPLIT_LABELS = { push: 'Push Day', pull: 'Pull Day', legs: 'Legs Day', run: 'Run Day', rest: 'Rest Day' };
-  var SPLIT_COLORS = { push: '#6BE3A4', pull: '#6BE3A4', legs: '#6BE3A4', run: '#FF8F5E', rest: '#76746E' };
+  var SPLIT_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
   function hexToRgba(hex, alpha) {
     var h = hex.replace('#', '');
     var r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
@@ -426,7 +428,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 
     var split = getSplit();
     var badge = document.getElementById('splitBadge');
-    var color = SPLIT_COLORS[split] || '#76746E';
+    var color = SPLIT_COLORS[split] || '#687580';
     badge.textContent = split ? (SPLIT_LABELS[split] || split) : 'Not Planned';
     badge.style.color = color;
     badge.style.background = hexToRgba(color, 0.12);

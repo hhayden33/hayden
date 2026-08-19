@@ -1,0 +1,58 @@
+/* =================================================================
+   DASHBOARD THEME — "MEVIUS Option Purple"
+   Single source of truth for the dashboard's color system: a dark,
+   premium, Japanese-tech-inspired palette that moves from deep
+   navy/black through cyan and teal into purple and magenta.
+
+   Linked from every page's <head>, before that page's own <style>
+   block. Each page's own :root still defines its historical variable
+   names (--text-1, --good, --accent, etc. — left over from when each
+   page was built independently) with values matching the ones below,
+   so nothing downstream had to change. The tokens here are the ones
+   to edit to re-theme the dashboard — everything else follows.
+   ================================================================= */
+:root {
+  /* ---------- Backgrounds ---------- */
+  --bg-primary: #10151A;   /* page background — near-black */
+  --bg-secondary: #151A21; /* deep charcoal, secondary page areas */
+  --bg-navy: #07304A;      /* dark navy, used in atmospheric glows */
+
+  /* ---------- Surfaces (cards, panels, inputs) ---------- */
+  --surface: #19232D;
+  --surface-hover: #202B35;
+  --surface-elevated: #26343E;
+
+  /* ---------- Accent gradient stops ---------- */
+  --accent-cyan: #087CA3;
+  --accent-teal: #20A5A0;
+  --accent-purple: #552080;
+  --accent-magenta: #A83FAF;
+  --accent-lavender: #B98AE0;
+
+  /* ---------- Composed gradients (use these directly in
+       `background:`/`border-image:` — restrained, not everywhere:
+       active nav, primary CTAs, KPI highlights, progress bars,
+       chart series, selected states, decorative glows) ---------- */
+  --gradient-primary: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-teal) 40%, var(--accent-purple) 75%, var(--accent-magenta) 100%);
+  --gradient-nav: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+  --gradient-progress: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal));
+  --gradient-secondary: linear-gradient(135deg, var(--accent-purple), var(--accent-magenta));
+  --gradient-glow: radial-gradient(circle, var(--accent-purple), transparent 70%);
+
+  /* ---------- Text ---------- */
+  --text-primary: #F2F2F2;
+  --text-secondary: #AEB7C0;
+  --text-muted: #687580;
+
+  /* ---------- Borders ---------- */
+  --border-subtle: rgba(120, 160, 180, 0.15);
+  --border-strong: rgba(120, 160, 180, 0.28);
+
+  /* ---------- Semantic status (kept distinct from the accent
+       spectrum on purpose — success/warning/danger need to stay
+       legible and unambiguous, so they don't ride the gradient) ---- */
+  --success: var(--accent-teal);
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --run-accent: var(--accent-magenta);
+}

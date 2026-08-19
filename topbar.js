@@ -21,24 +21,24 @@
   display: flex; justify-content: flex-end; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
-  background: #0a0a0b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #10151A;
+  border-bottom: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 .topbar-water-wrap { display: flex; align-items: stretch; }
 .topbar-water-pill {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 14px;
-  background: rgba(125, 211, 252, 0.08);
-  border: 1px solid rgba(125, 211, 252, 0.16);
+  background: rgba(8, 124, 163, 0.10);
+  border: 1px solid rgba(8, 124, 163, 0.22);
   border-right: none;
   border-radius: 12px 0 0 12px;
-  text-decoration: none; color: #FAFAFA;
+  text-decoration: none; color: #F2F2F2;
   -webkit-tap-highlight-color: transparent;
 }
 .topbar-water-pill .topbar-pill-dot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: #7DD3FC; flex-shrink: 0;
+  background: #087CA3; flex-shrink: 0;
 }
 .topbar-water-pill.warn .topbar-pill-dot { background: #fbbf24; }
 .topbar-water-pill.miss .topbar-pill-dot {
@@ -51,14 +51,14 @@
 }
 .topbar-pill-count {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 13px; font-weight: 700; color: #FAFAFA;
+  font-size: 13px; font-weight: 700; color: #F2F2F2;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .topbar-water-add {
   width: 44px;
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.28), rgba(110, 231, 183, 0.28));
-  color: #FFFFFF; font-family: inherit;
+  border: 1px solid rgba(8, 124, 163, 0.22);
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.45), rgba(85, 32, 128, 0.45));
+  color: #F2F2F2; font-family: inherit;
   font-size: 20px; font-weight: 700; line-height: 1;
   cursor: pointer; border-radius: 0 12px 12px 0;
   -webkit-tap-highlight-color: transparent;
@@ -66,18 +66,18 @@
 }
 .topbar-water-add:active { transform: scale(0.94); }
 .topbar-water-add.flash {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(110, 231, 183, 0.7));
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.85), rgba(85, 32, 128, 0.85));
 }
 .topbar-finance-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(120, 160, 180, 0.15);
+  background: #19232D;
   border-radius: 12px; text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
 }
-.topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.topbar-finance-btn:hover { background: #202B35; }
 .topbar-finance-icon {
   font-size: 20px; line-height: 1;
   filter: grayscale(100%) brightness(1.4); opacity: 0.85;
@@ -86,24 +86,29 @@
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
-  background: #0a0a0b;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #10151A;
+  border-top: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 .bottombar-tab {
   flex: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px; padding: 6px 0 4px; text-decoration: none;
-  color: rgba(255, 255, 255, 0.45);
+  color: #687580;
   font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-  -webkit-tap-highlight-color: transparent; transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent; transition: color 0.15s, background 0.15s;
+  border-radius: 12px;
 }
+.bottombar-tab:hover { color: #AEB7C0; background: rgba(8, 124, 163, 0.08); }
 .bottombar-tab-icon {
   font-size: 24px; line-height: 1;
   filter: grayscale(100%) brightness(1.2); opacity: 0.55;
   transition: opacity 0.15s, filter 0.15s, transform 0.10s;
 }
-.bottombar-tab.active { color: #FAFAFA; }
+.bottombar-tab.active {
+  color: #F2F2F2;
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.18), rgba(85, 32, 128, 0.14));
+}
 .bottombar-tab.active .bottombar-tab-icon {
   filter: grayscale(100%) brightness(1.6); opacity: 1;
 }
