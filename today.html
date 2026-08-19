@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#10151A">
 <title>Today · Dashboard</title>
 <link rel="stylesheet" href="theme.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
 <style>
 /* ============================================================= */
 /*  Shared dashboard design tokens — matches main.html/index.html */
@@ -207,6 +209,15 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
 .ex-name { font-size: 13.5px; color: var(--text-primary); font-weight: 500; }
 .training-note { margin-top: 12px; font-size: 12.5px; color: var(--text-secondary); }
 
+/* Stacked sections when multiple splits are selected for the same day */
+.training-split-group + .training-split-group {
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+}
+.training-split-heading {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 8px;
+}
+
 .card-footer-link {
   display: flex; align-items: center; justify-content: flex-end; gap: 6px;
   margin-top: 14px; padding-top: 14px;
@@ -225,6 +236,15 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   padding: 8px 16px; border-radius: 999px;
   font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   border: 1px solid currentColor;
+}
+
+/* Quote of the day */
+.quote-banner {
+  font-size: 13px; font-style: italic; color: var(--text-secondary);
+  line-height: 1.5; padding: 0 2px; margin: 10px 0 4px;
+}
+.quote-banner .quote-attr {
+  font-style: normal; color: var(--text-tertiary); font-size: 11.5px;
 }
 
 /* Finance line */
@@ -275,6 +295,7 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
       </div>
       <span class="split-badge" id="splitBadge">—</span>
     </div>
+    <p class="quote-banner" id="quoteBanner"></p>
   </div>
 
   <!-- 2. WATER -->
@@ -406,12 +427,18 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     return d.getUTCFullYear() + '-W' + pad2(weekNo);
   }
-  function getSplit() {
+  // A day's plan value can be a single split string (old shape) or an
+  // array (new multi-select shape, e.g. ['push', 'run']) — normalize
+  // to an array either way, matching topbar.js's getTodaySplits().
+  function getSplits() {
     var monday = mondayOf(today);
     var plan = storeGet('weekplan:' + isoWeekKey(monday)) || {};
-    return plan[todayKey] || null; // 'push' | 'pull' | 'legs' | 'run' | 'rest' | null
+    var val = plan[todayKey];
+    if (!val) return [];
+    return Array.isArray(val) ? val : [val];
   }
 
+  var SPLIT_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
   var SPLIT_LABELS = { push: 'Push Day', pull: 'Pull Day', legs: 'Legs Day', run: 'Run Day', rest: 'Rest Day' };
   var SPLIT_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
   function hexToRgba(hex, alpha) {
@@ -420,20 +447,58 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
   }
 
+  // ------------------------------------------------------------
+  // QUOTE OF THE DAY — mixes running and finance quotes, picked
+  // deterministically from the day of year so it's stable across
+  // reloads but changes daily.
+  // ------------------------------------------------------------
+  var QUOTES = [
+    { text: 'The pain of discipline is far less than the pain of regret.', by: 'Running' },
+    { text: 'Run when you can, walk if you have to, crawl if you must; just never give up.', by: 'Running' },
+    { text: 'The miracle isn’t that you finished. The miracle is that you had the courage to start.', by: 'Running' },
+    { text: 'Somewhere behind the athlete you’ve become was a kid who loved a sport.', by: 'Running' },
+    { text: 'The body achieves what the mind believes.', by: 'Running' },
+    { text: 'Every mile in the bank is a mile you don’t have to run scared later.', by: 'Running' },
+    { text: 'A goal without a plan is just a wish.', by: 'Finance' },
+    { text: 'Do not save what is left after spending; spend what is left after saving.', by: 'Finance' },
+    { text: 'Small amounts saved consistently beat large amounts saved occasionally.', by: 'Finance' },
+    { text: 'Every dollar you don’t spend today is a dollar working for you tomorrow.', by: 'Finance' },
+    { text: 'Net worth is built in decades, not days — stay consistent.', by: 'Finance' },
+    { text: 'Track it, trend it, trust it.', by: 'Finance' }
+  ];
+  function dayOfYear(d) {
+    var start = new Date(d.getFullYear(), 0, 0);
+    var diff = d - start;
+    return Math.floor(diff / 86400000);
+  }
+  function renderQuote() {
+    var el = document.getElementById('quoteBanner');
+    if (!el) return;
+    var q = QUOTES[dayOfYear(today) % QUOTES.length];
+    el.innerHTML = '“' + escapeHtml(q.text) + '” <span class="quote-attr">— ' + escapeHtml(q.by) + '</span>';
+  }
+
   function renderHeader() {
     var dows = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     var mons = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     document.getElementById('todayDate').textContent =
       dows[today.getDay()] + ', ' + mons[today.getMonth()] + ' ' + today.getDate();
 
-    var split = getSplit();
+    var splits = SPLIT_ORDER.filter(function (s) { return getSplits().indexOf(s) !== -1; });
     var badge = document.getElementById('splitBadge');
-    var color = SPLIT_COLORS[split] || '#687580';
-    badge.textContent = split ? (SPLIT_LABELS[split] || split) : 'Not Planned';
-    badge.style.color = color;
-    badge.style.background = hexToRgba(color, 0.12);
+    if (!splits.length) {
+      badge.textContent = 'Not Planned';
+      badge.style.color = '#687580';
+      badge.style.background = hexToRgba('#687580', 0.12);
+    } else {
+      var label = splits.map(function (s) { return SPLIT_LABELS[s].replace(/ Day$/, ''); }).join(' + ') + ' Day';
+      var color = SPLIT_COLORS[splits[0]];
+      badge.textContent = label;
+      badge.style.color = color;
+      badge.style.background = hexToRgba(color, 0.12);
+    }
 
-    renderTraining(split);
+    renderTraining(splits);
   }
 
   // ------------------------------------------------------------
@@ -450,62 +515,73 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     return m + ':' + (s < 10 ? '0' + s : s) + '/km';
   }
 
-  function renderTraining(split) {
-    var wrap = document.getElementById('trainingBody');
-    var link = document.getElementById('trainingLink');
+  function renderRunSection() {
+    var wp = storeGet('run:weekPlan');
+    var dow = (today.getDay() + 6) % 7; // 0=Mon .. 6=Sun
+    var entry = (Array.isArray(wp) && wp.length === 7) ? wp.find(function (e) { return e.dow === dow; }) : null;
+    if (!entry || entry.rest) return '<div class="empty-state">No run scheduled today.</div>';
+    return (
+      '<div class="stat-grid">' +
+        '<div class="stat"><div class="stat-num">' + fmtKm(entry.distanceKm) + '</div><div class="stat-label">Distance</div></div>' +
+        '<div class="stat"><div class="stat-num">' + fmtPace(entry.paceTargetSecPerKm) + '</div><div class="stat-label">Pace</div></div>' +
+        '<div class="stat"><div class="stat-num" style="font-size:15px;">' + escapeHtml(entry.hrZone || '—') + '</div><div class="stat-label">HR Zone</div></div>' +
+      '</div>' +
+      '<div class="training-note">' + escapeHtml(entry.type || 'Run') + (entry.purpose ? ' · ' + escapeHtml(entry.purpose) : '') + '</div>'
+    );
+  }
 
-    if (!split) {
-      wrap.innerHTML = '<div class="empty-state">No split planned for today.</div>';
-      link.href = 'main.html'; link.textContent = 'Plan your week →';
-      return;
-    }
-    if (split === 'rest') {
-      wrap.innerHTML = '<div class="empty-state">Rest day — recovery in progress.</div>';
-      link.href = 'gym.html'; link.textContent = 'Open Fitness →';
-      return;
-    }
-    if (split === 'run') {
-      var wp = storeGet('run:weekPlan');
-      var dow = (today.getDay() + 6) % 7; // 0=Mon .. 6=Sun
-      var entry = (Array.isArray(wp) && wp.length === 7) ? wp.find(function (e) { return e.dow === dow; }) : null;
-      if (!entry || entry.rest) {
-        wrap.innerHTML = '<div class="empty-state">No run scheduled today.</div>';
-      } else {
-        wrap.innerHTML =
-          '<div class="stat-grid">' +
-            '<div class="stat"><div class="stat-num">' + fmtKm(entry.distanceKm) + '</div><div class="stat-label">Distance</div></div>' +
-            '<div class="stat"><div class="stat-num">' + fmtPace(entry.paceTargetSecPerKm) + '</div><div class="stat-label">Pace</div></div>' +
-            '<div class="stat"><div class="stat-num" style="font-size:15px;">' + escapeHtml(entry.hrZone || '—') + '</div><div class="stat-label">HR Zone</div></div>' +
-          '</div>' +
-          '<div class="training-note">' + escapeHtml(entry.type || 'Run') + (entry.purpose ? ' · ' + escapeHtml(entry.purpose) : '') + '</div>';
-      }
-      link.href = 'running.html'; link.textContent = 'Log run →';
-      return;
-    }
-
-    // Gym day (push / pull / legs)
+  function renderGymSection(split) {
     var gym = storeGet('po_coach_v1');
     var unit = (gym && gym.units) || 'kg';
     var logsMap = (gym && gym.logs) || {};
     var exercises = (gym && Array.isArray(gym.exercises)) ? gym.exercises.filter(function (e) { return e.day === split; }) : [];
 
-    if (!exercises.length) {
-      wrap.innerHTML = '<div class="empty-state">No exercises set for ' + escapeHtml(split) + ' day.</div>';
-    } else {
-      wrap.innerHTML = '<ul class="ro-list">' + exercises.map(function (ex) {
-        var logs = logsMap[ex.id] || [];
-        var last = logs.length ? logs[logs.length - 1] : null;
-        var lastLabel;
-        if (last) {
-          lastLabel = ex.bw ? (last.reps + ' reps') : (last.weight + unit + ' × ' + last.reps);
-        } else {
-          lastLabel = ex.bw ? 'Not logged yet' : ((ex.startWeight || 0) + unit + ' (start)');
-        }
-        return '<li class="gm-row ex-row"><span class="ex-name">' + escapeHtml(ex.name) + '</span>' +
-          '<span class="row-meta">' + escapeHtml(lastLabel) + '</span></li>';
-      }).join('') + '</ul>';
+    if (!exercises.length) return '<div class="empty-state">No exercises set for ' + escapeHtml(split) + ' day.</div>';
+    return '<ul class="ro-list">' + exercises.map(function (ex) {
+      var logs = logsMap[ex.id] || [];
+      var last = logs.length ? logs[logs.length - 1] : null;
+      var lastLabel;
+      if (last) {
+        lastLabel = ex.bw ? (last.reps + ' reps') : (last.weight + unit + ' × ' + last.reps);
+      } else {
+        lastLabel = ex.bw ? 'Not logged yet' : ((ex.startWeight || 0) + unit + ' (start)');
+      }
+      return '<li class="gm-row ex-row"><span class="ex-name">' + escapeHtml(ex.name) + '</span>' +
+        '<span class="row-meta">' + escapeHtml(lastLabel) + '</span></li>';
+    }).join('') + '</ul>';
+  }
+
+  function renderTraining(splits) {
+    var wrap = document.getElementById('trainingBody');
+    var link = document.getElementById('trainingLink');
+
+    if (!splits.length) {
+      wrap.innerHTML = '<div class="empty-state">No split planned for today.</div>';
+      link.href = 'main.html'; link.textContent = 'Plan your week →';
+      return;
     }
-    link.href = 'gym.html'; link.textContent = 'Log workout →';
+    if (splits.length === 1 && splits[0] === 'rest') {
+      wrap.innerHTML = '<div class="empty-state">Rest day — recovery in progress.</div>';
+      link.href = 'gym.html'; link.textContent = 'Open Fitness →';
+      return;
+    }
+
+    var active = splits.filter(function (s) { return s !== 'rest'; });
+    if (active.length === 1) {
+      var only = active[0];
+      wrap.innerHTML = only === 'run' ? renderRunSection() : renderGymSection(only);
+      link.href = only === 'run' ? 'running.html' : 'gym.html';
+      link.textContent = only === 'run' ? 'Log run →' : 'Log workout →';
+      return;
+    }
+
+    // Multiple splits selected for today — stack each section with a label.
+    wrap.innerHTML = active.map(function (s) {
+      var section = s === 'run' ? renderRunSection() : renderGymSection(s);
+      return '<div class="training-split-group"><div class="training-split-heading">' +
+        escapeHtml(SPLIT_LABELS[s]) + '</div>' + section + '</div>';
+    }).join('');
+    link.href = 'main.html'; link.textContent = 'View plan →';
   }
 
   // ------------------------------------------------------------
@@ -640,11 +716,34 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
   }
 
   // ------------------------------------------------------------
-  renderHeader();
-  renderWater();
-  renderTodos();
-  renderFinance();
-  renderStreaks();
+  function renderAll() {
+    renderQuote();
+    renderHeader();
+    renderWater();
+    renderTodos();
+    renderFinance();
+    renderStreaks();
+  }
+  renderAll();
+  window.addEventListener('storage', renderAll);
+
+  // This page never writes localStorage — it only reads keys owned by
+  // the other pages — but it still needs each of their cloud-sync
+  // channels registered so a change made on another device (e.g. desktop)
+  // lands here without having to open those pages first on this device.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({ appKey: 'goals', syncedPrefixes: ['goals:'], onApplied: renderAll });
+    initCloudSync({ appKey: 'weekplan', syncedPrefixes: ['weekplan:'], onApplied: renderAll });
+    initCloudSync({ appKey: 'water', syncedKeys: ['po_water_v1'], onApplied: renderAll });
+    initCloudSync({ appKey: 'finance', syncedKeys: ['subs'], onApplied: renderAll });
+    initCloudSync({ appKey: 'running', syncedPrefixes: ['run:'], onApplied: renderAll });
+    initCloudSync({
+      appKey: 'po-coach',
+      syncedKeys: ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos'],
+      onApplied: renderAll
+    });
+  });
 })();
 </script>
 </body>

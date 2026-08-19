@@ -703,6 +703,7 @@ html, body {
   // STATE
   // ============================================================
   const LS_KEY = 'po_water_v1';
+  let didMigrateTarget = false;
   function loadState() {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -724,12 +725,25 @@ html, body {
     // and just set a flat daily goal in ml (e.g. "3 litres, full stop").
     s.useManualTarget = !!s.useManualTarget;
     s.manualTargetMl = (s.manualTargetMl != null) ? s.manualTargetMl : 3000;
+    // One-time migration: switch the indicator over to a flat 500ml-bottle
+    // target of 3L/day (6 bottles) instead of the personalized calculator.
+    // Runs once per device — after this, Settings' auto/manual toggle is
+    // free to change it again.
+    if (!s.targetConfigV2) {
+      s.unit = 'bottle';
+      s.bottleMl = 500;
+      s.useManualTarget = true;
+      s.manualTargetMl = 3000;
+      s.targetConfigV2 = true;
+      didMigrateTarget = true;
+    }
     return s;
   }
   function saveState() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
   }
   let state = loadState();
+  if (didMigrateTarget) saveState();
   $('appTitle').textContent = CONFIG.appTitle || 'Water Coach';
 
   // Helpers
