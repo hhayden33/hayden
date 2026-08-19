@@ -25,6 +25,15 @@
   border-bottom: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
+.topbar-split-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; margin-right: auto;
+  border-radius: 999px; border: 1px solid currentColor;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em;
+  text-decoration: none; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
 .topbar-water-wrap { display: flex; align-items: stretch; }
 .topbar-water-pill {
   display: inline-flex; align-items: center; gap: 8px;
@@ -118,6 +127,7 @@ body.has-bottombar {
 }
 @media (max-width: 480px) {
   .topbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
+  .topbar-split-badge { padding: 7px 11px; font-size: 11.5px; }
   .topbar-water-pill { padding: 8px 11px; gap: 6px; }
   .topbar-pill-count { font-size: 12px; }
   .topbar-water-add { width: 40px; font-size: 18px; }
@@ -155,6 +165,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
 
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
+  <a href="main.html#wkCard" class="topbar-split-badge" id="topbarSplitBadge" aria-label="Today's training"></a>
   <div class="topbar-water-wrap">
     <a href="main.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
       <span class="topbar-pill-dot"></span>
@@ -221,6 +232,56 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
   }
+
+  // -------- Today's split badge --------
+  // Single source of truth: the 'weekplan:<ISO-week>' key main.html's
+  // 7-Day Planner Split control reads/writes. Shown here so every page
+  // agrees on what today's split is (this used to drift — gym.html had
+  // its own separate day-rotation system that could disagree with
+  // main.html's, showing conflicting "today" splits across pages).
+  const SPLIT_META = {
+    push: { icon: '🏋️', label: 'Push Day', color: '#20A5A0' },
+    pull: { icon: '🏋️', label: 'Pull Day', color: '#20A5A0' },
+    legs: { icon: '🏋️', label: 'Legs Day', color: '#20A5A0' },
+    run:  { icon: '🏃', label: 'Run Day',  color: '#A83FAF' },
+    rest: { icon: '😴', label: 'Rest Day', color: '#687580' }
+  };
+  function getTodaySplit() {
+    try {
+      const now = new Date();
+      const monday = new Date(now);
+      const dow = monday.getDay();
+      monday.setDate(monday.getDate() + (dow === 0 ? -6 : 1 - dow));
+      monday.setHours(0, 0, 0, 0);
+      const u = new Date(Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate()));
+      const dayNum = u.getUTCDay() || 7;
+      u.setUTCDate(u.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(u.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((u - yearStart) / 86400000) + 1) / 7);
+      const isoWeekKey = u.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+      const plan = JSON.parse(localStorage.getItem('weekplan:' + isoWeekKey)) || {};
+      return plan[calendarDateKey()] || null;
+    } catch (e) { return null; }
+  }
+  function hexToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+  function renderSplitBadge() {
+    const badge = document.getElementById('topbarSplitBadge');
+    if (!badge) return;
+    const meta = SPLIT_META[getTodaySplit()] || { icon: '—', label: 'No Split Set', color: '#687580' };
+    badge.setAttribute('aria-label', "Today's training: " + meta.label);
+    badge.style.color = meta.color;
+    badge.style.background = hexToRgba(meta.color, 0.12);
+    badge.textContent = meta.icon + ' ' + meta.label;
+  }
+  // Exposed for main.html's own Split control (a same-page click, so the
+  // 'storage' event below won't fire) to call right after it changes today's
+  // split, so this badge updates instantly instead of waiting for the next
+  // periodic render.
+  window.refreshTodaySplitBadge = renderSplitBadge;
   function getWaterProgress() {
     let state = null;
     try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
@@ -266,6 +327,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     if (status === 'warn' || status === 'miss') pillEl.classList.add(status);
   }
   function render() {
+    renderSplitBadge();
     const waterEl = document.getElementById('topbarWater');
     if (!waterEl) return;
     const w = getWaterProgress();

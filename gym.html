@@ -30,20 +30,6 @@ const CONFIG = {
     { id: "legs", name: "Legs" }
   ],
 
-  // Split rotation — the order your training days cycle through. Use day
-  // ids from `days` above, plus "rest" for off-days. The pill at the top
-  // of the app reads this + splitAnchor to compute "what day is today".
-  splitRotation: ["push", "pull", "legs", "rest"],
-
-  // Anchor: pair a real calendar date with which split day fell on it.
-  // The rotation advances from this point. Set `date` to a recent day
-  // when you knew what split you were on, and `splitId` to that day.
-  // Edit this if your split drifts.
-  splitAnchor: {
-    date: "2026-05-12",
-    splitId: "rest"
-  },
-
   // Progression rule: hit this many reps on the top set → coach tells you
   // to add weight next session. Lower this to be more aggressive (e.g. 6),
   // raise it for more volume bias (e.g. 10).
@@ -209,7 +195,6 @@ img, video, canvas, svg { max-width: 100%; }
 .po-day-date { color: var(--text-2); }
 .po-day-sep { color: var(--text-4); }
 .po-day-split { color: var(--good); font-weight: 800; }
-.po-day-split.is-rest { color: #087CA3; }
 
 .po-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -619,55 +604,6 @@ img, video, canvas, svg { max-width: 100%; }
   -webkit-tap-highlight-color: transparent;
 }
 .po-add-row-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-1); }
-
-/* Rotation editor list */
-.rot-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.rot-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto;
-  gap: 6px; align-items: center;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  transition: border-color 0.15s, background 0.15s;
-}
-.rot-row.is-today {
-  background: linear-gradient(180deg, rgba(32,165,160,0.10), rgba(255,255,255,0.025));
-  border-color: rgba(32,165,160,0.30);
-}
-.rot-row-num {
-  font-size: 11px; color: var(--text-3);
-  font-family: var(--font-mono); font-weight: 700;
-  width: 18px; text-align: center;
-}
-.rot-row input {
-  background: transparent; border: none; outline: none;
-  color: var(--text-1); font-family: inherit; font-size: 13px;
-  padding: 4px 0; min-width: 0;
-}
-.rot-row .rot-mini {
-  background: transparent; border: none;
-  color: var(--text-3); font-size: 14px;
-  cursor: pointer; padding: 4px 8px;
-  -webkit-tap-highlight-color: transparent;
-}
-.rot-row .rot-mini:hover { color: var(--text-1); }
-.rot-row .rot-mini-del:hover { color: var(--bad); }
-.rot-row .rot-today-tag {
-  font-size: 8px; font-weight: 800; letter-spacing: 0.10em;
-  color: var(--good); padding: 2px 6px; border-radius: 999px;
-  background: rgba(32,165,160,0.16);
-}
-.rot-row .rot-today-btn {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  color: var(--text-3); font-size: 9px; font-weight: 700;
-  letter-spacing: 0.06em; padding: 4px 8px; border-radius: 999px;
-  cursor: pointer; text-transform: uppercase;
-  -webkit-tap-highlight-color: transparent;
-}
-.rot-row .rot-today-btn:hover { color: var(--good); border-color: rgba(32,165,160,0.30); }
 
 @media (max-width: 480px) {
   /* === Mobile / iPhone polish === */
@@ -1262,7 +1198,7 @@ img, video, canvas, svg { max-width: 100%; }
 <body>
 
 <div class="po-shell">
-  <button class="po-day-pill" type="button" id="dayPill" title="Tap to switch the day filter to today's split">
+  <button class="po-day-pill" type="button" id="dayPill" title="Today's split is set on the Main dashboard — tap to open it">
     <span class="po-day-date" id="dayPillDate">—</span>
     <span class="po-day-sep">·</span>
     <span class="po-day-split" id="dayPillSplit">—</span>
@@ -1616,23 +1552,6 @@ img, video, canvas, svg { max-width: 100%; }
   </div>
 </div>
 
-<!-- Rotation editor modal -->
-<div class="po-modal-bg" id="rotModalBg">
-  <div class="po-modal">
-    <h3>Edit split rotation</h3>
-    <p style="font-size:12px;color:var(--text-3);margin:-6px 0 14px;line-height:1.45;">
-      Days cycle in this order, repeating forever. Today is whichever entry is highlighted.
-      Use <strong>Today is →</strong> to jump the cycle to a different starting day.
-    </p>
-    <div class="rot-list" id="rotList"></div>
-    <button class="po-add-row-btn" id="rotAddBtn">+ Add day</button>
-    <div class="po-modal-actions">
-      <button class="po-btn-secondary" id="rotCancel">Cancel</button>
-      <button class="po-btn-primary" id="rotSave">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- Settings Modal -->
 <div class="po-modal-bg" id="setModalBg">
   <div class="po-modal" style="max-width: 480px;">
@@ -1696,30 +1615,6 @@ img, video, canvas, svg { max-width: 100%; }
     s.exercises = Array.isArray(s.exercises) ? s.exercises : buildDefaultExercises();
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};
     s.filterDay = s.filterDay || s.days[0].id;
-    // Split rotation lives in state so the user can edit it via the pill modal.
-    // Stored as a plain array of names (e.g. ["Push", "Pull", "Legs", "Rest"]).
-    if (!Array.isArray(s.splitRotation) || !s.splitRotation.length) {
-      s.splitRotation = (CONFIG.splitRotation || ['Push', 'Pull', 'Legs', 'Rest']).map(x =>
-        // CONFIG used ids — map id → display name where possible
-        (CONFIG.days || []).find(d => d.id === x) ? (CONFIG.days.find(d => d.id === x).name) :
-        (x === 'rest' ? 'Rest' : x.charAt(0).toUpperCase() + x.slice(1))
-      );
-    }
-    if (!s.splitAnchor || !s.splitAnchor.date || s.splitAnchor.index == null) {
-      // Map old anchor-by-id to new anchor-by-index, or default to today=index 0.
-      const oldId = (CONFIG.splitAnchor && CONFIG.splitAnchor.splitId) || null;
-      let idx = 0;
-      if (oldId) {
-        const oldName = (CONFIG.days || []).find(d => d.id === oldId);
-        const targetName = oldName ? oldName.name : (oldId === 'rest' ? 'Rest' : oldId);
-        const found = s.splitRotation.findIndex(n => n.toLowerCase() === targetName.toLowerCase());
-        if (found >= 0) idx = found;
-      }
-      s.splitAnchor = {
-        date: (CONFIG.splitAnchor && CONFIG.splitAnchor.date) || new Date().toISOString().slice(0, 10),
-        index: idx
-      };
-    }
     return s;
   }
   function saveState() {
@@ -1958,21 +1853,29 @@ img, video, canvas, svg { max-width: 100%; }
       });
     });
   }
-  // Compute today's split from state.splitRotation + state.splitAnchor.
-  // Returns the rotation entry name (e.g. "Push" or "Rest") AND the index.
-  function todaySplit() {
+  // Today's split — read from the SAME 'weekplan:<ISO-week>' localStorage
+  // key that main.html's 7-Day Planner Split control writes, so gym.html
+  // never disagrees with main.html about what today is. (Used to be its
+  // own independent CONFIG.splitRotation cycle — that's what let this
+  // page and main.html show two different "today" splits at once.)
+  function todaySplitId() {
     try {
-      const rot = state.splitRotation;
-      if (!rot || !rot.length) return { name: '—', index: 0 };
-      const a = new Date(state.splitAnchor.date);
-      const t = new Date();
-      a.setHours(0,0,0,0); t.setHours(0,0,0,0);
-      const diffDays = Math.round((t - a) / 86400000);
-      const idx = ((state.splitAnchor.index + diffDays) % rot.length + rot.length) % rot.length;
-      return { name: rot[idx], index: idx };
-    } catch (e) {
-      return { name: (state.splitRotation && state.splitRotation[0]) || '—', index: 0 };
-    }
+      const now = new Date();
+      const monday = new Date(now);
+      const dow = monday.getDay();
+      monday.setDate(monday.getDate() + (dow === 0 ? -6 : 1 - dow));
+      monday.setHours(0, 0, 0, 0);
+      const u = new Date(Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate()));
+      const dayNum = u.getUTCDay() || 7;
+      u.setUTCDate(u.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(u.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((u - yearStart) / 86400000) + 1) / 7);
+      const isoWeekKey = u.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+      const pad = n => String(n).padStart(2, '0');
+      const todayKey = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+      const plan = JSON.parse(localStorage.getItem('weekplan:' + isoWeekKey)) || {};
+      return plan[todayKey] || null;
+    } catch (e) { return null; }
   }
   function todayDateLabel() {
     const d = new Date();
@@ -1980,17 +1883,14 @@ img, video, canvas, svg { max-width: 100%; }
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     return dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
   }
-  function isRestName(name) { return /^rest\b/i.test(name || ''); }
-  function splitLabel(name) {
-    if (!name) return '—';
-    return (isRestName(name) ? 'REST DAY' : (name + ' DAY')).toUpperCase();
-  }
+  const SPLIT_PILL_LABELS = { push: 'PUSH DAY', pull: 'PULL DAY', legs: 'LEGS DAY', run: 'RUN DAY', rest: 'REST DAY' };
+  const SPLIT_PILL_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
   function renderDayPill() {
-    const split = todaySplit();
+    const splitId = todaySplitId();
     $('dayPillDate').textContent = todayDateLabel();
     const splitEl = $('dayPillSplit');
-    splitEl.textContent = splitLabel(split.name);
-    splitEl.classList.toggle('is-rest', isRestName(split.name));
+    splitEl.textContent = SPLIT_PILL_LABELS[splitId] || 'NOT PLANNED';
+    splitEl.style.color = SPLIT_PILL_COLORS[splitId] || '#687580';
   }
 
   // Build the rep buttons based on the current exercise's repMin/repMax.
@@ -2201,19 +2101,17 @@ img, video, canvas, svg { max-width: 100%; }
   // ============================================================
   // EVENT WIRING
   // ============================================================
-  // Tap the day pill → opens the rotation editor so you can rename /
-  // reorder / add / delete entries (e.g. switch Push/Pull/Legs/Rest to
-  // Legs/Arms/Back/Chest). Long-press isn't a thing on web reliably so
-  // this is the only action — the day filter still auto-snaps on load.
-  $('dayPill').addEventListener('click', () => openRotationModal());
+  // Tap the day pill → jump to main.html's 7-Day Planner, since that's
+  // the only place today's split gets set now.
+  $('dayPill').addEventListener('click', () => { window.location.href = 'main.html#wkCard'; });
 
-  // First-load nicety: if today's split matches one of the day filters
-  // by name (case-insensitive) and the user hasn't manually picked one,
-  // pre-select that day.
+  // First-load nicety: if today's split (from main.html's weekplan) is a
+  // lift day, pre-select that day filter — unless the user already picked
+  // one manually this session.
   (function autoSelectTodaySplit() {
-    const s = todaySplit();
-    if (!s.name || isRestName(s.name) || state._userPickedDay) return;
-    const match = state.days.find(d => d.name.toLowerCase() === s.name.toLowerCase());
+    const splitId = todaySplitId();
+    if (!splitId || state._userPickedDay) return;
+    const match = state.days.find(d => d.id === splitId);
     if (match) state.filterDay = match.id;
   })();
 
@@ -2351,105 +2249,6 @@ img, video, canvas, svg { max-width: 100%; }
     editingExId = null;
     saveState();
     $('exModalBg').classList.remove('show');
-    renderAll();
-  });
-
-  // ============================================================
-  // ROTATION EDITOR (tap the day pill)
-  // Edit the split cycle in place: rename, reorder, add, delete.
-  // "Today is →" jumps the cycle anchor to any entry, so you can change
-  // both the order AND which day in that order is "today".
-  // ============================================================
-  let rotDraft = null;          // working copy while modal is open
-  let rotDraftTodayIdx = 0;     // which entry IS today in the draft
-
-  function openRotationModal() {
-    rotDraft = (state.splitRotation || []).slice();
-    if (!rotDraft.length) rotDraft = ['Push', 'Pull', 'Legs', 'Rest'];
-    rotDraftTodayIdx = todaySplit().index;
-    if (rotDraftTodayIdx >= rotDraft.length) rotDraftTodayIdx = 0;
-    renderRotList();
-    $('rotModalBg').classList.add('show');
-  }
-
-  function renderRotList() {
-    const list = $('rotList');
-    list.innerHTML = rotDraft.map((name, i) => {
-      const isToday = (i === rotDraftTodayIdx);
-      return '<div class="rot-row ' + (isToday ? 'is-today' : '') + '" data-i="' + i + '">'
-        + '<span class="rot-row-num">' + (i + 1) + '</span>'
-        + '<input type="text" value="' + escape(name) + '" placeholder="e.g. Arms" maxlength="30">'
-        + (isToday
-            ? '<span class="rot-today-tag">TODAY</span>'
-            : '<button type="button" class="rot-today-btn" data-action="today">Today is →</button>')
-        + '<button type="button" class="rot-mini" data-action="up"   aria-label="Move up">↑</button>'
-        + '<button type="button" class="rot-mini" data-action="down" aria-label="Move down">↓</button>'
-        + '<button type="button" class="rot-mini rot-mini-del" data-action="del" aria-label="Delete">×</button>'
-        + '</div>';
-    }).join('');
-    list.querySelectorAll('.rot-row').forEach(row => {
-      const i = parseInt(row.dataset.i, 10);
-      row.querySelector('input').addEventListener('input', e => { rotDraft[i] = e.target.value; });
-      const upBtn = row.querySelector('[data-action="up"]');
-      const dnBtn = row.querySelector('[data-action="down"]');
-      const delBtn = row.querySelector('[data-action="del"]');
-      const todayBtn = row.querySelector('[data-action="today"]');
-      if (upBtn) upBtn.addEventListener('click', () => {
-        if (i === 0) return;
-        [rotDraft[i-1], rotDraft[i]] = [rotDraft[i], rotDraft[i-1]];
-        if (rotDraftTodayIdx === i)   rotDraftTodayIdx = i - 1;
-        else if (rotDraftTodayIdx === i - 1) rotDraftTodayIdx = i;
-        renderRotList();
-      });
-      if (dnBtn) dnBtn.addEventListener('click', () => {
-        if (i >= rotDraft.length - 1) return;
-        [rotDraft[i+1], rotDraft[i]] = [rotDraft[i], rotDraft[i+1]];
-        if (rotDraftTodayIdx === i)   rotDraftTodayIdx = i + 1;
-        else if (rotDraftTodayIdx === i + 1) rotDraftTodayIdx = i;
-        renderRotList();
-      });
-      if (delBtn) delBtn.addEventListener('click', () => {
-        if (rotDraft.length <= 1) { alert('Need at least one day in the cycle.'); return; }
-        rotDraft.splice(i, 1);
-        if (rotDraftTodayIdx >= rotDraft.length) rotDraftTodayIdx = rotDraft.length - 1;
-        else if (i < rotDraftTodayIdx) rotDraftTodayIdx--;
-        renderRotList();
-      });
-      if (todayBtn) todayBtn.addEventListener('click', () => {
-        rotDraftTodayIdx = i;
-        renderRotList();
-      });
-    });
-  }
-
-  $('rotAddBtn').addEventListener('click', () => {
-    rotDraft.push('New day');
-    renderRotList();
-    // Focus the newly added input
-    setTimeout(() => {
-      const inputs = $('rotList').querySelectorAll('input');
-      const last = inputs[inputs.length - 1];
-      if (last) { last.focus(); last.select(); }
-    }, 30);
-  });
-  $('rotCancel').addEventListener('click', () => {
-    $('rotModalBg').classList.remove('show');
-    rotDraft = null;
-  });
-  $('rotSave').addEventListener('click', () => {
-    // Trim + drop empty entries
-    const cleaned = rotDraft.map(s => (s || '').trim()).filter(Boolean);
-    if (!cleaned.length) { alert('Need at least one day in the cycle.'); return; }
-    let newTodayIdx = rotDraftTodayIdx;
-    if (newTodayIdx >= cleaned.length) newTodayIdx = 0;
-    state.splitRotation = cleaned;
-    state.splitAnchor = {
-      date: new Date().toISOString().slice(0, 10),
-      index: newTodayIdx
-    };
-    saveState();
-    $('rotModalBg').classList.remove('show');
-    rotDraft = null;
     renderAll();
   });
 

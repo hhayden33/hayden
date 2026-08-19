@@ -1953,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', function () {
       renderSeg();
       renderChart();
       renderTodoList();
+      if (typeof window.refreshTodaySplitBadge === 'function') window.refreshTodaySplitBadge();
     }
 
     function goToWeek(offset) {
@@ -1979,6 +1980,7 @@ document.addEventListener('DOMContentLoaded', function () {
       renderStrip();
       renderSeg();
       renderChart();
+      if (typeof window.refreshTodaySplitBadge === 'function') window.refreshTodaySplitBadge();
     });
 
     // Pointer-drag-to-scroll for desktop/mouse users (touch already scrolls natively).
@@ -2016,100 +2018,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   })();
-});
-</script>
-<script>
-// ===================================================================
-// TODAY'S SPLIT BADGE — sits in the empty top-left of the topbar
-// (topbar.js injects that row with justify-content:flex-end, so the
-// left side is free). Reads the exact same 'weekplan:<ISO-week>' key
-// the 7-Day Planner's Split control above reads/writes — no separate
-// rotation logic, just the same data read a second time. Read-only:
-// tapping it jumps to #wkCard, it never writes anything.
-// ===================================================================
-document.addEventListener('DOMContentLoaded', function () {
-  'use strict';
-
-  var WK_PREFIX = 'weekplan:';
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
-  function mondayOf(date) {
-    var d = new Date(date);
-    var day = d.getDay();
-    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-  function isoWeekKey(date) {
-    var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    var dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    return d.getUTCFullYear() + '-W' + pad(weekNo);
-  }
-  function getTodaySplit() {
-    var today = new Date();
-    var storeKey = WK_PREFIX + isoWeekKey(mondayOf(today));
-    var plan;
-    try { plan = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch (e) { plan = {}; }
-    return plan[ymd(today)] || null;
-  }
-  function hexToRgba(hex, alpha) {
-    var h = hex.replace('#', '');
-    var r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
-  }
-
-  var SPLIT_META = {
-    push: { icon: '🏋️', label: 'Push Day', color: '#20A5A0' },
-    pull: { icon: '🏋️', label: 'Pull Day', color: '#20A5A0' },
-    legs: { icon: '🏋️', label: 'Legs Day', color: '#20A5A0' },
-    run:  { icon: '🏃', label: 'Run Day',  color: '#A83FAF' },
-    rest: { icon: '😴', label: 'Rest Day', color: '#687580' }
-  };
-
-  function buildBadge() {
-    var meta = SPLIT_META[getTodaySplit()] || { icon: '—', label: 'No Split Set', color: '#687580' };
-
-    var style = document.createElement('style');
-    style.textContent =
-      '#todaySplitBadge {' +
-      '  display: inline-flex; align-items: center; gap: 6px;' +
-      '  padding: 8px 14px; margin-right: auto;' +
-      '  border-radius: 999px; border: 1px solid currentColor;' +
-      '  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;' +
-      '  font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em;' +
-      '  text-decoration: none; white-space: nowrap;' +
-      '  -webkit-tap-highlight-color: transparent;' +
-      '}' +
-      '@media (max-width: 480px) { #todaySplitBadge { padding: 7px 11px; font-size: 11.5px; } }';
-    document.head.appendChild(style);
-
-    var badge = document.createElement('a');
-    badge.id = 'todaySplitBadge';
-    badge.href = '#wkCard';
-    badge.setAttribute('aria-label', "Today's training: " + meta.label);
-    badge.style.color = meta.color;
-    badge.style.background = hexToRgba(meta.color, 0.12);
-    badge.textContent = meta.icon + ' ' + meta.label;
-    return badge;
-  }
-
-  function insertBadge() {
-    var topbar = document.getElementById('topbar');
-    if (!topbar || document.getElementById('todaySplitBadge')) return false;
-    topbar.insertBefore(buildBadge(), topbar.firstChild);
-    return true;
-  }
-
-  // topbar.js is deferred and injects #topbar on its own DOMContentLoaded
-  // listener, which may run after this one — wait for it if it's not there yet.
-  if (insertBadge()) return;
-  var observer = new MutationObserver(function () {
-    if (insertBadge()) observer.disconnect();
-  });
-  observer.observe(document.body, { childList: true });
 });
 </script>
 </body>
