@@ -387,6 +387,29 @@ body::after {
     </div>
   </div>
 
+  <!-- ===== 1b. Fitness & Recovery (from Garmin) ===== -->
+  <div class="section">
+    <div class="section-title">Fitness &amp; Recovery</div>
+    <div class="gm-card">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow">Garmin · VO2 Max</div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="runVo2Max">—</span>
+          </div>
+        </div>
+        <span class="gm-streak" id="runGarminSynced">Not synced yet</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="runTrainingStatus">—</div><div class="stat-label">Training Status</div></div>
+        <div class="stat"><div class="stat-num" id="runTrainingLoad">—</div><div class="stat-label">Training Load</div></div>
+        <div class="stat"><div class="stat-num" id="runRestingHr">—</div><div class="stat-label">Resting HR</div></div>
+        <div class="stat"><div class="stat-num" id="runMonthDist">—</div><div class="stat-label">This Month</div></div>
+        <div class="stat"><div class="stat-num" id="runLongestRecent">—</div><div class="stat-label">Longest Recent Run</div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 2. Today's Training (primary) ===== -->
   <div class="section">
     <div class="section-title">Today's Training</div>
@@ -706,6 +729,7 @@ body::after {
     return Array.isArray(wp) && wp.length === 7 ? wp : defaultWeekPlan();
   }
   function runs() { return load('run:runs', []); }
+  function garminSnapshot() { return load('run:garminSnapshot', null); }
 
   // =============================================================
   // FORMAT HELPERS
@@ -847,6 +871,56 @@ body::after {
     const badge = document.getElementById('runStatusBadge');
     badge.className = 'run-badge ' + status;
     badge.textContent = STATUS_LABEL[status] || status;
+  }
+
+  // =============================================================
+  // RENDER — Fitness & Recovery (Garmin)
+  // Everything here reads run:garminSnapshot (wellness/fitness metrics
+  // that don't belong to a single run) plus run:runs (for the two
+  // rollups Garmin doesn't report directly: this month's distance and
+  // the longest run in the last 90 days). Populated by garmin-sync.py —
+  // if that hasn't run yet, the card just shows placeholders like every
+  // other empty section on this page.
+  // =============================================================
+  const TRAINING_STATUS_LABEL = {
+    PRODUCTIVE: 'Productive', PEAKING: 'Peaking', MAINTAINING: 'Maintaining',
+    RECOVERY: 'Recovery', DETRAINING: 'Detraining', OVERREACHING: 'Overreaching',
+    UNPRODUCTIVE: 'Unproductive', STRAINED: 'Strained'
+  };
+  function monthDistanceKm() {
+    const now = new Date();
+    const prefix = now.getFullYear() + '-' + pad2(now.getMonth() + 1);
+    return runs().filter(r => (r.date || '').indexOf(prefix) === 0).reduce((s, r) => s + (r.distanceKm || 0), 0);
+  }
+  function longestRecentKm(days) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffKey = dateKey(cutoff);
+    const recent = runs().filter(r => r.date >= cutoffKey);
+    if (!recent.length) return null;
+    return recent.reduce((m, r) => Math.max(m, r.distanceKm || 0), 0);
+  }
+  function renderGarminCard() {
+    const snap = garminSnapshot();
+    document.getElementById('runVo2Max').textContent = (snap && snap.vo2Max) ? snap.vo2Max : '—';
+    document.getElementById('runTrainingStatus').textContent = snap && snap.trainingStatus
+      ? (TRAINING_STATUS_LABEL[snap.trainingStatus] || snap.trainingStatus) : '—';
+    document.getElementById('runTrainingLoad').textContent = (snap && snap.trainingLoadAcute != null)
+      ? Math.round(snap.trainingLoadAcute) + (snap.acwrStatus ? ' · ' + snap.acwrStatus : '') : '—';
+    document.getElementById('runRestingHr').textContent = (snap && snap.restingHr) ? snap.restingHr + ' bpm' : '—';
+
+    const monthKm = monthDistanceKm();
+    document.getElementById('runMonthDist').textContent = monthKm > 0 ? fmtKm(monthKm) : '—';
+    const longest = longestRecentKm(90);
+    document.getElementById('runLongestRecent').textContent = longest ? fmtKm(longest) : '—';
+
+    const syncedEl = document.getElementById('runGarminSynced');
+    if (snap && snap.asOfDate) {
+      const d = new Date(snap.asOfDate + 'T00:00:00');
+      syncedEl.textContent = 'Synced ' + d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+    } else {
+      syncedEl.textContent = 'Not synced yet';
+    }
   }
 
   // =============================================================
@@ -1060,7 +1134,12 @@ body::after {
     }
     return out;
   }
-  function sortedRuns() { return runs().slice().sort((a, b) => a.date.localeCompare(b.date)); }
+  // Sorts by date, then by time-of-day where known (Garmin runs carry it;
+  // manual entries don't, so they sort to the start of their day) — needed
+  // because Garmin often logs a warmup/main/cooldown as separate same-date
+  // activities, which date-only sorting can't order correctly.
+  function runSortKey(r) { return r.date + ' ' + (r.time || '00:00:00'); }
+  function sortedRuns() { return runs().slice().sort((a, b) => runSortKey(a).localeCompare(runSortKey(b))); }
   function paceSeries(n) {
     return sortedRuns().filter(r => r.distanceKm > 0 && r.durationSec > 0).slice(-n).map(r => r.durationSec / r.distanceKm);
   }
@@ -1155,6 +1234,7 @@ body::after {
   // =============================================================
   function renderAll() {
     renderOverview();
+    renderGarminCard();
     renderToday();
     renderWeek();
     renderPerformance();
@@ -1227,7 +1307,9 @@ body::after {
       '<div class="run-detail-row"><span class="label">Duration</span><span class="val">' + fmtDuration(r.durationSec) + '</span></div>' +
       '<div class="run-detail-row"><span class="label">Avg Pace</span><span class="val">' + (pace ? fmtPace(pace) : '—') + '</span></div>' +
       '<div class="run-detail-row"><span class="label">Avg Heart Rate</span><span class="val">' + (r.avgHr ? r.avgHr + ' bpm' : '—') + '</span></div>' +
+      (r.maxHr ? '<div class="run-detail-row"><span class="label">Max Heart Rate</span><span class="val">' + r.maxHr + ' bpm</span></div>' : '') +
       '<div class="run-detail-row"><span class="label">Elevation Gain</span><span class="val">' + (r.elevationM ? Math.round(r.elevationM) + ' m' : '—') + '</span></div>' +
+      (r.trainingLoad ? '<div class="run-detail-row"><span class="label">Training Load</span><span class="val">' + r.trainingLoad + '</span></div>' : '') +
       '<div class="run-detail-row"><span class="label">Source</span><span class="val">' + (r.source || 'manual') + '</span></div>' +
       (r.notes ? '<div class="run-detail-row" style="flex-direction:column;align-items:flex-start;gap:6px;"><span class="label">Notes</span><span class="val" style="font-weight:500;white-space:pre-wrap;text-align:left;">' + escapeHtml(r.notes) + '</span></div>' : '');
     openModal(runDetailModalBg);
