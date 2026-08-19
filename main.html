@@ -784,15 +784,12 @@ body::after {
 .water-iframe {
   display: block;
   width: 100%;
-  height: 880px;
+  height: 600px; /* placeholder until JS measures real content height below */
   border: 0;
   background: transparent;
   border-radius: 16px;
   overflow: hidden;
   color-scheme: dark;
-}
-@media (max-width: 480px) {
-  .water-iframe { height: 780px; }
 }
 
 </style>
@@ -966,11 +963,47 @@ body::after {
   <div class="section" id="water">
     <div class="section-title">Water Tracker</div>
     <section class="water-embed">
-      <iframe src="po-water.html" class="water-iframe" loading="lazy" title="Water Tracker"></iframe>
+      <iframe src="po-water.html" class="water-iframe" id="waterIframe" loading="lazy" title="Water Tracker"></iframe>
     </section>
   </div>
 
 </div>
+
+<script>
+// Water Tracker embed used to be a fixed-height box with its own internal
+// scrollbar (a "page inside a page"). Same-origin, so instead we measure
+// the embedded page's real content height and grow the iframe to match —
+// it then scrolls as part of the normal page, no nested scroll area.
+document.addEventListener('DOMContentLoaded', function () {
+  var iframe = document.getElementById('waterIframe');
+  if (!iframe) return;
+
+  function resize() {
+    try {
+      var doc = iframe.contentDocument;
+      if (!doc || !doc.documentElement) return;
+      iframe.style.height = doc.documentElement.scrollHeight + 'px';
+    } catch (e) {}
+  }
+
+  iframe.addEventListener('load', function () {
+    try {
+      var doc = iframe.contentDocument;
+      // po-water.html sets html,body { min-height: 100vh } so it always
+      // fills at least one screen standalone — inside an iframe that
+      // fights the measurement (100vh = the iframe's own current height,
+      // a circular dependency). Neutralize it just in this embedded copy.
+      var style = doc.createElement('style');
+      style.textContent = 'html, body { min-height: 0 !important; }';
+      doc.head.appendChild(style);
+      resize();
+      if (doc.body && window.ResizeObserver) {
+        new ResizeObserver(resize).observe(doc.body);
+      }
+    } catch (e) {}
+  });
+});
+</script>
 
 <script>
 (function () {
@@ -1637,6 +1670,20 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!MUSCLE_CONFIG[k].accent) MUSCLE_CONFIG[k].accent = 'success';
     });
 
+    // A day's plan value used to be a single split string. It's now an
+    // array so a day can be e.g. ['push', 'run']. This normalizes either
+    // shape (including old data already saved as a bare string) to an array.
+    function normalizeSplits(v) {
+      if (!v) return [];
+      return Array.isArray(v) ? v : [v];
+    }
+    function hexToRgba(hex, alpha) {
+      const h = hex.replace('#', '');
+      const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+    const SPLIT_TAG_COLORS = { push: '#087CA3', pull: '#20A5A0', legs: '#B98AE0', run: '#A83FAF' };
+
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
     function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
     function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
@@ -1706,6 +1753,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function loadRunPlanParts(dateKey) {
       try {
+        // An actual logged run for this date (running.html's "Log a Run")
+        // beats the recurring weekly template — it's the real workout,
+        // notes included, not just what was planned.
+        const runsRaw = localStorage.getItem('run:runs');
+        if (runsRaw) {
+          const list = JSON.parse(runsRaw);
+          if (Array.isArray(list)) {
+            const logged = list.find(function (r) { return r.date === dateKey; });
+            if (logged) {
+              const parts = [logged.type];
+              const km = fmtKm(logged.distanceKm);
+              if (km) parts.push(km);
+              if (logged.distanceKm > 0 && logged.durationSec > 0) {
+                const pace = fmtPace(logged.durationSec / logged.distanceKm);
+                if (pace) parts.push(pace);
+              }
+              if (logged.notes) parts.push('"' + logged.notes + '"');
+              return parts;
+            }
+          }
+        }
         const raw = localStorage.getItem('run:weekPlan');
         if (!raw) return null;
         const wp = JSON.parse(raw);
@@ -1861,9 +1929,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const tagEl = document.createElement('div');
         tagEl.className = 'wk-day-tag';
-        if (split) {
-          tagEl.dataset.split = split;
-          tagEl.textContent = split.charAt(0).toUpperCase() + split.slice(1);
+        const splitArr = normalizeSplits(split);
+        if (splitArr.length === 1) {
+          tagEl.dataset.split = splitArr[0];
+          tagEl.textContent = splitArr[0].charAt(0).toUpperCase() + splitArr[0].slice(1);
+        } else if (splitArr.length > 1) {
+          tagEl.textContent = splitArr.map(function (s) { return s.charAt(0).toUpperCase() + s.slice(1); }).join('+');
+          const colors = splitArr.map(function (s) { return SPLIT_TAG_COLORS[s] || '#687580'; });
+          tagEl.style.background = 'linear-gradient(90deg, ' + colors.map(function (c) { return hexToRgba(c, 0.20); }).join(', ') + ')';
+          tagEl.style.color = colors[0];
         } else {
           tagEl.textContent = '—';
         }
@@ -1888,52 +1962,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderSeg() {
       const plan = loadPlan();
-      const current = plan[activeDate];
+      const current = normalizeSplits(plan[activeDate]);
       segEl.querySelectorAll('.wk-seg-btn').forEach(function (btn) {
-        btn.classList.toggle('active', btn.dataset.split === current);
+        btn.classList.toggle('active', current.indexOf(btn.dataset.split) !== -1);
       });
     }
 
     function renderChart() {
       const plan = loadPlan();
-      const split = plan[activeDate];
+      const splits = normalizeSplits(plan[activeDate]);
 
-      if (!split) {
+      if (!splits.length) {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = "Pick Push, Pull, Legs, or Run to see the day's focus.";
         return;
       }
-      if (split === 'rest') {
+      if (splits.indexOf('rest') !== -1) {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = 'Rest day — recovery in progress.';
         return;
       }
 
-      const cfg = MUSCLE_CONFIG[split];
-      const litClass = cfg.accent === 'run' ? 'is-lit-run' : 'is-lit';
       chartRestEl.style.display = 'none';
       chartBodyWrap.style.display = 'flex';
-      frontSvg.style.display = cfg.view === 'front' ? 'block' : 'none';
-      backSvg.style.display  = cfg.view === 'back'  ? 'block' : 'none';
 
-      const activeSvg = cfg.view === 'front' ? frontSvg : backSvg;
+      const needFront = splits.some(function (s) { return MUSCLE_CONFIG[s].view === 'front'; });
+      const needBack  = splits.some(function (s) { return MUSCLE_CONFIG[s].view === 'back'; });
+      frontSvg.style.display = needFront ? 'block' : 'none';
+      backSvg.style.display  = needBack  ? 'block' : 'none';
+
       [frontSvg, backSvg].forEach(function (svg) {
         svg.querySelectorAll('.wk-muscle').forEach(function (el) {
           el.classList.remove('is-lit', 'is-lit-run');
         });
       });
-      cfg.regions.forEach(function (region) {
-        activeSvg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
-          el.classList.add(litClass);
+      // Light lift-split regions first (teal), then run's regions (magenta)
+      // for anything a lift split hasn't already claimed — so a combined
+      // Legs + Run day doesn't fight itself over quads/calves.
+      const claimed = {};
+      splits.filter(function (s) { return s !== 'run'; }).forEach(function (s) {
+        const cfg = MUSCLE_CONFIG[s];
+        const svg = cfg.view === 'front' ? frontSvg : backSvg;
+        cfg.regions.forEach(function (region) {
+          svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
+            el.classList.add('is-lit');
+          });
+          claimed[cfg.view + ':' + region] = true;
         });
       });
+      if (splits.indexOf('run') !== -1) {
+        const cfg = MUSCLE_CONFIG.run;
+        const svg = cfg.view === 'front' ? frontSvg : backSvg;
+        cfg.regions.forEach(function (region) {
+          if (claimed[cfg.view + ':' + region]) return;
+          svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
+            el.classList.add('is-lit-run');
+          });
+        });
+      }
 
-      chartTitleEl.textContent = cfg.title;
-      chartSubEl.textContent = cfg.sub;
-      const parts = (split === 'run') ? loadRunPlanParts(activeDate) : loadGymExercises(split);
-      chartExEl.textContent = (parts || cfg.fallback).join(' · ');
+      const order = ['push', 'pull', 'legs', 'run'];
+      const ordered = order.filter(function (s) { return splits.indexOf(s) !== -1; });
+      chartTitleEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ') + ' Day';
+      chartSubEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
+
+      const exParts = ordered.map(function (s) {
+        const parts = (s === 'run') ? loadRunPlanParts(activeDate) : loadGymExercises(s);
+        const list = (parts || MUSCLE_CONFIG[s].fallback).join(' · ');
+        return ordered.length > 1 ? (MUSCLE_CONFIG[s].title.replace(/ day$/i, '') + ': ' + list) : list;
+      });
+      chartExEl.textContent = exParts.join('     |     ');
     }
 
     function renderWeekLabel() {
@@ -1974,8 +2074,17 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!btn) return;
       const plan = loadPlan();
       const split = btn.dataset.split;
-      if (plan[activeDate] === split) delete plan[activeDate];
-      else plan[activeDate] = split;
+      let cur = normalizeSplits(plan[activeDate]);
+      if (split === 'rest') {
+        // Rest is exclusive — picking it clears anything else, and it's
+        // the only thing a second click on it can toggle off.
+        cur = cur.indexOf('rest') !== -1 ? [] : ['rest'];
+      } else {
+        cur = cur.filter(function (s) { return s !== 'rest'; });
+        const idx = cur.indexOf(split);
+        if (idx !== -1) cur.splice(idx, 1); else cur.push(split);
+      }
+      if (cur.length) plan[activeDate] = cur; else delete plan[activeDate];
       savePlan(plan);
       renderStrip();
       renderSeg();

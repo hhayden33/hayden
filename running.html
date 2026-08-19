@@ -309,12 +309,14 @@ body::after {
   display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px;
 }
-.run-field input, .run-field select {
+.run-field input, .run-field select, .run-field textarea {
   width: 100%; padding: 10px 12px;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary);
   font-family: inherit; font-size: 14px; outline: none;
 }
+.run-field textarea { resize: vertical; min-height: 60px; line-height: 1.4; }
+.run-field textarea::placeholder { color: var(--text-tertiary); }
 .run-field-row { display: flex; gap: 10px; }
 .run-field-row .run-field { flex: 1; min-width: 0; }
 .run-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
@@ -561,6 +563,7 @@ body::after {
       <div class="run-field"><label>Avg HR (optional)</label><input type="number" id="runLogHr" placeholder="152"></div>
     </div>
     <div class="run-field"><label>Elevation gain — m (optional)</label><input type="number" id="runLogElev" placeholder="0"></div>
+    <div class="run-field"><label>Notes (optional)</label><textarea id="runLogNotes" rows="3" placeholder="How it felt, splits, route, anything worth remembering — shows up on the 7-Day Planner too"></textarea></div>
     <div class="run-modal-actions">
       <button class="gm-ghost" id="runLogCancel" type="button">Cancel</button>
       <button class="gm-add" id="runLogSave" type="button">Save Run</button>
@@ -1174,6 +1177,7 @@ body::after {
     document.getElementById('runLogDur').value = '';
     document.getElementById('runLogHr').value = '';
     document.getElementById('runLogElev').value = '';
+    document.getElementById('runLogNotes').value = '';
     openModal(runLogModalBg);
   });
   document.getElementById('runLogCancel').addEventListener('click', () => closeModal(runLogModalBg));
@@ -1190,12 +1194,13 @@ body::after {
     if (!durSec || durSec <= 0) { durEl.focus(); return; }
     const hr = parseFloat(document.getElementById('runLogHr').value) || null;
     const elev = parseFloat(document.getElementById('runLogElev').value) || 0;
+    const notes = document.getElementById('runLogNotes').value.trim();
     const list = runs();
     list.push({
       id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, type: document.getElementById('runLogType').value,
       distanceKm: dist, durationSec: durSec, avgHr: hr, elevationM: elev,
-      source: 'manual', notes: ''
+      source: 'manual', notes: notes
     });
     save('run:runs', list);
     closeModal(runLogModalBg);
@@ -1207,6 +1212,9 @@ body::after {
   // =============================================================
   const runDetailModalBg = document.getElementById('runDetailModalBg');
   let activeDetailId = null;
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
   function openRunDetail(id) {
     const r = runs().find(x => x.id === id);
     if (!r) return;
@@ -1220,7 +1228,8 @@ body::after {
       '<div class="run-detail-row"><span class="label">Avg Pace</span><span class="val">' + (pace ? fmtPace(pace) : '—') + '</span></div>' +
       '<div class="run-detail-row"><span class="label">Avg Heart Rate</span><span class="val">' + (r.avgHr ? r.avgHr + ' bpm' : '—') + '</span></div>' +
       '<div class="run-detail-row"><span class="label">Elevation Gain</span><span class="val">' + (r.elevationM ? Math.round(r.elevationM) + ' m' : '—') + '</span></div>' +
-      '<div class="run-detail-row"><span class="label">Source</span><span class="val">' + (r.source || 'manual') + '</span></div>';
+      '<div class="run-detail-row"><span class="label">Source</span><span class="val">' + (r.source || 'manual') + '</span></div>' +
+      (r.notes ? '<div class="run-detail-row" style="flex-direction:column;align-items:flex-start;gap:6px;"><span class="label">Notes</span><span class="val" style="font-weight:500;white-space:pre-wrap;text-align:left;">' + escapeHtml(r.notes) + '</span></div>' : '');
     openModal(runDetailModalBg);
   }
   document.getElementById('runDetailClose').addEventListener('click', () => closeModal(runDetailModalBg));

@@ -1858,7 +1858,9 @@ img, video, canvas, svg { max-width: 100%; }
   // never disagrees with main.html about what today is. (Used to be its
   // own independent CONFIG.splitRotation cycle — that's what let this
   // page and main.html show two different "today" splits at once.)
-  function todaySplitId() {
+  // A day's plan value used to be a single split string — it's now an
+  // array (a day can be e.g. ['push', 'run']). Handles either shape.
+  function todaySplitIds() {
     try {
       const now = new Date();
       const monday = new Date(now);
@@ -1874,8 +1876,10 @@ img, video, canvas, svg { max-width: 100%; }
       const pad = n => String(n).padStart(2, '0');
       const todayKey = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
       const plan = JSON.parse(localStorage.getItem('weekplan:' + isoWeekKey)) || {};
-      return plan[todayKey] || null;
-    } catch (e) { return null; }
+      const val = plan[todayKey];
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    } catch (e) { return []; }
   }
   function todayDateLabel() {
     const d = new Date();
@@ -1883,14 +1887,21 @@ img, video, canvas, svg { max-width: 100%; }
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     return dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
   }
-  const SPLIT_PILL_LABELS = { push: 'PUSH DAY', pull: 'PULL DAY', legs: 'LEGS DAY', run: 'RUN DAY', rest: 'REST DAY' };
+  const SPLIT_PILL_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', run: 'Run', rest: 'Rest' };
   const SPLIT_PILL_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
+  const SPLIT_PILL_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
   function renderDayPill() {
-    const splitId = todaySplitId();
+    const ids = todaySplitIds();
     $('dayPillDate').textContent = todayDateLabel();
     const splitEl = $('dayPillSplit');
-    splitEl.textContent = SPLIT_PILL_LABELS[splitId] || 'NOT PLANNED';
-    splitEl.style.color = SPLIT_PILL_COLORS[splitId] || '#687580';
+    const ordered = SPLIT_PILL_ORDER.filter(id => ids.indexOf(id) !== -1);
+    if (!ordered.length) {
+      splitEl.textContent = 'NOT PLANNED';
+      splitEl.style.color = '#687580';
+      return;
+    }
+    splitEl.textContent = ordered.map(id => SPLIT_PILL_LABELS[id]).join(' + ').toUpperCase() + ' DAY';
+    splitEl.style.color = SPLIT_PILL_COLORS[ordered[0]] || '#687580';
   }
 
   // Build the rep buttons based on the current exercise's repMin/repMax.
@@ -2109,9 +2120,9 @@ img, video, canvas, svg { max-width: 100%; }
   // lift day, pre-select that day filter — unless the user already picked
   // one manually this session.
   (function autoSelectTodaySplit() {
-    const splitId = todaySplitId();
-    if (!splitId || state._userPickedDay) return;
-    const match = state.days.find(d => d.id === splitId);
+    if (state._userPickedDay) return;
+    const ids = todaySplitIds();
+    const match = state.days.find(d => ids.indexOf(d.id) !== -1);
     if (match) state.filterDay = match.id;
   })();
 

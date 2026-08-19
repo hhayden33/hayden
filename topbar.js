@@ -246,7 +246,9 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     run:  { icon: '🏃', label: 'Run Day',  color: '#A83FAF' },
     rest: { icon: '😴', label: 'Rest Day', color: '#687580' }
   };
-  function getTodaySplit() {
+  // A day's plan value used to be a single split string — it's now an
+  // array (a day can be e.g. ['push', 'run']). Handles either shape.
+  function getTodaySplits() {
     try {
       const now = new Date();
       const monday = new Date(now);
@@ -260,22 +262,37 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
       const weekNo = Math.ceil((((u - yearStart) / 86400000) + 1) / 7);
       const isoWeekKey = u.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
       const plan = JSON.parse(localStorage.getItem('weekplan:' + isoWeekKey)) || {};
-      return plan[calendarDateKey()] || null;
-    } catch (e) { return null; }
+      const val = plan[calendarDateKey()];
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    } catch (e) { return []; }
   }
   function hexToRgba(hex, alpha) {
     const h = hex.replace('#', '');
     const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
   }
+  const SPLIT_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
   function renderSplitBadge() {
     const badge = document.getElementById('topbarSplitBadge');
     if (!badge) return;
-    const meta = SPLIT_META[getTodaySplit()] || { icon: '—', label: 'No Split Set', color: '#687580' };
-    badge.setAttribute('aria-label', "Today's training: " + meta.label);
-    badge.style.color = meta.color;
-    badge.style.background = hexToRgba(meta.color, 0.12);
-    badge.textContent = meta.icon + ' ' + meta.label;
+    const ordered = SPLIT_ORDER.filter((s) => getTodaySplits().indexOf(s) !== -1);
+    if (!ordered.length) {
+      badge.setAttribute('aria-label', "Today's training: not set");
+      badge.style.color = '#687580';
+      badge.style.background = hexToRgba('#687580', 0.12);
+      badge.textContent = '— No Split Set';
+      return;
+    }
+    const metas = ordered.map((s) => SPLIT_META[s]);
+    const icon = metas.map((m) => m.icon).join('');
+    const label = metas.map((m) => m.label.replace(/ Day$/, '')).join(' + ') + ' Day';
+    badge.setAttribute('aria-label', "Today's training: " + label);
+    badge.style.color = metas[0].color;
+    badge.style.background = metas.length > 1
+      ? 'linear-gradient(90deg, ' + metas.map((m) => hexToRgba(m.color, 0.16)).join(', ') + ')'
+      : hexToRgba(metas[0].color, 0.12);
+    badge.textContent = icon + ' ' + label;
   }
   // Exposed for main.html's own Split control (a same-page click, so the
   // 'storage' event below won't fire) to call right after it changes today's
