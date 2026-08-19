@@ -102,6 +102,33 @@ body::after {
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dash-home-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; flex-shrink: 0;
+  margin-top: 1px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
+  border-radius: 12px;
+  font-size: 17px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.dash-home-btn:hover {
+  background: var(--surface-hover, #202B35);
+  border-color: rgba(255,255,255,0.22);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+@media (max-width: 480px) { .dash-home-btn { width: 36px; height: 36px; font-size: 15px; } }
+
 /* ===== Component 2: Goal Ticker ===== */
 .ticker-row {
   display: grid;
@@ -821,7 +848,10 @@ body::after {
 <body>
 <div class="page">
 
-  <h1 class="dash-title">88YYDS Dashboard</h1>
+  <div class="dash-header">
+    <h1 class="dash-title">88YYDS Dashboard</h1>
+    <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
+  </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
 
   <div class="ticker-row">
@@ -1171,7 +1201,13 @@ document.addEventListener('DOMContentLoaded', function () {
       const old = getGoals(k);
       old.forEach(g => {
         if (!g.done && g.text && !texts.has(g.text)) {
-          today.push({ text: g.text, done: false });
+          // Carry the whole goal object forward (id, priority, category,
+          // dueTime, notes, etc. — fields todo.html adds) instead of
+          // rebuilding a bare {text, done}, which used to silently drop
+          // that metadata every time a stale task rolled into today.
+          const carried = Object.assign({}, g, { done: false });
+          delete carried.doneAt;
+          today.push(carried);
           texts.add(g.text);
         }
       });

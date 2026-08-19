@@ -183,6 +183,9 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   <a href="main.html" class="bottombar-tab" data-page="main">
     <span class="bottombar-tab-icon">🏠</span><span>Main</span>
   </a>
+  <a href="todo.html" class="bottombar-tab" data-page="todo">
+    <span class="bottombar-tab-icon">📝</span><span>Todo</span>
+  </a>
   <a href="running.html" class="bottombar-tab" data-page="running">
     <span class="bottombar-tab-icon">🏃</span><span>Running</span>
   </a>
@@ -203,6 +206,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('running.html')) return 'running';
     if (p.endsWith('gym.html')) return 'fitness';
+    if (p.endsWith('todo.html')) return 'todo';
     return 'main';
   }
 
