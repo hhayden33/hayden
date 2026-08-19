@@ -423,9 +423,9 @@ body::after {
       </div>
       <div class="stat-grid">
         <div class="stat"><div class="stat-num" id="runTodayDist">—</div><div class="stat-label">Distance</div></div>
-        <div class="stat"><div class="stat-num" id="runTodayPace">—</div><div class="stat-label">Target Pace</div></div>
-        <div class="stat"><div class="stat-num" id="runTodayHr">—</div><div class="stat-label">HR Zone</div></div>
-        <div class="stat"><div class="stat-num" id="runTodayDur">—</div><div class="stat-label">Est. Duration</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayPace">—</div><div class="stat-label">Pace</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayHr">—</div><div class="stat-label">Avg HR</div></div>
+        <div class="stat"><div class="stat-num" id="runTodayDur">—</div><div class="stat-label">Moving Time</div></div>
       </div>
     </div>
   </div>
@@ -925,37 +925,71 @@ body::after {
 
   // =============================================================
   // RENDER — Today's Training
+  // No longer driven by the Weekly Plan Template (still used by Weekly
+  // Training's day grid + Settings, just not here). This card now shows
+  // the actual Garmin activity recorded today, if any — nothing planned,
+  // nothing estimated. todayKey() is local-date based, so "today" always
+  // matches the browser's current local day.
   // =============================================================
+  function pickTodaysGarminRun() {
+    const todays = runs().filter(r => r.date === todayKey() && r.source === 'garmin');
+    if (!todays.length) return null;
+    // Garmin sometimes logs a warmup/main/cooldown as separate same-day
+    // activities (e.g. a short recovery jog before AND after the real
+    // session) — the largest by distance is the representative session,
+    // not whichever happens to be chronologically first or last.
+    return todays.slice().sort((a, b) => (b.distanceKm || 0) - (a.distanceKm || 0))[0];
+  }
+  function fmt12Hour(hhmmss) {
+    if (!hhmmss) return null;
+    const parts = hhmmss.split(':');
+    const hour = parseInt(parts[0], 10);
+    if (isNaN(hour)) return null;
+    const hour12 = ((hour + 11) % 12) + 1;
+    return hour12 + ':' + parts[1] + ' ' + (hour >= 12 ? 'PM' : 'AM');
+  }
   function renderToday() {
-    const plan = weekPlan();
-    const dow = (new Date().getDay() + 6) % 7;
-    const today = plan[dow];
     const typeEl = document.getElementById('runTodayType');
     const purposeEl = document.getElementById('runTodayPurpose');
     const badge = document.getElementById('runTodayBadge');
+    const distEl = document.getElementById('runTodayDist');
+    const paceEl = document.getElementById('runTodayPace');
+    const hrEl = document.getElementById('runTodayHr');
+    const durEl = document.getElementById('runTodayDur');
 
-    if (!today || today.rest) {
-      typeEl.textContent = '😴 Rest Day';
-      purposeEl.textContent = (today && today.purpose) || 'Recovery — no run scheduled today.';
+    const run = pickTodaysGarminRun();
+
+    if (!run) {
+      typeEl.textContent = '—';
+      purposeEl.textContent = '';
       badge.className = 'run-badge idle';
-      badge.textContent = 'Rest';
-      document.getElementById('runTodayDist').textContent = '—';
-      document.getElementById('runTodayPace').textContent = '—';
-      document.getElementById('runTodayHr').textContent = '—';
-      document.getElementById('runTodayDur').textContent = '—';
+      badge.textContent = '—';
+      distEl.textContent = '—';
+      paceEl.textContent = '—';
+      hrEl.textContent = '—';
+      durEl.textContent = '—';
       return;
     }
 
-    typeEl.textContent = today.type;
-    purposeEl.textContent = today.purpose || '';
-    document.getElementById('runTodayDist').textContent = fmtKm(today.distanceKm);
-    document.getElementById('runTodayPace').textContent = fmtPace(today.paceTargetSecPerKm);
-    document.getElementById('runTodayHr').textContent = today.hrZone || '—';
-    document.getElementById('runTodayDur').textContent = today.durationEstMin ? today.durationEstMin + ' min' : '—';
+    typeEl.textContent = run.type || '—';
 
-    const hasRunToday = runs().some(r => r.date === todayKey());
-    if (hasRunToday) { badge.className = 'run-badge good'; badge.textContent = 'Completed'; }
-    else { badge.className = 'run-badge warn'; badge.textContent = 'Planned'; }
+    const extras = [];
+    const startTime = fmt12Hour(run.time);
+    if (startTime) extras.push('Started ' + startTime);
+    if (run.maxHr) extras.push('Max HR ' + run.maxHr + ' bpm');
+    if (run.elevationM) extras.push(Math.round(run.elevationM) + ' m elevation');
+    if (run.calories) extras.push(run.calories + ' cal');
+    purposeEl.textContent = extras.join(' · ');
+
+    badge.className = 'run-badge good';
+    badge.textContent = 'Completed';
+
+    distEl.textContent = run.distanceKm ? fmtKm(run.distanceKm) : '—';
+    const pace = (run.distanceKm > 0 && run.durationSec > 0) ? run.durationSec / run.distanceKm : null;
+    paceEl.textContent = pace ? fmtPace(pace) : '—';
+    hrEl.textContent = run.avgHr ? run.avgHr + ' bpm' : '—';
+    const movingSec = run.movingDurationSec || run.durationSec;
+    durEl.textContent = movingSec ? fmtDuration(movingSec) : '—';
   }
 
   // =============================================================
