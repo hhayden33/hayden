@@ -184,7 +184,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     <span class="bottombar-tab-icon">🏠</span><span>Main</span>
   </a>
   <a href="todo.html" class="bottombar-tab" data-page="todo">
-    <span class="bottombar-tab-icon">📝</span><span>Todo</span>
+    <span class="bottombar-tab-icon">📝</span><span>To-Do</span>
   </a>
   <a href="running.html" class="bottombar-tab" data-page="running">
     <span class="bottombar-tab-icon">🏃</span><span>Running</span>
