@@ -11,7 +11,7 @@
 <!-- =============================================================
      EDIT THIS BLOCK TO MAKE THE APP YOURS.
      Other people who fork this repo only need to change the values
-     below — gyms, days, units, and starter exercises. Everything
+     below — days, units, and starter exercises. Everything
      else (logs, edits, additions you make in the app) is saved to
      the browser's local storage on each device.
      ============================================================= -->
@@ -21,13 +21,6 @@ const CONFIG = {
 
   // Weight unit shown everywhere. "kg" or "lb".
   units: "kg",
-
-  // Gyms you train at. Add as many as you want.
-  // `id` must be a short unique slug (no spaces). `name` is what people see.
-  gyms: [
-    { id: "home",  name: "Home Gym" },
-    { id: "comm",  name: "Commercial Gym" }
-  ],
 
   // Training split. Most people use Push/Pull/Legs but you can rename
   // these to "Upper", "Lower", "Full Body", "Day A", anything.
@@ -68,7 +61,6 @@ const CONFIG = {
 
   // Starter exercise list. Each one needs:
   //   name        — what shows in the dropdown
-  //   gym         — one of the gym ids above, or "both"
   //   day         — one of the day ids above
   //   repMin      — bottom of your target rep range
   //   repMax      — top of your target rep range
@@ -79,15 +71,15 @@ const CONFIG = {
   // First-run defaults. Once a user logs anything, they edit through
   // the in-app + / gear buttons; this block stays as the seed.
   defaultExercises: [
-    { name: "Bench press",     gym: "comm", day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 60 },
-    { name: "Overhead press",  gym: "comm", day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 35 },
-    { name: "Tricep pushdown", gym: "comm", day: "push", repMin: 8, repMax: 12, step: 2.5, startWeight: 25 },
-    { name: "Pull-ups",        gym: "both", day: "pull", repMin: 5, repMax: 10, step: 1,   startWeight: 0, bw: true },
-    { name: "Barbell row",     gym: "comm", day: "pull", repMin: 6, repMax: 10, step: 2.5, startWeight: 50 },
-    { name: "Bicep curl",      gym: "comm", day: "pull", repMin: 8, repMax: 12, step: 1.25,startWeight: 15 },
-    { name: "Back squat",      gym: "comm", day: "legs", repMin: 5, repMax: 8,  step: 5,   startWeight: 80 },
-    { name: "Romanian deadlift", gym: "comm", day: "legs", repMin: 6, repMax: 10, step: 5, startWeight: 60 },
-    { name: "Leg press",       gym: "comm", day: "legs", repMin: 8, repMax: 12, step: 5,   startWeight: 100 }
+    { name: "Bench press",     day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 60 },
+    { name: "Overhead press",  day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 35 },
+    { name: "Tricep pushdown", day: "push", repMin: 8, repMax: 12, step: 2.5, startWeight: 25 },
+    { name: "Pull-ups",        day: "pull", repMin: 5, repMax: 10, step: 1,   startWeight: 0, bw: true },
+    { name: "Barbell row",     day: "pull", repMin: 6, repMax: 10, step: 2.5, startWeight: 50 },
+    { name: "Bicep curl",      day: "pull", repMin: 8, repMax: 12, step: 1.25,startWeight: 15 },
+    { name: "Back squat",      day: "legs", repMin: 5, repMax: 8,  step: 5,   startWeight: 80 },
+    { name: "Romanian deadlift", day: "legs", repMin: 6, repMax: 10, step: 5, startWeight: 60 },
+    { name: "Leg press",       day: "legs", repMin: 8, repMax: 12, step: 5,   startWeight: 100 }
   ]
 };
 </script>
@@ -1445,10 +1437,6 @@ img, video, canvas, svg { max-width: 100%; }
     <!-- Filters -->
     <div class="po-filters">
       <div class="po-seg-row">
-        <span class="po-seg-label">Gym</span>
-        <div class="po-seg-control" id="gymSeg"></div>
-      </div>
-      <div class="po-seg-row">
         <span class="po-seg-label">Day</span>
         <div class="po-seg-control" id="daySeg"></div>
       </div>
@@ -1595,10 +1583,6 @@ img, video, canvas, svg { max-width: 100%; }
       <input type="text" id="exName" placeholder="e.g. Incline DB press">
     </div>
     <div class="po-field">
-      <label style="font-size:11px;color:var(--text-3);font-weight:700;letter-spacing:0.04em;text-transform:uppercase">Gym</label>
-      <div class="po-modal-seg" id="exGymSeg"></div>
-    </div>
-    <div class="po-field">
       <label style="font-size:11px;color:var(--text-3);font-weight:700;letter-spacing:0.04em;text-transform:uppercase">Day</label>
       <div class="po-modal-seg" id="exDaySeg"></div>
     </div>
@@ -1663,12 +1647,6 @@ img, video, canvas, svg { max-width: 100%; }
     </div>
 
     <div class="po-set-section">
-      <h4>Gyms</h4>
-      <div class="po-set-list" id="setGyms"></div>
-      <button class="po-add-row-btn" id="setAddGym">+ Add gym</button>
-    </div>
-
-    <div class="po-set-section">
       <h4>Days</h4>
       <div class="po-set-list" id="setDays"></div>
       <button class="po-add-row-btn" id="setAddDay">+ Add day</button>
@@ -1714,11 +1692,9 @@ img, video, canvas, svg { max-width: 100%; }
   function normalize(s) {
     s = s || {};
     s.units = s.units || CONFIG.units || 'kg';
-    s.gyms  = (Array.isArray(s.gyms)  && s.gyms.length)  ? s.gyms  : CONFIG.gyms.slice();
     s.days  = (Array.isArray(s.days)  && s.days.length)  ? s.days  : CONFIG.days.slice();
     s.exercises = Array.isArray(s.exercises) ? s.exercises : buildDefaultExercises();
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};
-    s.filterGym = s.filterGym || s.gyms[0].id;
     s.filterDay = s.filterDay || s.days[0].id;
     // Split rotation lives in state so the user can edit it via the pill modal.
     // Stored as a plain array of names (e.g. ["Push", "Pull", "Legs", "Rest"]).
@@ -1758,13 +1734,11 @@ img, video, canvas, svg { max-width: 100%; }
   const $ = (id) => document.getElementById(id);
   function unit() { return state.units; }
   function uid() { return 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 9999); }
-  function gymName(id) { const g = state.gyms.find(x => x.id === id); return g ? g.name : id; }
   function dayName(id) { const d = state.days.find(x => x.id === id); return d ? d.name : id; }
   function estimate1RM(w, r) { if (r < 2) return w; return w * (1 + r / 30); }
   function roundToStep(v, s) { return Math.round(v / s) * s; }
   function getFiltered() {
-    return state.exercises.filter(e =>
-      (e.gym === state.filterGym || e.gym === 'both') && e.day === state.filterDay);
+    return state.exercises.filter(e => e.day === state.filterDay);
   }
   function getCurrentEx() {
     const f = getFiltered();
@@ -1808,15 +1782,9 @@ img, video, canvas, svg { max-width: 100%; }
   // RENDER
   // ============================================================
   function renderFilters() {
-    $('gymSeg').innerHTML = state.gyms.map(g =>
-      '<button class="po-seg-btn ' + (g.id === state.filterGym ? 'active' : '') + '" data-gym="' + g.id + '">' + escape(g.name) + '</button>'
-    ).join('');
     $('daySeg').innerHTML = state.days.map(d =>
       '<button class="po-seg-btn ' + (d.id === state.filterDay ? 'active' : '') + '" data-day="' + d.id + '">' + escape(d.name) + '</button>'
     ).join('');
-    $('gymSeg').querySelectorAll('.po-seg-btn').forEach(b => {
-      b.addEventListener('click', () => { state.filterGym = b.dataset.gym; state.currentEx = null; saveState(); renderAll(); });
-    });
     $('daySeg').querySelectorAll('.po-seg-btn').forEach(b => {
       b.addEventListener('click', () => {
         state.filterDay = b.dataset.day;
@@ -1844,8 +1812,7 @@ img, video, canvas, svg { max-width: 100%; }
     if (!f.find(e => e.id === state.currentEx)) state.currentEx = f[0].id;
     sel.innerHTML = f.map(e => {
       const wLbl = e.bw ? ' · BW' : (e.startWeight ? ' · ' + e.startWeight + unit() : '');
-      const sh = e.gym === 'both' ? ' ★' : '';
-      return '<option value="' + e.id + '"' + (e.id === state.currentEx ? ' selected' : '') + '>' + escape(e.name) + wLbl + sh + '</option>';
+      return '<option value="' + e.id + '"' + (e.id === state.currentEx ? ' selected' : '') + '>' + escape(e.name) + wLbl + '</option>';
     }).join('');
   }
   function renderForm() {
@@ -1886,7 +1853,7 @@ img, video, canvas, svg { max-width: 100%; }
   function renderRx() {
     const wrap = $('rxWrap');
     const ex = getCurrentEx();
-    if (!ex) { wrap.innerHTML = '<div class="po-rx-empty">Pick a gym and day above.</div>'; return; }
+    if (!ex) { wrap.innerHTML = '<div class="po-rx-empty">Pick a day above.</div>'; return; }
     const logs = getLogs();
     const rx = getRx(ex, logs);
     if (!rx) {
@@ -2297,21 +2264,11 @@ img, video, canvas, svg { max-width: 100%; }
   // EXERCISE MODAL (add / edit)
   // ============================================================
   let editingExId = null;
-  let modalGym = null, modalDay = null;
+  let modalDay = null;
   function renderModalSegs() {
-    $('exGymSeg').innerHTML = state.gyms.map(g =>
-      '<button data-gym="' + g.id + '" class="' + (modalGym === g.id ? 'active' : '') + '">' + escape(g.name) + '</button>'
-    ).join('') + '<button data-gym="both" class="' + (modalGym === 'both' ? 'active' : '') + '">Both</button>';
     $('exDaySeg').innerHTML = state.days.map(d =>
       '<button data-day="' + d.id + '" class="' + (modalDay === d.id ? 'active' : '') + '">' + escape(d.name) + '</button>'
     ).join('');
-    $('exGymSeg').querySelectorAll('button').forEach(b => {
-      b.addEventListener('click', () => {
-        modalGym = b.dataset.gym;
-        $('exGymSeg').querySelectorAll('button').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-      });
-    });
     $('exDaySeg').querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
         modalDay = b.dataset.day;
@@ -2326,7 +2283,6 @@ img, video, canvas, svg { max-width: 100%; }
     $('exDelete').style.display = mode === 'edit' ? 'block' : 'none';
     if (mode === 'edit') {
       $('exName').value = ex.name;
-      modalGym = ex.gym;
       modalDay = ex.day;
       $('exBw').checked = !!ex.bw;
       $('exStartWeight').value = ex.startWeight || 0;
@@ -2335,7 +2291,6 @@ img, video, canvas, svg { max-width: 100%; }
       $('exStep').value = ex.step;
     } else {
       $('exName').value = '';
-      modalGym = state.filterGym;
       modalDay = state.filterDay;
       $('exBw').checked = false;
       $('exStartWeight').value = 20;
@@ -2363,13 +2318,12 @@ img, video, canvas, svg { max-width: 100%; }
   $('exModalSave').addEventListener('click', () => {
     const name = $('exName').value.trim();
     if (!name) { alert('Name is required.'); return; }
-    if (!modalGym) { alert('Pick a gym.'); return; }
     if (!modalDay) { alert('Pick a day.'); return; }
     const isBw = $('exBw').checked;
     const repMin = parseInt($('exRepMin').value, 10) || 6;
     const repMax = parseInt($('exRepMax').value, 10) || 8;
     const data = {
-      name, gym: modalGym, day: modalDay,
+      name, day: modalDay,
       bw: isBw,
       startWeight: isBw ? 0 : (parseFloat($('exStartWeight').value) || 0),
       repMin, repMax,
@@ -2382,7 +2336,6 @@ img, video, canvas, svg { max-width: 100%; }
       const ex = Object.assign({ id: uid() }, data);
       state.exercises.push(ex);
       state.currentEx = ex.id;
-      state.filterGym = (modalGym === 'both') ? state.filterGym : modalGym;
       state.filterDay = modalDay;
     }
     saveState();
@@ -2501,38 +2454,18 @@ img, video, canvas, svg { max-width: 100%; }
   });
 
   // ============================================================
-  // SETTINGS MODAL (gyms, days, units, data)
+  // SETTINGS MODAL (days, units, data)
   // ============================================================
   function renderSettings() {
     $('setUnitsSeg').querySelectorAll('button').forEach(b => {
       b.classList.toggle('active', b.dataset.u === state.units);
     });
-    $('setGyms').innerHTML = state.gyms.map((g, i) =>
-      '<div class="po-set-row" data-i="' + i + '">'
-      + '<input type="text" value="' + escape(g.name) + '" data-field="name" placeholder="Gym name">'
-      + '<button class="po-mini-btn" data-action="del" aria-label="Delete">×</button>'
-      + '</div>'
-    ).join('');
     $('setDays').innerHTML = state.days.map((d, i) =>
       '<div class="po-set-row" data-i="' + i + '">'
       + '<input type="text" value="' + escape(d.name) + '" data-field="name" placeholder="Day name">'
       + '<button class="po-mini-btn" data-action="del" aria-label="Delete">×</button>'
       + '</div>'
     ).join('');
-    $('setGyms').querySelectorAll('.po-set-row').forEach(row => {
-      const i = parseInt(row.dataset.i, 10);
-      row.querySelector('input').addEventListener('input', e => {
-        state.gyms[i].name = e.target.value;
-        saveState();
-      });
-      row.querySelector('[data-action="del"]').addEventListener('click', () => {
-        if (state.gyms.length <= 1) { alert('You need at least one gym.'); return; }
-        if (!confirm('Remove "' + state.gyms[i].name + '"? Exercises tagged to this gym will become invisible until you reassign them.')) return;
-        state.gyms.splice(i, 1);
-        if (!state.gyms.find(g => g.id === state.filterGym)) state.filterGym = state.gyms[0].id;
-        saveState(); renderSettings(); renderAll();
-      });
-    });
     $('setDays').querySelectorAll('.po-set-row').forEach(row => {
       const i = parseInt(row.dataset.i, 10);
       row.querySelector('input').addEventListener('input', e => {
@@ -2563,13 +2496,6 @@ img, video, canvas, svg { max-width: 100%; }
       b.classList.add('active');
       if (typeof wtRender === 'function') wtRender();
     });
-  });
-  $('setAddGym').addEventListener('click', () => {
-    const name = (prompt('New gym name:') || '').trim();
-    if (!name) return;
-    const id = 'g_' + Date.now();
-    state.gyms.push({ id, name });
-    saveState(); renderSettings(); renderAll();
   });
   $('setAddDay').addEventListener('click', () => {
     const name = (prompt('New day name:') || '').trim();
@@ -2602,7 +2528,7 @@ img, video, canvas, svg { max-width: 100%; }
     reader.readAsText(file);
   });
   $('setReset').addEventListener('click', () => {
-    if (!confirm('Delete EVERYTHING (logs, edits, gyms, days)? This cannot be undone.')) return;
+    if (!confirm('Delete EVERYTHING (logs, edits, days)? This cannot be undone.')) return;
     localStorage.removeItem(LS_KEY);
     state = loadState();
     $('setModalBg').classList.remove('show');
