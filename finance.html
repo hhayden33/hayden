@@ -742,15 +742,15 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .ord-input-from { font-size: 12px; }
 .ord-add-btn {
   padding: 0 14px;
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
-  color: var(--text-primary, #F2F2F2); border: none;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 9px;
   font-family: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer; white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(85,32,128,0.30);
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,0.45);
   transition: transform 0.12s, box-shadow 0.18s, filter 0.18s;
 }
-.ord-add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(32,165,160,0.36); }
+.ord-add-btn:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 6px 16px -6px rgba(0,0,0,0.5); }
 .ord-add-btn:active { transform: scale(0.97); }
 .ord-add-preview {
   margin-top: 10px; padding: 8px 12px;

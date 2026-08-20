@@ -623,18 +623,18 @@ body::after {
 
 .gm-add {
   padding: 11px 20px;
-  border: 0; border-radius: 12px;
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2);
   font-family: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 2px 8px rgba(0,0,0,0.35),
-    0 8px 22px -4px rgba(85, 32, 128, 0.55);
-  transition: transform 0.1s, filter 0.15s;
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 1px 2px rgba(0,0,0,0.30),
+    0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, filter 0.15s, box-shadow 0.15s;
 }
-.gm-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.32), 0 6px 16px -6px rgba(0,0,0,0.5); }
 .gm-add:active { transform: translateY(0); }
 
 .gm-polish {
@@ -660,6 +660,25 @@ body::after {
   margin-top: 4px;
 }
 .gm-status.gm-status-error { color: var(--danger); }
+
+/* ---------- Night Routine ---------- */
+/* A calm, fixed checklist — reuses the .gm-row/.gm-check chassis from the
+   goal list above for visual consistency, but drops the drag handle, queue
+   button, and delete control since items aren't reordered or removed. */
+.nr-card {
+  border-color: rgba(7, 48, 74, 0.55);
+  background: linear-gradient(180deg, rgba(7, 48, 74, 0.30), var(--surface, #19232D) 65%);
+}
+.nr-card.nr-all-done .gm-progress-num,
+.nr-card.nr-all-done .gm-progress-label { color: var(--success, #20A5A0); }
+.nr-list { margin-top: 4px; }
+.nr-row { cursor: default; }
+.nr-text { flex: 1; font-size: 14px; color: var(--text-primary); line-height: 1.4; }
+.nr-row.gm-row-done .nr-text {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255,255,255,0.3);
+}
 
 /* ---------- 7-Day Planner ---------- */
 .wk-nav-row {
@@ -1064,6 +1083,24 @@ body::after {
     </section>
   </div>
 
+  <!-- NIGHT ROUTINE -->
+  <div class="section" id="nightRoutine">
+    <div class="section-title">Night Routine</div>
+    <div class="gm-card nr-card" id="nrCard">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow">🌙 Wind down for tonight</div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="nrProgressNum">0</span>
+            <span class="gm-progress-total" id="nrProgressTotal">/ 0</span>
+            <span class="gm-progress-label" id="nrProgressLabel"></span>
+          </div>
+        </div>
+      </div>
+      <ul id="nightRoutineList" class="goal-list gm-list nr-list"></ul>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1187,6 +1224,34 @@ document.addEventListener('DOMContentLoaded', function () {
     return Array.isArray(g) ? g : [];
   }
   function setGoals(key, list) { storeSet(key, list); }
+
+  // ---------- Night Routine ----------
+  const NIGHT_ROUTINE_ITEMS = [
+    'Prepare clothes for tomorrow',
+    'Pack work/gym bag',
+    "Review tomorrow's schedule",
+    'Complete remaining tasks',
+    'Prepare water',
+    'Charge Garmin/watch',
+    'Brush teeth / skincare',
+    'No phone',
+    'Get into bed'
+  ];
+  function nightRoutineKey() { return 'nightroutine:' + getActiveDateString(); }
+  // Same items every night, but a fresh (unchecked) list each active day —
+  // carries a checked item's done state forward only if that exact item is
+  // still checked from *before* the day boundary flipped (handles the page
+  // just staying open across the 6 AM rollover).
+  function getNightRoutine() {
+    const key = nightRoutineKey();
+    let list = storeGet(key);
+    if (!Array.isArray(list) || list.length !== NIGHT_ROUTINE_ITEMS.length) {
+      list = NIGHT_ROUTINE_ITEMS.map(text => ({ text, done: false }));
+      storeSet(key, list);
+    }
+    return list;
+  }
+  function setNightRoutine(list) { storeSet(nightRoutineKey(), list); }
 
   // ---------- rollover: pull undone older goals into today ----------
   function rollover() {
@@ -1526,6 +1591,46 @@ document.addEventListener('DOMContentLoaded', function () {
     return li;
   }
 
+  function buildNightRoutineRow(item, idx) {
+    const li = document.createElement('li');
+    li.className = 'gm-row nr-row';
+    if (item.done) li.classList.add('gm-row-done');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'gm-check';
+    cb.checked = !!item.done;
+    cb.addEventListener('change', () => {
+      const list = getNightRoutine();
+      if (!list[idx]) return;
+      list[idx].done = cb.checked;
+      setNightRoutine(list);
+      renderNightRoutine();
+    });
+    li.appendChild(cb);
+
+    const text = document.createElement('span');
+    text.className = 'nr-text';
+    text.textContent = item.text;
+    li.appendChild(text);
+
+    return li;
+  }
+  function renderNightRoutine() {
+    const list = getNightRoutine();
+    const ul = document.getElementById('nightRoutineList');
+    if (!ul) return;
+    ul.innerHTML = '';
+    list.forEach((item, i) => ul.appendChild(buildNightRoutineRow(item, i)));
+
+    const done = list.filter(i => i.done).length;
+    document.getElementById('nrProgressNum').textContent = done;
+    document.getElementById('nrProgressTotal').textContent = '/ ' + list.length;
+    document.getElementById('nrProgressLabel').textContent =
+      done === list.length ? 'all set for tomorrow' : (list.length - done) + ' left';
+    document.getElementById('nrCard').classList.toggle('nr-all-done', done === list.length);
+  }
+
   // ---------- Renderers ----------
   function renderTodayHeader() {
     const goals = getGoals(todayKey());
@@ -1725,13 +1830,14 @@ document.addEventListener('DOMContentLoaded', function () {
   loadToday();
   loadTomorrow();
   renderStreak();
+  renderNightRoutine();
   updateDayRing();
   setInterval(updateDayRing, 60 * 1000);
   startTicker();
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine();
   });
 })();
 </script>
@@ -1743,6 +1849,13 @@ document.addEventListener('DOMContentLoaded', function () {
     syncedPrefixes: ['goals:'],
     onApplied: function () {
       window.dispatchEvent(new CustomEvent('goals-changed'));
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+  initCloudSync({
+    appKey: 'nightroutine',
+    syncedPrefixes: ['nightroutine:'],
+    onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
   });

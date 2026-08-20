@@ -177,17 +177,17 @@ body::after {
 .gm-input:focus { border-color: var(--accent-cyan, #087CA3); background: rgba(0,0,0,0.36); }
 
 .gm-add {
-  padding: 11px 20px; border: 0; border-radius: 12px;
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  padding: 11px 20px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2); font-family: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 2px 8px rgba(0,0,0,0.35),
-    0 8px 22px -4px rgba(85, 32, 128, 0.55);
-  transition: transform 0.1s, filter 0.15s;
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 1px 2px rgba(0,0,0,0.30),
+    0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, filter 0.15s, box-shadow 0.15s;
 }
-.gm-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 2px 4px rgba(0,0,0,0.32), 0 6px 16px -6px rgba(0,0,0,0.5); }
 .gm-add:active { transform: translateY(0); }
 
 .gm-ghost {
@@ -262,14 +262,30 @@ body::after {
 
 /* ===== Charts ===== */
 .run-chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-.run-chart-card { background: var(--surface-hover, #202B35); border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15)); border-radius: 12px; padding: 14px; }
-.run-chart-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.run-chart-card { background: var(--surface-hover, #202B35); border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15)); border-radius: 12px; padding: 16px; }
+.run-chart-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
 .run-chart-wrap { position: relative; }
-.run-chart-yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 34px; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0; }
-.run-chart-yaxis span { font-size: 9px; color: var(--text-tertiary); font-family: var(--font-mono); }
-.run-chart-svg { height: 100px; display: block; margin-left: 34px; width: calc(100% - 34px); }
-.run-chart-grid-line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
-.run-chart-meta { text-align: center; font-size: 10.5px; color: var(--text-tertiary); margin-top: 8px; }
+.run-chart-yaxis { position: absolute; left: 0; top: 1px; bottom: 1px; width: 42px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.run-chart-yaxis span { font-size: 9.5px; font-weight: 600; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; }
+.run-chart-svg { height: 108px; display: block; margin-left: 42px; width: calc(100% - 42px); overflow: visible; }
+.run-chart-grid-line { stroke: rgba(255,255,255,0.045); stroke-width: 1; }
+.run-chart-hoverline { stroke: rgba(255,255,255,0.16); stroke-width: 1; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.run-chart-hoverdot { fill: #fff; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.run-chart-hitarea { fill: transparent; cursor: crosshair; }
+.run-chart-meta { text-align: center; font-size: 10.5px; color: var(--text-tertiary); margin-top: 10px; }
+.run-chart-tooltip {
+  position: absolute; z-index: 5; top: 0; left: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--surface-elevated, #26343E);
+  border: 1px solid var(--border-strong, rgba(120, 160, 180, 0.28));
+  border-radius: 8px; padding: 6px 10px;
+  white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  opacity: 0; transition: opacity 0.12s;
+}
+.run-chart-tooltip.show { opacity: 1; }
+.run-chart-tooltip-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.run-chart-tooltip-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
 @media (max-width: 720px) { .run-chart-grid { grid-template-columns: 1fr; } }
 
 /* ===== Recent runs ===== */
@@ -463,12 +479,14 @@ body::after {
         <div class="run-chart-title">Weekly Mileage</div>
         <div class="run-chart-wrap" id="runChartMileageWrap">
           <div class="run-chart-yaxis"><span id="runChartMileageMax">—</span><span id="runChartMileageMin">—</span></div>
-          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
-            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
-            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
-            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+          <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
+            <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+            <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+            <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
             <g id="runChartMileageContent"></g>
+            <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
           </svg>
+          <div class="run-chart-tooltip" id="runChartMileageTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
           <div class="empty-state" id="runChartMileageEmpty" style="display:none">Log runs to see weekly mileage.</div>
         </div>
         <div class="run-chart-meta" id="runChartMileageMeta"></div>
@@ -478,15 +496,19 @@ body::after {
         <div class="run-chart-title">Pace Over Time</div>
         <div class="run-chart-wrap" id="runChartPaceWrap">
           <div class="run-chart-yaxis"><span id="runChartPaceMax">—</span><span id="runChartPaceMin">—</span></div>
-          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+          <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
             <defs><linearGradient id="runGradPace" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#087CA3" stop-opacity="0.22"/><stop offset="100%" stop-color="#087CA3" stop-opacity="0"/>
             </linearGradient></defs>
-            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
-            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
-            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+            <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+            <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
             <g id="runChartPaceContent"></g>
+            <line class="run-chart-hoverline" id="runChartPaceHoverLine" x1="0" y1="8" x2="0" y2="96"></line>
+            <circle class="run-chart-hoverdot" id="runChartPaceHoverDot" r="3.5"></circle>
+            <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
           </svg>
+          <div class="run-chart-tooltip" id="runChartPaceTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
           <div class="empty-state" id="runChartPaceEmpty" style="display:none">Log at least 2 runs to see your pace trend.</div>
         </div>
         <div class="run-chart-meta" id="runChartPaceMeta"></div>
@@ -496,15 +518,19 @@ body::after {
         <div class="run-chart-title">Heart Rate Over Time</div>
         <div class="run-chart-wrap" id="runChartHrWrap">
           <div class="run-chart-yaxis"><span id="runChartHrMax">—</span><span id="runChartHrMin">—</span></div>
-          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+          <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
             <defs><linearGradient id="runGradHr" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#A83FAF" stop-opacity="0.22"/><stop offset="100%" stop-color="#A83FAF" stop-opacity="0"/>
             </linearGradient></defs>
-            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
-            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
-            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+            <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+            <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
             <g id="runChartHrContent"></g>
+            <line class="run-chart-hoverline" id="runChartHrHoverLine" x1="0" y1="8" x2="0" y2="96"></line>
+            <circle class="run-chart-hoverdot" id="runChartHrHoverDot" r="3.5"></circle>
+            <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
           </svg>
+          <div class="run-chart-tooltip" id="runChartHrTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
           <div class="empty-state" id="runChartHrEmpty" style="display:none">Log runs with heart rate to see this trend.</div>
         </div>
         <div class="run-chart-meta" id="runChartHrMeta"></div>
@@ -514,15 +540,19 @@ body::after {
         <div class="run-chart-title">Aerobic Efficiency</div>
         <div class="run-chart-wrap" id="runChartEffWrap">
           <div class="run-chart-yaxis"><span id="runChartEffMax">—</span><span id="runChartEffMin">—</span></div>
-          <svg class="run-chart-svg" viewBox="0 0 320 130" preserveAspectRatio="none">
+          <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
             <defs><linearGradient id="runGradEff" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#B98AE0" stop-opacity="0.22"/><stop offset="100%" stop-color="#B98AE0" stop-opacity="0"/>
             </linearGradient></defs>
-            <line class="run-chart-grid-line" x1="0" y1="20" x2="320" y2="20"></line>
-            <line class="run-chart-grid-line" x1="0" y1="65" x2="320" y2="65"></line>
-            <line class="run-chart-grid-line" x1="0" y1="110" x2="320" y2="110"></line>
+            <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+            <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+            <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
             <g id="runChartEffContent"></g>
+            <line class="run-chart-hoverline" id="runChartEffHoverLine" x1="0" y1="8" x2="0" y2="96"></line>
+            <circle class="run-chart-hoverdot" id="runChartEffHoverDot" r="3.5"></circle>
+            <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
           </svg>
+          <div class="run-chart-tooltip" id="runChartEffTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
           <div class="empty-state" id="runChartEffEmpty" style="display:none">Log runs with heart rate to see pace-vs-HR efficiency.</div>
         </div>
         <div class="run-chart-meta" id="runChartEffMeta">Speed per heart-beat — trending up means the same effort is going further.</div>
@@ -749,7 +779,8 @@ body::after {
   }
   function fmtPace(secPerKm) {
     if (!secPerKm || !isFinite(secPerKm)) return '—';
-    const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
+    const total = Math.round(secPerKm);
+    const m = Math.floor(total / 60), s = total % 60;
     return m + ':' + pad2(s) + '/km';
   }
   function fmtKm(km) {
@@ -1085,12 +1116,100 @@ body::after {
     return d;
   }
 
-  function renderLineChart(prefix, data, color, gradId, fmtY) {
+  const CHART_X_LEFT = 6, CHART_X_RIGHT = 314, CHART_Y_TOP = 8, CHART_Y_BOT = 96;
+
+  function fmtWeekRange(wkStart) {
+    const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
+    const opts = { day: 'numeric', month: 'short' };
+    return wkStart.toLocaleDateString('en-AU', opts) + ' – ' + wkEnd.toLocaleDateString('en-AU', opts);
+  }
+
+  // Shared crosshair/tooltip behaviour for line charts. Reads whatever
+  // dataset the most recent render() attached to the wrap element, so it
+  // stays correct across re-renders without being rewired each time.
+  function wireLineChartHover(prefix) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const svg = wrap.querySelector('svg');
+    const hit = wrap.querySelector('.run-chart-hitarea');
+    const hoverLine = document.getElementById(prefix + 'HoverLine');
+    const hoverDot = document.getElementById(prefix + 'HoverDot');
+    const tip = document.getElementById(prefix + 'Tip');
+    if (!hit || wrap.dataset.hoverWired) return;
+    wrap.dataset.hoverWired = '1';
+
+    function hide() {
+      hoverLine.style.opacity = 0;
+      hoverDot.style.opacity = 0;
+      tip.classList.remove('show');
+    }
+    function move(clientX, clientY) {
+      const pts = wrap._chartPoints;
+      if (!pts || !pts.length) return;
+      const svgRect = svg.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const vbX = (clientX - svgRect.left) / svgRect.width * 320;
+      let nearest = 0, bestDist = Infinity;
+      pts.forEach((p, i) => {
+        const d = Math.abs(p.x - vbX);
+        if (d < bestDist) { bestDist = d; nearest = i; }
+      });
+      const p = pts[nearest];
+      hoverLine.setAttribute('x1', p.x); hoverLine.setAttribute('x2', p.x);
+      hoverLine.style.opacity = 1;
+      hoverDot.setAttribute('cx', p.x); hoverDot.setAttribute('cy', p.y);
+      hoverDot.style.opacity = 1;
+      const pxX = svgRect.left - wrapRect.left + (p.x / 320) * svgRect.width;
+      const pxY = svgRect.top - wrapRect.top + (p.y / 104) * svgRect.height;
+      tip.style.left = pxX + 'px';
+      tip.style.top = pxY + 'px';
+      tip.querySelector('.run-chart-tooltip-val').textContent = p.label;
+      tip.querySelector('.run-chart-tooltip-label').textContent = p.sub || '';
+      tip.classList.add('show');
+    }
+    hit.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
+    hit.addEventListener('mouseleave', hide);
+    hit.addEventListener('touchstart', (e) => { if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    hit.addEventListener('touchmove', (e) => { if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    hit.addEventListener('touchend', hide);
+  }
+
+  function wireBarChartHover(prefix) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const svg = wrap.querySelector('svg');
+    const hit = wrap.querySelector('.run-chart-hitarea');
+    const tip = document.getElementById(prefix + 'Tip');
+    if (!hit || wrap.dataset.hoverWired) return;
+    wrap.dataset.hoverWired = '1';
+
+    function hide() { tip.classList.remove('show'); }
+    function move(clientX) {
+      const bars = wrap._chartBars;
+      if (!bars || !bars.length) return;
+      const svgRect = svg.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const vbX = (clientX - svgRect.left) / svgRect.width * 320;
+      const bar = bars.find(b => vbX >= b.x && vbX <= b.x + b.w) || bars[bars.length - 1];
+      const pxX = svgRect.left - wrapRect.left + ((bar.x + bar.w / 2) / 320) * svgRect.width;
+      const pxY = svgRect.top - wrapRect.top + (bar.y / 104) * svgRect.height;
+      tip.style.left = pxX + 'px';
+      tip.style.top = pxY + 'px';
+      tip.querySelector('.run-chart-tooltip-val').textContent = bar.label;
+      tip.querySelector('.run-chart-tooltip-label').textContent = bar.sub || '';
+      tip.classList.add('show');
+    }
+    hit.addEventListener('mousemove', (e) => move(e.clientX));
+    hit.addEventListener('mouseleave', hide);
+    hit.addEventListener('touchstart', (e) => { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchmove', (e) => { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchend', hide);
+  }
+
+  function renderLineChart(prefix, series, color, gradId, fmtY) {
     const wrap = document.getElementById(prefix + 'Wrap');
     const empty = document.getElementById(prefix + 'Empty');
     const content = document.getElementById(prefix + 'Content');
     if (!content) return;
-    if (data.length < 2) {
+    if (series.length < 2) {
       empty.style.display = 'block';
       content.innerHTML = '';
       wrap.querySelector('svg').style.display = 'none';
@@ -1101,31 +1220,33 @@ body::after {
     wrap.querySelector('svg').style.display = 'block';
     wrap.querySelector('.run-chart-yaxis').style.display = 'flex';
 
+    const data = series.map(d => d.value);
     const min = Math.min.apply(null, data), max = Math.max.apply(null, data);
     const pad = Math.max((max - min) * 0.15, max * 0.02, 0.01);
     const yMin = min - pad, yMax = max + pad;
-    const xLeft = 8, xRight = 312, yTop = 20, yBot = 110;
+    const xLeft = CHART_X_LEFT, xRight = CHART_X_RIGHT, yTop = CHART_Y_TOP, yBot = CHART_Y_BOT;
     const xFor = (i) => data.length === 1 ? xRight : xLeft + (i / (data.length - 1)) * (xRight - xLeft);
     const yFor = (v) => yBot - ((v - yMin) / (yMax - yMin)) * (yBot - yTop);
-    const points = data.map((v, i) => ({ x: xFor(i), y: yFor(v) }));
+    const points = series.map((d, i) => ({ x: xFor(i), y: yFor(d.value), label: fmtY(d.value), sub: d.sub }));
     const linePath = runSmoothPath(points);
     const areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(2) + ' ' + yBot + ' L ' + points[0].x.toFixed(2) + ' ' + yBot + ' Z';
 
+    const last = points[points.length - 1];
     let html = '<path fill="url(#' + gradId + ')" d="' + areaPath + '"></path>'
-             + '<path fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="' + linePath + '"></path>';
-    points.forEach((pt, i) => {
-      const r = (i === points.length - 1) ? 4.5 : 2.5;
-      html += '<circle cx="' + pt.x.toFixed(2) + '" cy="' + pt.y.toFixed(2) + '" r="' + r + '" fill="' + color + '" stroke="#19232D" stroke-width="1.5"></circle>';
-    });
+             + '<path fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="' + linePath + '"></path>'
+             + '<circle cx="' + last.x.toFixed(2) + '" cy="' + last.y.toFixed(2) + '" r="4" fill="' + color + '" stroke="#19232D" stroke-width="1.5"></circle>';
     content.innerHTML = html;
+    wrap._chartPoints = points;
     document.getElementById(prefix.replace('Wrap', '') + 'Max').textContent = fmtY(yMax);
     document.getElementById(prefix.replace('Wrap', '') + 'Min').textContent = fmtY(yMin);
+    wireLineChartHover(prefix);
   }
 
-  function renderBarChart(prefix, data, color) {
+  function renderBarChart(prefix, series, color) {
     const wrap = document.getElementById(prefix + 'Wrap');
     const empty = document.getElementById(prefix + 'Empty');
     const content = document.getElementById(prefix + 'Content');
+    const data = series.map(d => d.value);
     const nonZero = data.filter(v => v > 0);
     if (nonZero.length === 0) {
       empty.style.display = 'block';
@@ -1139,20 +1260,24 @@ body::after {
     wrap.querySelector('.run-chart-yaxis').style.display = 'flex';
 
     const max = Math.max.apply(null, data) || 1;
-    const xLeft = 8, xRight = 312, yTop = 20, yBot = 110;
+    const xLeft = CHART_X_LEFT, xRight = CHART_X_RIGHT, yTop = CHART_Y_TOP, yBot = CHART_Y_BOT;
     const n = data.length;
     const gap = 6;
     const barW = (xRight - xLeft - gap * (n - 1)) / n;
     let html = '';
-    data.forEach((v, i) => {
-      const h = (v / max) * (yBot - yTop);
+    const bars = [];
+    series.forEach((d, i) => {
+      const h = (d.value / max) * (yBot - yTop);
       const x = xLeft + i * (barW + gap);
       const y = yBot - h;
       html += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + Math.max(1, h).toFixed(2) + '" rx="3" fill="' + color + '" opacity="' + (i === n - 1 ? '1' : '0.55') + '"></rect>';
+      bars.push({ x, w: barW, y, label: fmtKm(d.value), sub: d.sub });
     });
     content.innerHTML = html;
+    wrap._chartBars = bars;
     document.getElementById(prefix.replace('Wrap', '') + 'Max').textContent = fmtKm(max);
     document.getElementById(prefix.replace('Wrap', '') + 'Min').textContent = '0 km';
+    wireBarChartHover(prefix);
   }
 
   function weeklyMileageSeries(n) {
@@ -1164,7 +1289,7 @@ body::after {
       const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
       const startKey = dateKey(wkStart), endKey = dateKey(wkEnd);
       const total = allRuns.filter(r => r.date >= startKey && r.date <= endKey).reduce((s, r) => s + (r.distanceKm || 0), 0);
-      out.push(total);
+      out.push({ value: total, sub: fmtWeekRange(wkStart) });
     }
     return out;
   }
@@ -1175,15 +1300,17 @@ body::after {
   function runSortKey(r) { return r.date + ' ' + (r.time || '00:00:00'); }
   function sortedRuns() { return runs().slice().sort((a, b) => runSortKey(a).localeCompare(runSortKey(b))); }
   function paceSeries(n) {
-    return sortedRuns().filter(r => r.distanceKm > 0 && r.durationSec > 0).slice(-n).map(r => r.durationSec / r.distanceKm);
+    return sortedRuns().filter(r => r.distanceKm > 0 && r.durationSec > 0).slice(-n)
+      .map(r => ({ value: r.durationSec / r.distanceKm, sub: fmtDate(r.date) }));
   }
   function hrSeries(n) {
-    return sortedRuns().filter(r => r.avgHr).slice(-n).map(r => r.avgHr);
+    return sortedRuns().filter(r => r.avgHr).slice(-n)
+      .map(r => ({ value: r.avgHr, sub: fmtDate(r.date) }));
   }
   function efficiencySeries(n) {
     return sortedRuns().filter(r => r.avgHr && r.distanceKm > 0 && r.durationSec > 0).slice(-n).map(r => {
       const speedMPerMin = (r.distanceKm * 1000) / (r.durationSec / 60);
-      return speedMPerMin / r.avgHr;
+      return { value: speedMPerMin / r.avgHr, sub: fmtDate(r.date) };
     });
   }
 
@@ -1191,11 +1318,13 @@ body::after {
     renderBarChart('runChartMileage', weeklyMileageSeries(8), '#20A5A0');
     document.getElementById('runChartMileageMeta').textContent = 'Last 8 weeks';
 
-    renderLineChart('runChartPace', paceSeries(12), '#087CA3', 'runGradPace', fmtPace);
-    document.getElementById('runChartPaceMeta').textContent = 'Last ' + Math.min(12, paceSeries(12).length) + ' runs';
+    const pace = paceSeries(12);
+    renderLineChart('runChartPace', pace, '#087CA3', 'runGradPace', fmtPace);
+    document.getElementById('runChartPaceMeta').textContent = 'Last ' + Math.min(12, pace.length) + ' runs';
 
-    renderLineChart('runChartHr', hrSeries(12), '#A83FAF', 'runGradHr', (v) => Math.round(v) + ' bpm');
-    document.getElementById('runChartHrMeta').textContent = 'Last ' + Math.min(12, hrSeries(12).length) + ' runs with HR';
+    const hr = hrSeries(12);
+    renderLineChart('runChartHr', hr, '#A83FAF', 'runGradHr', (v) => Math.round(v) + ' bpm');
+    document.getElementById('runChartHrMeta').textContent = 'Last ' + Math.min(12, hr.length) + ' runs with HR';
 
     renderLineChart('runChartEff', efficiencySeries(12), '#B98AE0', 'runGradEff', (v) => v.toFixed(1));
   }

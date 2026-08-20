@@ -33,7 +33,11 @@
        `background:`/`border-image:` — restrained, not everywhere:
        active nav, primary CTAs, KPI highlights, progress bars,
        chart series, selected states, decorative glows) ---------- */
-  --gradient-primary: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-teal) 40%, var(--accent-purple) 75%, var(--accent-magenta) 100%);
+  /* Deliberately desaturated/darkened versions of the accent stops —
+     the full-brightness cyan/teal/purple/magenta read as too "poppy"
+     when used as a solid CTA fill, so --gradient-primary uses its own
+     muted stops rather than the raw accent tokens above. */
+  --gradient-primary: linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%);
   --gradient-nav: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
   --gradient-progress: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal));
   --gradient-secondary: linear-gradient(135deg, var(--accent-purple), var(--accent-magenta));

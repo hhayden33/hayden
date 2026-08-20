@@ -250,9 +250,9 @@ img, video, canvas, svg { max-width: 100%; }
 }
 .po-seg-btn:hover { color: var(--text-2); background: rgba(255,255,255,0.04); }
 .po-seg-btn.active {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px -3px rgba(0,0,0,0.4);
 }
 
 /* ----- Sub-section title ----- */
@@ -401,7 +401,7 @@ img, video, canvas, svg { max-width: 100%; }
 }
 .po-reps-pill:hover { background: rgba(255,255,255,0.06); color: var(--text-1); }
 .po-reps-pill.active {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2); border-color: transparent;
   font-weight: 800;
 }
@@ -409,12 +409,13 @@ img, video, canvas, svg { max-width: 100%; }
 /* ----- Primary button ----- */
 .po-btn-primary {
   width: 100%; padding: 14px;
-  border: 1px solid rgba(255,255,255,0.85);
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  border: 1px solid rgba(255,255,255,0.10);
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2); border-radius: 12px;
   font-family: inherit; font-size: 14px; font-weight: 700;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.40);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .po-btn-primary:hover { transform: translateY(-1px); }
@@ -550,7 +551,7 @@ img, video, canvas, svg { max-width: 100%; }
   -webkit-tap-highlight-color: transparent;
 }
 .po-modal-seg button.active {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2);
 }
 .po-bw-toggle {
@@ -698,11 +699,12 @@ img, video, canvas, svg { max-width: 100%; }
 .po-tw-summary-sep { color: var(--text-4); margin: 0 4px; }
 .po-tw-summary-vol { font-size: 13px; color: var(--text-2); font-weight: 500; }
 .po-tw-done-btn {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
-  color: var(--text-primary, #F2F2F2); border: none; border-radius: 999px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
   padding: 9px 16px;
   font-family: inherit; font-size: 12px; font-weight: 700;
   cursor: pointer;
+  transition: transform 0.1s;
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
 }

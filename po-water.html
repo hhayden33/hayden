@@ -203,13 +203,14 @@ html, body {
 .water-minus-btn:hover { background: rgba(255,255,255,0.10); }
 .water-minus-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .water-plus-btn {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
-  color: var(--text-primary, #F2F2F2); border: none; border-radius: 16px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
   font-family: inherit; font-size: 16px; font-weight: 700;
   cursor: pointer; padding: 16px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.40);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, box-shadow 0.15s;
 }
 .water-plus-btn:hover { transform: translateY(-1px); }
 .water-plus-btn:active { transform: scale(0.98); }
@@ -347,7 +348,7 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 .seg button.active {
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2);
 }
 
@@ -431,12 +432,13 @@ html, body {
 /* ----- Buttons ----- */
 .btn-primary {
   width: 100%; padding: 13px;
-  border: none;
-  background: var(--gradient-primary, linear-gradient(135deg, #087CA3, #20A5A0 40%, #552080 75%, #A83FAF));
+  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   color: var(--text-primary, #F2F2F2); border-radius: 12px;
   font-family: inherit; font-size: 14px; font-weight: 700;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.40);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .btn-secondary {
