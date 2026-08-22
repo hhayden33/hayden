@@ -88,19 +88,35 @@ body::after {
   .hero-greeting { animation: none; opacity: 1; }
 }
 
-/* ===== Component 1: page title ===== */
+/* ===== Component 1: page title — a wordmark, not a heading ===== */
 .dash-title {
   margin: 0 0 14px;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.dash-title-mark {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
   background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+.dash-title-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+@media (max-width: 480px) {
+  .dash-title-mark { font-size: 21px; }
+  .dash-title-kicker { font-size: 9px; }
+}
 
 .dash-header {
   display: flex;
@@ -869,7 +885,7 @@ body::after {
 <div class="page">
 
   <div class="dash-header">
-    <h1 class="dash-title">88YYDS Dashboard</h1>
+    <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-kicker">Dashboard</span></h1>
     <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
   </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
@@ -1081,7 +1097,7 @@ body::after {
   <div class="section" id="water">
     <div class="section-title">Water Tracker</div>
     <section class="water-embed">
-      <iframe src="po-water.html" class="water-iframe" id="waterIframe" loading="lazy" title="Water Tracker"></iframe>
+      <iframe src="po-water.html" class="water-iframe" id="waterIframe" loading="lazy" title="Water Tracker" scrolling="no"></iframe>
     </section>
   </div>
 
@@ -1247,7 +1263,10 @@ document.addEventListener('DOMContentLoaded', function () {
   function getNightRoutine() {
     const key = nightRoutineKey();
     let list = storeGet(key);
-    if (!Array.isArray(list) || list.length !== NIGHT_ROUTINE_ITEMS.length) {
+    // Only seed the default 9 the first time this active day is seen —
+    // once a list exists, a shorter one (after a delete) is left alone
+    // instead of being topped back up to 9.
+    if (!Array.isArray(list)) {
       list = NIGHT_ROUTINE_ITEMS.map(text => ({ text, done: false }));
       storeSet(key, list);
     }
@@ -1616,6 +1635,19 @@ document.addEventListener('DOMContentLoaded', function () {
     text.textContent = item.text;
     li.appendChild(text);
 
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'goal-delete';
+    del.setAttribute('aria-label', 'Remove item');
+    del.textContent = '×';
+    del.addEventListener('click', () => {
+      const list = getNightRoutine();
+      list.splice(idx, 1);
+      setNightRoutine(list);
+      renderNightRoutine();
+    });
+    li.appendChild(del);
+
     return li;
   }
   function renderNightRoutine() {
@@ -1883,9 +1915,9 @@ document.addEventListener('DOMContentLoaded', function () {
       full: { composite: ['push', 'pull', 'legs'], accent: 'success',
               title: 'Full body day', sub: 'Full-body strength',
               fallback: ['Squat', 'Bench press', 'Barbell row', 'Overhead press'] },
-      run:  { view: 'front', regions: ['quads', 'calves'], accent: 'run',
-              title: 'Run day', sub: 'Quads · Calves · Cardio',
-              fallback: ['Easy run', 'Tempo run', 'Long run'] }
+      // No 'sub'/'fallback' here — Run's only description is the dated
+      // Garmin sentence built in formatGarminRunDescription(), or nothing.
+      run:  { view: 'front', regions: ['quads', 'calves'], accent: 'run', title: 'Run day' }
     };
     ['push', 'pull', 'legs'].forEach(function (k) {
       if (!MUSCLE_CONFIG[k].accent) MUSCLE_CONFIG[k].accent = 'success';
@@ -1989,42 +2021,28 @@ document.addEventListener('DOMContentLoaded', function () {
       const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
       return m + ':' + (s < 10 ? '0' + s : s) + '/km';
     }
-    function loadRunPlanParts(dateKey) {
+    function ordinalSuffix(n) {
+      const v = n % 100;
+      if (v >= 11 && v <= 13) return 'th';
+      switch (n % 10) { case 1: return 'st'; case 2: return 'nd'; case 3: return 'rd'; default: return 'th'; }
+    }
+    // The only "description" shown for a Run day — the actual Garmin-synced
+    // run on that exact date, in one plain sentence (e.g. "Monday 17th,
+    // 10km run"). No plan, no fallback text: null means nothing renders.
+    function formatGarminRunDescription(dateKey) {
       try {
-        // An actual logged run for this date (running.html's "Log a Run")
-        // beats the recurring weekly template — it's the real workout,
-        // notes included, not just what was planned.
         const runsRaw = localStorage.getItem('run:runs');
-        if (runsRaw) {
-          const list = JSON.parse(runsRaw);
-          if (Array.isArray(list)) {
-            const logged = list.find(function (r) { return r.date === dateKey; });
-            if (logged) {
-              const parts = [logged.type];
-              const km = fmtKm(logged.distanceKm);
-              if (km) parts.push(km);
-              if (logged.distanceKm > 0 && logged.durationSec > 0) {
-                const pace = fmtPace(logged.durationSec / logged.distanceKm);
-                if (pace) parts.push(pace);
-              }
-              if (logged.notes) parts.push('"' + logged.notes + '"');
-              return parts;
-            }
-          }
-        }
-        const raw = localStorage.getItem('run:weekPlan');
-        if (!raw) return null;
-        const wp = JSON.parse(raw);
-        if (!Array.isArray(wp) || wp.length !== 7) return null;
-        const dow = weekDates.indexOf(dateKey);
-        const entry = wp.find(function (e) { return e.dow === dow; });
-        if (!entry) return null;
-        const parts = [entry.type];
-        const km = fmtKm(entry.distanceKm);
-        const pace = fmtPace(entry.paceTargetSecPerKm);
-        if (km) parts.push(km);
-        if (pace) parts.push(pace);
-        return parts;
+        if (!runsRaw) return null;
+        const list = JSON.parse(runsRaw);
+        if (!Array.isArray(list)) return null;
+        const logged = list.find(function (r) { return r.date === dateKey; });
+        if (!logged || !(logged.distanceKm > 0)) return null;
+        const d = parseYMD(dateKey);
+        const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()];
+        const day = d.getDate();
+        const km = Math.round(logged.distanceKm * 10) / 10;
+        const kmStr = (km % 1 === 0 ? km.toFixed(0) : km.toFixed(1)) + 'km';
+        return weekday + ' ' + day + ordinalSuffix(day) + ', ' + kmStr + ' run';
       } catch (e) { return null; }
     }
     function loadDoneDays() {
@@ -2267,13 +2285,19 @@ document.addEventListener('DOMContentLoaded', function () {
       const order = ['push', 'pull', 'legs', 'full', 'run'];
       const ordered = order.filter(function (s) { return splits.indexOf(s) !== -1; });
       chartTitleEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ') + ' Day';
-      chartSubEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
+      // Run has no generic muscle-focus blurb here — its only description
+      // is the dated Garmin sentence below (or nothing at all).
+      const subText = ordered.filter(function (s) { return s !== 'run'; })
+        .map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
+      chartSubEl.textContent = subText;
+      chartSubEl.style.display = subText ? '' : 'none';
 
       const exParts = ordered.map(function (s) {
-        const parts = (s === 'run') ? loadRunPlanParts(activeDate) : loadGymExercises(s);
+        if (s === 'run') return formatGarminRunDescription(activeDate);
+        const parts = loadGymExercises(s);
         const list = (parts || MUSCLE_CONFIG[s].fallback).join(' · ');
         return ordered.length > 1 ? (MUSCLE_CONFIG[s].title.replace(/ day$/i, '') + ': ' + list) : list;
-      });
+      }).filter(Boolean);
       chartExEl.textContent = exParts.join('     |     ');
     }
 

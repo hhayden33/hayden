@@ -244,8 +244,6 @@ body::after {
 .run-day-dist { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-secondary); }
 .run-day.today { border-color: var(--run-accent); box-shadow: 0 0 0 1px var(--run-accent) inset; }
 .run-day.completed { background: rgba(32,165,160,0.10); border-color: rgba(32,165,160,0.28); }
-.run-day.missed { background: rgba(255,107,107,0.06); border-color: rgba(255,107,107,0.20); }
-.run-day.rest { opacity: 0.5; }
 
 .run-progress-track { height: 8px; border-radius: 999px; background: var(--surface-hover, #202B35); overflow: hidden; margin: 4px 0 16px; }
 .run-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--run-accent), #B98AE0); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
@@ -317,9 +315,42 @@ body::after {
 .modal {
   width: 100%; max-width: 440px;
   background: var(--surface-elevated, #26343E); border: 1px solid var(--border-strong, rgba(120, 160, 180, 0.28));
-  border-radius: 16px; padding: 22px; max-height: 88vh; overflow-y: auto;
+  border-radius: 16px; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
 }
-.modal h3 { margin: 0 0 16px; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+/* Sticky head + footer, scrolling body — so Close/Cancel/Save stay reachable
+   without scrolling, even when the modal is forced full-height on mobile
+   (see topbar.js's @media override below). */
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 18px 20px 14px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  /* topbar.js forces the modal itself to scroll on mobile (overflow-y:auto
+     !important, so it can't be overridden here) — sticky + an opaque
+     background keeps the head reachable in that scroll container too,
+     not just in the .modal-body scroll case used everywhere else. */
+  position: sticky; top: 0; z-index: 1;
+  background: var(--surface-elevated, #26343E);
+}
+.modal-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.modal-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex-shrink: 0;
+  border: 0; border-radius: 8px;
+  background: rgba(255,255,255,0.06); color: var(--text-secondary);
+  font-size: 15px; line-height: 1; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.modal-close:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+.modal-body { padding: 18px 20px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.modal .run-modal-actions {
+  flex-shrink: 0; margin: 0; gap: 8px;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255,255,255,0.06);
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--surface-elevated, #26343E);
+}
 .run-field { margin-bottom: 12px; }
 .run-field label {
   display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
@@ -339,20 +370,6 @@ body::after {
 .run-modal-actions button { flex: 1; }
 .run-set-section { margin-bottom: 18px; }
 .run-set-section h4 { margin: 0 0 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); }
-.run-plan-row {
-  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px; padding: 10px; margin-bottom: 8px;
-}
-.run-plan-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.run-plan-dow { font-size: 11.5px; font-weight: 700; color: var(--text-primary); }
-.run-plan-rest-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-tertiary); }
-.run-plan-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-.run-plan-fields input, .run-plan-fields select {
-  width: 100%; padding: 7px 9px; font-size: 12px;
-  border: 1px solid rgba(255,255,255,0.07); border-radius: 7px;
-  background: rgba(0,0,0,0.25); color: var(--text-primary); font-family: inherit; outline: none;
-}
-.run-plan-fields .full { grid-column: 1 / -1; }
 .run-detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
 .run-detail-row:last-child { border-bottom: 0; }
 .run-detail-row .label { color: var(--text-tertiary); }
@@ -365,7 +382,6 @@ body::after {
   .run-chart-grid { grid-template-columns: 1fr; }
   .run-today-card { padding: 18px; }
   .gm-progress-num { font-size: 34px; }
-  .run-plan-fields { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
@@ -375,7 +391,6 @@ body::after {
   <div class="run-header-row">
     <h1 class="dash-title" style="margin:0">Running</h1>
     <div class="run-header-actions">
-      <button class="gm-add" id="runLogBtn" type="button">+ Log Run</button>
       <button class="gm-ghost" id="runSettingsBtn" type="button" aria-label="Settings">⚙️ Settings</button>
     </div>
   </div>
@@ -596,39 +611,16 @@ body::after {
 
 </div><!-- /.page -->
 
-<!-- ===== Log Run Modal ===== -->
-<div class="modal-bg" id="runLogModalBg">
-  <div class="modal">
-    <h3>Log a Run</h3>
-    <div class="run-field"><label>Date</label><input type="date" id="runLogDate"></div>
-    <div class="run-field-row">
-      <div class="run-field">
-        <label>Type</label>
-        <select id="runLogType">
-          <option>Easy Run</option><option>Tempo</option><option>Intervals</option>
-          <option>Long Run</option><option>Recovery</option><option>Race</option>
-        </select>
-      </div>
-      <div class="run-field"><label>Distance (km)</label><input type="number" step="0.01" id="runLogDist" placeholder="10"></div>
-    </div>
-    <div class="run-field-row">
-      <div class="run-field"><label>Duration (h:mm:ss)</label><input type="text" id="runLogDur" placeholder="45:30"></div>
-      <div class="run-field"><label>Avg HR (optional)</label><input type="number" id="runLogHr" placeholder="152"></div>
-    </div>
-    <div class="run-field"><label>Elevation gain — m (optional)</label><input type="number" id="runLogElev" placeholder="0"></div>
-    <div class="run-field"><label>Notes (optional)</label><textarea id="runLogNotes" rows="3" placeholder="How it felt, splits, route, anything worth remembering — shows up on the 7-Day Planner too"></textarea></div>
-    <div class="run-modal-actions">
-      <button class="gm-ghost" id="runLogCancel" type="button">Cancel</button>
-      <button class="gm-add" id="runLogSave" type="button">Save Run</button>
-    </div>
-  </div>
-</div>
-
 <!-- ===== Run Detail Modal ===== -->
 <div class="modal-bg" id="runDetailModalBg">
   <div class="modal">
-    <h3 id="runDetailTitle">Run</h3>
-    <div id="runDetailBody"></div>
+    <div class="modal-head">
+      <h3 id="runDetailTitle">Run</h3>
+      <button class="modal-close" id="runDetailCloseX" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="runDetailBody"></div>
+    </div>
     <div class="run-modal-actions">
       <button class="gm-ghost" id="runDetailDelete" type="button" style="color:var(--danger)">Delete</button>
       <button class="gm-add" id="runDetailClose" type="button">Close</button>
@@ -639,8 +631,11 @@ body::after {
 <!-- ===== Settings Modal ===== -->
 <div class="modal-bg" id="runSettingsModalBg">
   <div class="modal" style="max-width:540px">
-    <h3>Running Settings</h3>
-
+    <div class="modal-head">
+      <h3>Running Settings</h3>
+      <button class="modal-close" id="runSettingsCloseX" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
     <div class="run-set-section">
       <h4>Race Goal</h4>
       <div class="run-field"><label>Race Name</label><input type="text" id="setRaceName"></div>
@@ -687,10 +682,6 @@ body::after {
         <option value="idle">Recovering</option>
       </select>
     </div>
-
-    <div class="run-set-section">
-      <h4>Weekly Plan Template</h4>
-      <div id="setWeekPlan"></div>
     </div>
 
     <div class="run-modal-actions">
@@ -738,26 +729,9 @@ body::after {
   function defaultSettings() {
     return { weeklyDistanceTargetKm: 47, trainingStatusOverride: 'auto' };
   }
-  function defaultWeekPlan() {
-    // dow: 0=Mon .. 6=Sun. A repeating weekly template — edit anytime in Settings.
-    return [
-      { dow: 0, rest: false, type: 'Easy Run',  distanceKm: 8,  paceTargetSecPerKm: 340, hrZone: 'Z2 · 135–150', durationEstMin: 45, purpose: 'Aerobic base' },
-      { dow: 1, rest: true,  type: 'Rest',      distanceKm: 0,  paceTargetSecPerKm: 0,   hrZone: '',             durationEstMin: 0,  purpose: 'Recovery' },
-      { dow: 2, rest: false, type: 'Intervals', distanceKm: 10, paceTargetSecPerKm: 290, hrZone: 'Z4 · 165–178', durationEstMin: 55, purpose: 'VO2max / speed' },
-      { dow: 3, rest: false, type: 'Easy Run',  distanceKm: 6,  paceTargetSecPerKm: 340, hrZone: 'Z2 · 135–150', durationEstMin: 34, purpose: 'Active recovery' },
-      { dow: 4, rest: true,  type: 'Rest',      distanceKm: 0,  paceTargetSecPerKm: 0,   hrZone: '',             durationEstMin: 0,  purpose: 'Recovery' },
-      { dow: 5, rest: false, type: 'Long Run',  distanceKm: 18, paceTargetSecPerKm: 355, hrZone: 'Z2 · 140–155', durationEstMin: 110,purpose: 'Endurance / fat adaptation' },
-      { dow: 6, rest: false, type: 'Recovery',  distanceKm: 5,  paceTargetSecPerKm: 380, hrZone: 'Z1 · 120–135', durationEstMin: 30, purpose: 'Shakeout' }
-    ];
-  }
-
   function goal()     { return Object.assign(defaultGoal(), load('run:goal', {})); }
   function pbs()      { return Object.assign(defaultPbs(), load('run:pbs', {})); }
   function settings() { return Object.assign(defaultSettings(), load('run:settings', {})); }
-  function weekPlan() {
-    const wp = load('run:weekPlan', null);
-    return Array.isArray(wp) && wp.length === 7 ? wp : defaultWeekPlan();
-  }
   function runs() { return load('run:runs', []); }
   function garminSnapshot() { return load('run:garminSnapshot', null); }
 
@@ -918,6 +892,18 @@ body::after {
     RECOVERY: 'Recovery', DETRAINING: 'Detraining', OVERREACHING: 'Overreaching',
     UNPRODUCTIVE: 'Unproductive', STRAINED: 'Strained'
   };
+  const ACWR_STATUS_LABEL = {
+    OPTIMAL: 'Optimal', LOW: 'Low', HIGH: 'High',
+    HIGH_RISK: 'High risk', UNDERTRAINING: 'Undertraining'
+  };
+  // Garmin's status enums arrive SCREAMING_CASE; normalize anything not in
+  // the lookup above the same way instead of showing it shouting at you.
+  function normalizeStatusLabel(s) {
+    if (!s) return s;
+    if (ACWR_STATUS_LABEL[s]) return ACWR_STATUS_LABEL[s];
+    const lower = String(s).toLowerCase().replace(/_/g, ' ');
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }
   function monthDistanceKm() {
     const now = new Date();
     const prefix = now.getFullYear() + '-' + pad2(now.getMonth() + 1);
@@ -937,7 +923,7 @@ body::after {
     document.getElementById('runTrainingStatus').textContent = snap && snap.trainingStatus
       ? (TRAINING_STATUS_LABEL[snap.trainingStatus] || snap.trainingStatus) : '—';
     document.getElementById('runTrainingLoad').textContent = (snap && snap.trainingLoadAcute != null)
-      ? Math.round(snap.trainingLoadAcute) + (snap.acwrStatus ? ' · ' + snap.acwrStatus : '') : '—';
+      ? Math.round(snap.trainingLoadAcute) + (snap.acwrStatus ? ' · ' + normalizeStatusLabel(snap.acwrStatus) : '') : '—';
     document.getElementById('runRestingHr').textContent = (snap && snap.restingHr) ? snap.restingHr + ' bpm' : '—';
 
     const monthKm = monthDistanceKm();
@@ -1027,7 +1013,6 @@ body::after {
   // RENDER — Weekly Training
   // =============================================================
   function renderWeek() {
-    const plan = weekPlan();
     const stats = weekRunsAndStats();
     const s = settings();
     const grid = document.getElementById('runWeekGrid');
@@ -1037,19 +1022,16 @@ body::after {
     const runsByDate = {};
     stats.weekRuns.forEach(r => { (runsByDate[r.date] = runsByDate[r.date] || []).push(r); });
 
+    // No plan to compare against — every day is either a completed Garmin
+    // activity or simply blank, never inferred as "rest" or "missed".
     stats.days.forEach((d, i) => {
       const key = dateKey(d);
-      const dayPlan = plan[i];
       const hasRun = !!runsByDate[key];
-      let statusClass = '';
-      let icon = '·';
-      if (dayPlan && dayPlan.rest) { statusClass = 'rest'; icon = '—'; }
-      else if (hasRun) { statusClass = 'completed'; icon = '✓'; }
-      else if (key < tKey) { statusClass = 'missed'; icon = '✕'; }
-      else { icon = '○'; }
+      const statusClass = hasRun ? 'completed' : '';
+      const icon = hasRun ? '✓' : '·';
       const isToday = key === tKey;
 
-      const dayDist = hasRun ? runsByDate[key].reduce((s2, r) => s2 + (r.distanceKm || 0), 0) : (dayPlan ? dayPlan.distanceKm : 0);
+      const dayDist = hasRun ? runsByDate[key].reduce((s2, r) => s2 + (r.distanceKm || 0), 0) : 0;
 
       const cell = document.createElement('div');
       cell.className = 'run-day' + (statusClass ? ' ' + statusClass : '') + (isToday ? ' today' : '');
@@ -1407,48 +1389,10 @@ body::after {
   }
 
   // =============================================================
-  // MODALS — Log Run
+  // MODALS — shared open/close (Settings, Run Detail)
   // =============================================================
   function openModal(bg) { bg.classList.add('show'); }
   function closeModal(bg) { bg.classList.remove('show'); }
-
-  const runLogModalBg = document.getElementById('runLogModalBg');
-  document.getElementById('runLogBtn').addEventListener('click', () => {
-    document.getElementById('runLogDate').value = todayKey();
-    document.getElementById('runLogType').value = 'Easy Run';
-    document.getElementById('runLogDist').value = '';
-    document.getElementById('runLogDur').value = '';
-    document.getElementById('runLogHr').value = '';
-    document.getElementById('runLogElev').value = '';
-    document.getElementById('runLogNotes').value = '';
-    openModal(runLogModalBg);
-  });
-  document.getElementById('runLogCancel').addEventListener('click', () => closeModal(runLogModalBg));
-  runLogModalBg.addEventListener('click', (e) => { if (e.target === runLogModalBg) closeModal(runLogModalBg); });
-  document.getElementById('runLogSave').addEventListener('click', () => {
-    const dateEl = document.getElementById('runLogDate');
-    const distEl = document.getElementById('runLogDist');
-    const durEl = document.getElementById('runLogDur');
-    const date = dateEl.value;
-    const dist = parseFloat(distEl.value);
-    const durSec = parseClockToSec(durEl.value);
-    if (!date) { dateEl.focus(); return; }
-    if (!dist || dist <= 0) { distEl.focus(); return; }
-    if (!durSec || durSec <= 0) { durEl.focus(); return; }
-    const hr = parseFloat(document.getElementById('runLogHr').value) || null;
-    const elev = parseFloat(document.getElementById('runLogElev').value) || 0;
-    const notes = document.getElementById('runLogNotes').value.trim();
-    const list = runs();
-    list.push({
-      id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, type: document.getElementById('runLogType').value,
-      distanceKm: dist, durationSec: durSec, avgHr: hr, elevationM: elev,
-      source: 'manual', notes: notes
-    });
-    save('run:runs', list);
-    closeModal(runLogModalBg);
-    renderAll();
-  });
 
   // =============================================================
   // MODALS — Run Detail
@@ -1478,6 +1422,7 @@ body::after {
     openModal(runDetailModalBg);
   }
   document.getElementById('runDetailClose').addEventListener('click', () => closeModal(runDetailModalBg));
+  document.getElementById('runDetailCloseX').addEventListener('click', () => closeModal(runDetailModalBg));
   runDetailModalBg.addEventListener('click', (e) => { if (e.target === runDetailModalBg) closeModal(runDetailModalBg); });
   document.getElementById('runDetailDelete').addEventListener('click', () => {
     if (!activeDetailId) return;
@@ -1493,51 +1438,6 @@ body::after {
   const runSettingsModalBg = document.getElementById('runSettingsModalBg');
 
   function secToClockInput(sec) { return sec ? fmtClock(sec) : ''; }
-
-  function buildWeekPlanEditor(plan) {
-    const wrap = document.getElementById('setWeekPlan');
-    wrap.innerHTML = '';
-    plan.forEach((day, i) => {
-      const row = document.createElement('div');
-      row.className = 'run-plan-row';
-      row.dataset.dow = i;
-      row.innerHTML =
-        '<div class="run-plan-row-head">' +
-        '  <span class="run-plan-dow">' + DOW_LABELS[i] + '</span>' +
-        '  <label class="run-plan-rest-toggle"><input type="checkbox" class="pr-rest" ' + (day.rest ? 'checked' : '') + '> Rest day</label>' +
-        '</div>' +
-        '<div class="run-plan-fields">' +
-        '  <select class="pr-type"><option' + (day.type === 'Easy Run' ? ' selected' : '') + '>Easy Run</option><option' + (day.type === 'Tempo' ? ' selected' : '') + '>Tempo</option><option' + (day.type === 'Intervals' ? ' selected' : '') + '>Intervals</option><option' + (day.type === 'Long Run' ? ' selected' : '') + '>Long Run</option><option' + (day.type === 'Recovery' ? ' selected' : '') + '>Recovery</option></select>' +
-        '  <input class="pr-dist" type="number" step="0.1" placeholder="Distance km" value="' + (day.distanceKm || '') + '">' +
-        '  <input class="pr-pace" type="text" placeholder="Pace mm:ss" value="' + (day.paceTargetSecPerKm ? fmtPace(day.paceTargetSecPerKm).replace('/km', '') : '') + '">' +
-        '  <input class="pr-dur" type="number" placeholder="Duration min" value="' + (day.durationEstMin || '') + '">' +
-        '  <input class="pr-hr full" type="text" placeholder="HR zone label (e.g. Z2 · 135–150)" value="' + (day.hrZone || '').replace(/"/g, '&quot;') + '">' +
-        '  <input class="pr-purpose full" type="text" placeholder="Purpose" value="' + (day.purpose || '').replace(/"/g, '&quot;') + '">' +
-        '</div>';
-      wrap.appendChild(row);
-    });
-  }
-
-  function readWeekPlanEditor() {
-    const rows = document.querySelectorAll('#setWeekPlan .run-plan-row');
-    const out = [];
-    rows.forEach((row, i) => {
-      const rest = row.querySelector('.pr-rest').checked;
-      const paceParts = row.querySelector('.pr-pace').value.split(':').map(Number);
-      const paceSec = paceParts.length === 2 && !paceParts.some(isNaN) ? paceParts[0] * 60 + paceParts[1] : 0;
-      out.push({
-        dow: i,
-        rest: rest,
-        type: rest ? 'Rest' : row.querySelector('.pr-type').value,
-        distanceKm: rest ? 0 : (parseFloat(row.querySelector('.pr-dist').value) || 0),
-        paceTargetSecPerKm: rest ? 0 : paceSec,
-        hrZone: rest ? '' : row.querySelector('.pr-hr').value,
-        durationEstMin: rest ? 0 : (parseFloat(row.querySelector('.pr-dur').value) || 0),
-        purpose: row.querySelector('.pr-purpose').value
-      });
-    });
-    return out;
-  }
 
   document.getElementById('runSettingsBtn').addEventListener('click', () => {
     const g = goal(), p = pbs(), s = settings();
@@ -1555,10 +1455,10 @@ body::after {
     document.getElementById('setPb50k').value = secToClockInput(p.fiftyK);
     document.getElementById('setWeeklyTarget').value = s.weeklyDistanceTargetKm;
     document.getElementById('setStatusOverride').value = s.trainingStatusOverride || 'auto';
-    buildWeekPlanEditor(weekPlan());
     openModal(runSettingsModalBg);
   });
   document.getElementById('runSettingsCancel').addEventListener('click', () => closeModal(runSettingsModalBg));
+  document.getElementById('runSettingsCloseX').addEventListener('click', () => closeModal(runSettingsModalBg));
   runSettingsModalBg.addEventListener('click', (e) => { if (e.target === runSettingsModalBg) closeModal(runSettingsModalBg); });
   document.getElementById('runSettingsSave').addEventListener('click', () => {
     save('run:goal', {
@@ -1581,7 +1481,6 @@ body::after {
       weeklyDistanceTargetKm: parseFloat(document.getElementById('setWeeklyTarget').value) || 0,
       trainingStatusOverride: document.getElementById('setStatusOverride').value
     });
-    save('run:weekPlan', readWeekPlanEditor());
     closeModal(runSettingsModalBg);
     renderAll();
   });
