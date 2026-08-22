@@ -142,6 +142,24 @@ body::after {
   color: transparent;
   filter: drop-shadow(0 0 26px rgba(85, 32, 128, 0.35));
 }
+.dash-title-orb {
+  align-self: center;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #F1E0FF 0%, #B98AE0 45%, #552080 100%);
+  box-shadow: 0 0 12px 2px rgba(168, 63, 175, 0.55), 0 0 22px 6px rgba(8, 124, 163, 0.2);
+  animation: orb-pulse 3.6s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.18); opacity: 0.8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-title-orb { animation: none; }
+}
 .dash-title-kicker {
   font-size: 10px;
   font-weight: 700;
@@ -979,7 +997,7 @@ body::after {
 <div class="page">
 
   <div class="dash-header">
-    <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-kicker">AIO</span></h1>
+    <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-orb"></span><span class="dash-title-kicker">AIO</span></h1>
     <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
   </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
