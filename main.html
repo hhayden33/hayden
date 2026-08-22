@@ -49,6 +49,16 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  /* This page re-renders sections in place constantly (selecting a day,
+     toggling a split, checking off a goal), often changing their height.
+     Browsers' automatic scroll anchoring tries to compensate by nudging
+     scrollY to keep whatever's on screen visually stable — scoping
+     overflow-anchor:none to just the resizing element isn't enough,
+     since the anchor node it ends up picking can still live elsewhere
+     on the page. Disabling it here stops the page from ever jumping on
+     its own; scroll position now only ever changes when something
+     explicitly scrolls it. */
+  overflow-anchor: none;
 }
 body {
   min-height: 100vh;
@@ -733,6 +743,9 @@ body::after {
 }
 
 /* ---------- 7-Day Planner ---------- */
+/* (Selecting a day here can change the chart panel's height a lot —
+   see the overflow-anchor:none on html,body above for why that no
+   longer moves the page.) */
 .wk-nav-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px;
@@ -900,6 +913,14 @@ body::after {
   .wk-day { width: 76px; }
   .wk-chart-svg { width: 92px; height: 132px; }
   .wk-seg-btn { padding: 8px 3px; font-size: 10.5px; }
+  /* A two-split day (e.g. Pull + Run) shows both front and back body
+     diagrams — on a narrow phone that plus the title/description text
+     doesn't fit on one row, so it wraps. Force the text block onto its
+     own full-width row every time (rather than only when it barely
+     doesn't fit) and center whichever diagram(s) sit above it, instead
+     of leaving them stranded flush-left with empty space beside them. */
+  .wk-chart-wrap { justify-content: center; }
+  .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
 }
 
 /* ---------- Water Tracker (moved in from health.html) ---------- */
