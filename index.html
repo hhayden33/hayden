@@ -81,7 +81,7 @@ body::after {
 
 /* ===== page title ===== */
 .dash-title {
-  margin: 0 0 18px;
+  margin: 0 0 6px;
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -92,6 +92,26 @@ body::after {
   color: transparent;
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+/* ===== Hero greeting ===== */
+.hero-greeting {
+  margin: 0 0 18px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+  opacity: 0;
+  animation: hero-greeting-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.1s;
+}
+@keyframes hero-greeting-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-greeting { animation: none; opacity: 1; }
+}
 
 /* ===== Bento grid ===== */
 .bento-grid {
@@ -178,7 +198,8 @@ body::after {
 <body>
 <div class="page">
 
-  <h1 class="dash-title">Dashboard</h1>
+  <h1 class="dash-title">Welcome to 88YYDS AIO</h1>
+  <div class="hero-greeting" id="heroGreetingSub">Good morning</div>
 
   <div class="bento-grid">
     <a href="main.html" class="bento-tile big" style="--accent:#20A5A0">
@@ -258,8 +279,41 @@ body::after {
         <span class="bento-arrow">→</span>
       </div>
     </a>
+
+    <a href="todo.html" class="bento-tile" style="--accent:#F2C063">
+      <div class="bento-top">
+        <span class="bento-num">·07</span>
+        <span class="bento-emoji">📝</span>
+      </div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">To-Do</div>
+      <div class="bento-footer">
+        <span class="bento-subtitle">Weekly task list</span>
+        <span class="bento-arrow">→</span>
+      </div>
+    </a>
   </div>
 
 </div>
+<script>
+(function () {
+  'use strict';
+  // Time-of-day hero greeting — reads the browser's local clock, so it's
+  // always correct for whoever has the page open, not when it was built.
+  const subEl = document.getElementById('heroGreetingSub');
+  if (!subEl) return;
+
+  function greetingForHour(h) {
+    if (h >= 5 && h < 12) return 'Good morning';
+    if (h >= 12 && h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+  function renderGreeting() {
+    subEl.textContent = greetingForHour(new Date().getHours());
+  }
+  renderGreeting();
+  setInterval(renderGreeting, 60 * 1000);
+})();
+</script>
 </body>
 </html>
