@@ -826,11 +826,21 @@ body::after {
 }
 .wk-day-tag {
   display: inline-flex; align-items: center; gap: 3px;
+  max-width: 100%; overflow: hidden;
   font-size: 9.5px; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase;
   padding: 3px 7px; border-radius: 999px;
   background: rgba(255,255,255,0.05);
   color: var(--text-tertiary);
+}
+/* A combined tag (e.g. "Pull+Run") is longer than any single split name
+   and, at the same size as a normal tag, is wider than the day card
+   itself — shrink it to fit instead of spilling past the card's edges.
+   white-space/text-overflow are a last-resort safety net for anything
+   still too long (a hypothetical 3-way combo). */
+.wk-day-tag-combo {
+  font-size: 7.5px; letter-spacing: 0.01em; padding: 3px 5px;
+  white-space: nowrap; text-overflow: ellipsis;
 }
 .wk-day-tag[data-split="push"] { background: rgba(8,124,163,0.16); color: #087CA3; }
 .wk-day-tag[data-split="pull"] { background: rgba(32,165,160,0.16); color: #20A5A0; }
@@ -2387,6 +2397,7 @@ document.addEventListener('DOMContentLoaded', function () {
           tagEl.dataset.split = splitArr[0];
           tagEl.textContent = splitTagLabel(splitArr[0]);
         } else if (splitArr.length > 1) {
+          tagEl.classList.add('wk-day-tag-combo');
           tagEl.textContent = splitArr.map(splitTagLabel).join('+');
           const colors = splitArr.map(function (s) { return SPLIT_TAG_COLORS[s] || '#687580'; });
           tagEl.style.background = 'linear-gradient(90deg, ' + colors.map(function (c) { return hexToRgba(c, 0.20); }).join(', ') + ')';
