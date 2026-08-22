@@ -395,6 +395,60 @@ body::after {
 .run-detail-row .label { color: var(--text-tertiary); }
 .run-detail-row .val { font-family: var(--font-mono); font-weight: 700; color: var(--text-primary); }
 
+/* ===== Share overlay ===== */
+.run-share-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 9px; background: rgba(255,255,255,0.04);
+  color: var(--text-tertiary); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.run-share-btn:hover { background: var(--surface-elevated, #26343E); border-color: var(--accent-cyan, #087CA3); color: var(--text-primary); }
+.run-share-btn svg { width: 15px; height: 15px; }
+
+.run-share-modal { max-width: 400px; }
+.run-share-layout-toggle {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.run-share-layout-btn {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 10px; background: var(--surface-hover, #202B35);
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.run-share-layout-btn:hover { background: var(--surface-elevated, #26343E); }
+.run-share-layout-btn.active {
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  border-color: transparent; color: var(--text-primary);
+}
+.run-share-canvas-wrap {
+  position: relative;
+  width: min(100%, 340px);
+  aspect-ratio: 1080 / 1920;
+  margin: 0 auto;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, rgba(8,124,163,0.35) 0%, rgba(20,30,45,0.55) 45%, rgba(85,32,128,0.35) 100%),
+    repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 50% / 24px 24px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+}
+.run-share-canvas-wrap canvas {
+  display: block; width: 100%; height: 100%;
+}
+.run-share-hint {
+  margin-top: 12px; text-align: center;
+  font-size: 11px; color: var(--text-tertiary);
+}
+
 @media (max-width: 480px) {
   .run-week-grid { gap: 5px; }
   .run-day { padding: 7px 3px; }
@@ -704,6 +758,30 @@ body::after {
     <div class="run-modal-actions">
       <button class="gm-ghost" id="runSettingsCancel" type="button">Cancel</button>
       <button class="gm-add" id="runSettingsSave" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Share Overlay Modal ===== -->
+<div class="modal-bg" id="runShareModalBg">
+  <div class="modal run-share-modal">
+    <div class="modal-head">
+      <h3 id="runShareTitle">Share Run</h3>
+      <button class="modal-close" id="runShareCloseX" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="run-share-layout-toggle" role="tablist" aria-label="Share layout">
+        <button class="run-share-layout-btn active" type="button" data-layout="minimal" role="tab" aria-selected="true">Minimal</button>
+        <button class="run-share-layout-btn" type="button" data-layout="full" role="tab" aria-selected="false">Full Stats</button>
+      </div>
+      <div class="run-share-canvas-wrap">
+        <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
+      </div>
+      <div class="run-share-hint">Transparent 1080×1920 PNG — ready for Instagram Stories</div>
+    </div>
+    <div class="run-modal-actions">
+      <button class="gm-ghost" id="runShareCancel" type="button">Cancel</button>
+      <button class="gm-add" id="runShareDownload" type="button">Export PNG</button>
     </div>
   </div>
 </div>
@@ -1371,8 +1449,15 @@ body::after {
         '<div class="run-row-stats">' +
         '  <div class="run-row-dist">' + fmtKm(r.distanceKm) + '</div>' +
         '  <div class="run-row-pace">' + (pace ? fmtPace(pace) : fmtDuration(r.durationSec)) + '</div>' +
-        '</div>';
+        '</div>' +
+        '<button class="run-share-btn" type="button" title="Share" aria-label="Share this run">' +
+        '  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>' +
+        '</button>';
       li.addEventListener('click', () => openRunDetail(r.id));
+      li.querySelector('.run-share-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openShareModal(r.id);
+      });
       list.appendChild(li);
     });
   }
@@ -1516,6 +1601,251 @@ body::after {
     });
     closeModal(runSettingsModalBg);
     renderAll();
+  });
+
+  // =============================================================
+  // SHARE OVERLAY — Instagram Story export
+  // Renders a run's stats onto a transparent 1080x1920 canvas using the
+  // dashboard's own wordmark treatment, so no external image asset (and
+  // no risk of a boxed/backgrounded logo) is involved. Every value drawn
+  // here comes straight from the run object already loaded by runs() —
+  // nothing here invents or re-derives stats beyond what fmtKm/fmtPace/
+  // fmtDuration already compute for the rest of the page.
+  //
+  // Layouts are declared in SHARE_LAYOUTS as an ordered list of stat
+  // keys; adding a future layout is just a new entry there plus (if it
+  // needs a stat not already in shareStatParts) one more case in that
+  // switch — renderShareCanvas and the modal wiring don't need to change.
+  // =============================================================
+  const SHARE_W = 1080, SHARE_H = 1920;
+  const SHARE_FONT = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  const SHARE_LAYOUTS = {
+    minimal: { label: 'Minimal', stats: ['distance', 'pace', 'time'] },
+    full:    { label: 'Full Stats', stats: ['distance', 'pace', 'time', 'elevation', 'calories', 'avgHr'] }
+  };
+
+  const runShareModalBg = document.getElementById('runShareModalBg');
+  const runShareCanvas = document.getElementById('runShareCanvas');
+  const shareCtx = runShareCanvas.getContext('2d');
+  let shareActiveRun = null;
+  let shareLayout = 'minimal';
+
+  function shareStatParts(key, r) {
+    const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
+    switch (key) {
+      case 'distance': {
+        const km = r.distanceKm;
+        if (km == null || !isFinite(km)) return { label: 'Distance', value: '—', unit: '' };
+        const rk = Math.round(km * 10) / 10;
+        return { label: 'Distance', value: (rk % 1 === 0 ? rk.toFixed(0) : rk.toFixed(1)), unit: 'km' };
+      }
+      case 'pace': {
+        if (!pace || !isFinite(pace)) return { label: 'Pace', value: '—', unit: '' };
+        const total = Math.round(pace), m = Math.floor(total / 60), s = total % 60;
+        return { label: 'Pace', value: m + ':' + pad2(s), unit: '/km' };
+      }
+      case 'time':
+        return { label: 'Time', value: fmtDuration(r.durationSec), unit: '' };
+      case 'elevation':
+        return { label: 'Elevation Gain', value: r.elevationM ? String(Math.round(r.elevationM)) : '—', unit: r.elevationM ? 'm' : '' };
+      case 'calories':
+        return { label: 'Calories', value: r.calories ? String(r.calories) : '—', unit: r.calories ? 'cal' : '' };
+      case 'avgHr':
+        return { label: 'Avg HR', value: r.avgHr ? String(r.avgHr) : '—', unit: r.avgHr ? 'bpm' : '' };
+      default:
+        return { label: '', value: '—', unit: '' };
+    }
+  }
+
+  function drawRoundedRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Canvas has no CSS letter-spacing, so tracked labels are drawn one
+  // character at a time with a fixed advance between glyphs.
+  function drawTrackedText(ctx, text, x, y, opts) {
+    const size = opts.size, weight = opts.weight || 700, color = opts.color;
+    const spacing = opts.spacing || 0, align = opts.align || 'left';
+    ctx.font = weight + ' ' + size + 'px ' + SHARE_FONT;
+    const chars = String(text).split('');
+    let totalWidth = 0;
+    chars.forEach((c, i) => { totalWidth += ctx.measureText(c).width; if (i < chars.length - 1) totalWidth += spacing; });
+    let cx = align === 'center' ? x - totalWidth / 2 : align === 'right' ? x - totalWidth : x;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = color;
+    chars.forEach(c => { ctx.fillText(c, cx, y); cx += ctx.measureText(c).width + spacing; });
+    return totalWidth;
+  }
+
+  // A big number with a smaller unit suffix, centered as one group on centerX.
+  function drawStatValue(ctx, centerX, baselineY, numStr, unitStr, opts) {
+    ctx.font = '800 ' + opts.numSize + 'px ' + SHARE_FONT;
+    const numW = ctx.measureText(numStr).width;
+    let unitW = 0;
+    if (unitStr) { ctx.font = '700 ' + opts.unitSize + 'px ' + SHARE_FONT; unitW = ctx.measureText(unitStr).width; }
+    const gap = unitStr ? opts.numSize * 0.12 : 0;
+    const sx = centerX - (numW + gap + unitW) / 2;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '800 ' + opts.numSize + 'px ' + SHARE_FONT; ctx.fillStyle = opts.color;
+    ctx.fillText(numStr, sx, baselineY);
+    if (unitStr) {
+      ctx.font = '700 ' + opts.unitSize + 'px ' + SHARE_FONT; ctx.fillStyle = opts.unitColor;
+      ctx.fillText(unitStr, sx + numW + gap, baselineY);
+    }
+  }
+
+  // The dashboard's wordmark (index.html / main.html) redrawn in Canvas —
+  // same gradient, same orb, same "AIO" caption — so the overlay carries
+  // the real 88YYDS AIO identity without the app icon's background box.
+  function drawWordmark(ctx, x, y) {
+    const markSize = 40;
+    const markY = y + markSize * 0.78;
+    ctx.font = '800 ' + markSize + 'px ' + SHARE_FONT;
+    const markW = ctx.measureText('88YYDS').width;
+    const grad = ctx.createLinearGradient(x, 0, x + markW, 0);
+    grad.addColorStop(0, '#FFFFFF'); grad.addColorStop(0.38, '#EAF1F5');
+    grad.addColorStop(0.68, '#9FD9DA'); grad.addColorStop(1, '#C9A6EE');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(85,32,128,0.45)'; ctx.shadowBlur = 22;
+    ctx.fillStyle = grad;
+    ctx.fillText('88YYDS', x, markY);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+    const orbX = x + markW + 16, orbY = markY - markSize * 0.34, orbR = 6;
+    const orbGrad = ctx.createRadialGradient(orbX - orbR * 0.3, orbY - orbR * 0.3, 1, orbX, orbY, orbR);
+    orbGrad.addColorStop(0, '#F1E0FF'); orbGrad.addColorStop(0.45, '#B98AE0'); orbGrad.addColorStop(1, '#552080');
+    ctx.save();
+    ctx.shadowColor = 'rgba(168,63,175,0.55)'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.arc(orbX, orbY, orbR, 0, Math.PI * 2); ctx.fillStyle = orbGrad; ctx.fill();
+    ctx.restore();
+
+    drawTrackedText(ctx, 'AIO', x + 2, markY + 30, { size: 15, weight: 700, color: 'rgba(174,183,192,0.85)', spacing: 6, align: 'left' });
+  }
+
+  function renderShareCanvas() {
+    if (!shareActiveRun) return;
+    const r = shareActiveRun;
+    const ctx = shareCtx;
+    ctx.clearRect(0, 0, SHARE_W, SHARE_H);
+
+    const isFull = shareLayout === 'full';
+    const panelX = 64, panelW = SHARE_W - panelX * 2;
+    const panelH = isFull ? 620 : 360;
+    const panelBottom = 1650;
+    const panelY = panelBottom - panelH;
+    const pad = 56;
+
+    // Panel background stays deliberately subtle (~20% opacity) so the
+    // overlay reads as a light scrim over a photo, not a solid card —
+    // only the stat text itself needs full contrast to stay legible.
+    drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
+    ctx.fillStyle = 'rgba(16,21,26,0.20)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+
+    // Text shadow keeps every stat legible over bright or busy photos —
+    // applies to all text drawn below, panel above is unaffected.
+    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+
+    const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
+
+    const headerY = panelY + pad + 24;
+    drawWordmark(ctx, contentX, headerY);
+
+    const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
+    drawTrackedText(ctx, eyebrow, contentRight, headerY + 14, { size: 19, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
+
+    const dividerY = headerY + 56;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
+
+    const colW = contentW / 3;
+    const primaryNumSize = isFull ? 78 : 100;
+    const primaryUnitSize = isFull ? 30 : 38;
+    const primaryLabelSize = isFull ? 20 : 22;
+    const primaryY = dividerY + (isFull ? 140 : 170);
+    SHARE_LAYOUTS[shareLayout].stats.slice(0, 3).forEach((key, i) => {
+      const cx = contentX + colW * i + colW / 2;
+      const parts = shareStatParts(key, r);
+      drawStatValue(ctx, cx, primaryY, parts.value, parts.unit, { numSize: primaryNumSize, unitSize: primaryUnitSize, color: '#FFFFFF', unitColor: 'rgba(255,255,255,0.6)' });
+      drawTrackedText(ctx, parts.label.toUpperCase(), cx, primaryY + (isFull ? 36 : 42), { size: primaryLabelSize, weight: 700, color: 'rgba(255,255,255,0.5)', spacing: 3, align: 'center' });
+    });
+
+    const secondaryKeys = SHARE_LAYOUTS[shareLayout].stats.slice(3);
+    if (secondaryKeys.length) {
+      const secDividerY = primaryY + 96;
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.beginPath(); ctx.moveTo(contentX, secDividerY); ctx.lineTo(contentRight, secDividerY); ctx.stroke();
+
+      const secY = secDividerY + 96;
+      secondaryKeys.forEach((key, i) => {
+        const cx = contentX + colW * i + colW / 2;
+        const parts = shareStatParts(key, r);
+        drawStatValue(ctx, cx, secY, parts.value, parts.unit, { numSize: 46, unitSize: 20, color: 'rgba(255,255,255,0.92)', unitColor: 'rgba(255,255,255,0.55)' });
+        drawTrackedText(ctx, parts.label.toUpperCase(), cx, secY + 30, { size: 15, weight: 700, color: 'rgba(255,255,255,0.45)', spacing: 2.5, align: 'center' });
+      });
+    }
+
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  }
+
+  function setShareLayout(layout) {
+    shareLayout = layout;
+    document.querySelectorAll('.run-share-layout-btn').forEach(b => {
+      const active = b.dataset.layout === layout;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderShareCanvas();
+  }
+
+  function openShareModal(id) {
+    const r = runs().find(x => x.id === id);
+    if (!r) return;
+    shareActiveRun = r;
+    document.getElementById('runShareTitle').textContent = 'Share · ' + r.type + ' · ' + fmtDate(r.date);
+    setShareLayout('minimal');
+    openModal(runShareModalBg);
+  }
+
+  document.querySelectorAll('.run-share-layout-btn').forEach(btn => {
+    btn.addEventListener('click', () => setShareLayout(btn.dataset.layout));
+  });
+  document.getElementById('runShareCloseX').addEventListener('click', () => closeModal(runShareModalBg));
+  document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
+  runShareModalBg.addEventListener('click', (e) => { if (e.target === runShareModalBg) closeModal(runShareModalBg); });
+
+  document.getElementById('runShareDownload').addEventListener('click', () => {
+    if (!shareActiveRun) return;
+    const filename = '88yyds-' + (shareActiveRun.date || 'run') + '-' + shareLayout + '.png';
+    runShareCanvas.toBlob(async (blob) => {
+      if (!blob) return;
+      // Web Share API with a file lets iOS hand the PNG straight to the
+      // native share sheet (Instagram Stories included) — the exact
+      // "Export → Add over Instagram Story" hop this feature is for.
+      // Anything without that support just falls back to a normal
+      // blob download link.
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: '88YYDS AIO' });
+          return;
+        } catch (e) { /* user cancelled the share sheet — fall back to download */ }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }, 'image/png');
   });
 
   // =============================================================
