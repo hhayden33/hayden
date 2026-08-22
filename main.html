@@ -17,8 +17,9 @@
 <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-touch-icon-152.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Deliberately no apple-mobile-web-app-capable: that would launch the
+     Home Screen icon in a chromeless standalone window instead of
+     regular Safari, which isn't wanted here. -->
 <meta name="apple-mobile-web-app-title" content="88YYDS">
 
 <title>88YYDS Dashboard</title>
@@ -116,7 +117,13 @@ body::after {
 .dash-title-mark {
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
+  /* Tight negative tracking shrinks this box's calculated width past the
+     last glyph's actual ink (e.g. the S's curve) — background-clip:text
+     only paints within the box, so without this the last letter loses
+     its gradient fill and looks clipped. A little padding-right gives
+     the paint area room to cover it. */
+  padding-right: 0.08em;
   background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1203,8 +1210,14 @@ document.addEventListener('DOMContentLoaded', function () {
   function resize() {
     try {
       var doc = iframe.contentDocument;
-      if (!doc || !doc.documentElement) return;
-      iframe.style.height = doc.documentElement.scrollHeight + 'px';
+      if (!doc || !doc.body) return;
+      // Measure body, not documentElement: <html> stretches to fill at
+      // least the iframe's own current height (its "viewport"), so
+      // documentElement.scrollHeight is circular — once the iframe grows,
+      // it reads back its own old height and can never shrink again (e.g.
+      // after the embedded history card gets hidden). body.scrollHeight
+      // reflects the real content height regardless of that.
+      iframe.style.height = doc.body.scrollHeight + 'px';
     } catch (e) {}
   }
 
@@ -2545,7 +2558,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     renderAll();
     const activeCard = stripEl.querySelector('.wk-day.is-active');
-    if (activeCard) activeCard.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (activeCard) {
+      // Center the active card horizontally within the strip by setting
+      // scrollLeft directly, rather than activeCard.scrollIntoView(...).
+      // scrollIntoView's "nearest" block option is meant to leave the
+      // vertical scroll alone, but with a sticky top bar in the mix
+      // mobile Safari can still nudge the page down so the card's top
+      // ends up hidden behind it — this sidesteps that entirely by never
+      // touching vertical scroll at all.
+      stripEl.scrollLeft = activeCard.offsetLeft - (stripEl.clientWidth - activeCard.offsetWidth) / 2;
+    }
 
     // The strip reads run:runs/run:weekPlan directly off localStorage
     // (see loadRunPlanParts above). Those keys sync under a different

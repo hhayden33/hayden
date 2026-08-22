@@ -140,6 +140,12 @@ html, body {
   margin-bottom: 14px;
 }
 html.is-embedded #historyCard { display: none; }
+/* The 80px+ bottom padding below is reserved for this page's own bottom
+   safe-area/nav-bar clearance when it's the standalone page — main.html
+   already handles that at the outer page level, so embedded it's just
+   dead space under the card, visible as an empty gap before whatever
+   dashboard section comes next. */
+html.is-embedded .shell { padding-bottom: 20px; }
 
 /* ----- Water hero ----- */
 .water-label {

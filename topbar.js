@@ -21,6 +21,7 @@
   display: flex; justify-content: flex-end; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
+  margin-bottom: 18px;
   background: #10151A;
   border-bottom: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
