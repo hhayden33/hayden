@@ -174,9 +174,9 @@ body::after {
   transform: rotate(45deg);
 }
 .td-row-main { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 3px; }
-.gm-text { font-size: 14px; color: var(--text-primary); line-height: 1.3; }
+.gm-text { font-size: 14px; color: var(--text-primary); line-height: 1.3; overflow-wrap: anywhere; word-break: break-word; }
 .td-row-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.td-row-notes { font-size: 11.5px; color: var(--text-tertiary); font-style: italic; }
+.td-row-notes { font-size: 11.5px; color: var(--text-tertiary); font-style: italic; overflow-wrap: anywhere; word-break: break-word; }
 .td-row-due { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
 
 .td-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -257,12 +257,24 @@ body::after {
 .td-day-card.is-today .td-day-name { color: var(--accent-cyan, #087CA3); }
 .td-day-date { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
 .td-day-progress { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-secondary); }
-.td-day-tasks { display: flex; flex-direction: column; gap: 6px; }
-.td-day-tasks .gm-row { flex-direction: column; align-items: stretch; padding: 9px 10px; gap: 6px; }
-.td-day-tasks .td-row-top { display: flex; align-items: flex-start; gap: 8px; }
-.td-day-tasks .gm-check { width: 18px; height: 18px; margin-top: 1px; }
-.td-day-tasks .gm-text { font-size: 12.5px; }
-.td-day-tasks .td-row-actions { margin-left: 0; }
+.td-day-tasks { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* Day cards in the 7-column grid are only ~110-150px of usable content
+   width — far under .td-row-main's 140px min-width from the wide Focus
+   Today layout. Without overriding that here, every row was forced wider
+   than its card, clipping/overlapping the checkbox and action icons.
+   Fix: let the row wrap onto two lines (text, then actions) instead of
+   fighting for one line — flex-basis:100% on the main block always pushes
+   actions onto their own row, so buttons stay in the same place and never
+   overlap text regardless of title length; min-width:0 lets that block
+   actually shrink to the card instead of imposing its own floor; and
+   overflow-wrap on the text handles a single long unbroken word. */
+.td-day-tasks .gm-row { flex-direction: column; align-items: stretch; padding: 9px 10px; gap: 6px; min-width: 0; }
+.td-day-tasks .td-row-top { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+.td-day-tasks .gm-check { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }
+.td-day-tasks .td-row-main { flex: 1 1 100%; min-width: 0; }
+.td-day-tasks .gm-text { font-size: 12.5px; overflow-wrap: anywhere; word-break: break-word; }
+.td-day-tasks .td-row-notes { overflow-wrap: anywhere; word-break: break-word; }
+.td-day-tasks .td-row-actions { flex-shrink: 0; margin-left: auto; }
 .td-day-empty { font-size: 11px; font-style: italic; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
 .td-day-add {
   width: 100%; margin-top: 2px; padding: 7px; border: 1px dashed rgba(255,255,255,0.14);

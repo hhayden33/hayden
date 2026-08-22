@@ -591,6 +591,9 @@ body::after {
 
 .gm-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font-size: 14px;
   color: var(--text-primary);
   cursor: text;
@@ -2089,6 +2092,14 @@ document.addEventListener('DOMContentLoaded', function () {
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
     loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine();
+  });
+  // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
+  // todo.html when embedded/bridged) write through storeSet/setGoals, which
+  // dispatches this instead of a native 'storage' event (that only fires in
+  // *other* tabs) — without this, editing today's/tomorrow's goals from the
+  // 7-Day Overview panel wouldn't refresh these two cards until reload.
+  window.addEventListener('goals-changed', () => {
+    loadToday(); loadTomorrow();
   });
 })();
 </script>
