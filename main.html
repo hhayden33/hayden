@@ -891,6 +891,31 @@ body::after {
   color-scheme: dark;
 }
 
+/* ---------- Running Overview — 12-week mileage chart (same treatment
+     as running.html's Training Analytics bar chart, reused verbatim
+     for a consistent look) ---------- */
+.run-chart-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
+.run-chart-wrap { position: relative; }
+.run-chart-yaxis { position: absolute; left: 0; top: 1px; bottom: 1px; width: 42px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.run-chart-yaxis span { font-size: 9.5px; font-weight: 600; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; }
+.run-chart-svg { height: 108px; display: block; margin-left: 42px; width: calc(100% - 42px); overflow: visible; }
+.run-chart-grid-line { stroke: rgba(255,255,255,0.045); stroke-width: 1; }
+.run-chart-hitarea { fill: transparent; cursor: crosshair; }
+.run-chart-meta { text-align: center; font-size: 10.5px; color: var(--text-tertiary); margin-top: 10px; }
+.run-chart-tooltip {
+  position: absolute; z-index: 5; top: 0; left: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--surface-elevated, #26343E);
+  border: 1px solid var(--border-strong, rgba(120, 160, 180, 0.28));
+  border-radius: 8px; padding: 6px 10px;
+  white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  opacity: 0; transition: opacity 0.12s;
+}
+.run-chart-tooltip.show { opacity: 1; }
+.run-chart-tooltip-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.run-chart-tooltip-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
+
 </style>
 </head>
 <body>
@@ -968,7 +993,7 @@ body::after {
     </div>
 
     <!-- 7-DAY PLANNER -->
-    <div class="section-title">7-Day Planner</div>
+    <div class="section-title">7 Day Overview</div>
     <div class="gm-card" id="wkCard">
       <div class="wk-nav-row">
         <button type="button" class="wk-nav-btn" id="wkPrevWeek" aria-label="Previous week">‹</button>
@@ -1101,6 +1126,22 @@ body::after {
         <div class="stat"><div class="stat-num" id="roVo2Max">—</div><div class="stat-label">VO2 Max</div></div>
         <div class="stat"><div class="stat-num" id="roLongestRecent">—</div><div class="stat-label">Longest Recent Run</div></div>
         <div class="stat"><div class="stat-num" id="roMarathonWeek">—</div><div class="stat-label">Training Week</div></div>
+      </div>
+    </div>
+
+    <div class="gm-card" style="margin-top:14px">
+      <div class="run-chart-title">Weekly Mileage — Last 12 Weeks</div>
+      <div class="run-chart-wrap" id="roChartWrap">
+        <div class="run-chart-yaxis"><span id="roChartMax">—</span><span id="roChartMin">—</span></div>
+        <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
+          <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+          <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+          <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
+          <g id="roChartContent"></g>
+          <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
+        </svg>
+        <div class="run-chart-tooltip" id="roChartTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
+        <div class="empty-state" id="roChartEmpty" style="display:none">Log runs to see your mileage trend.</div>
       </div>
     </div>
   </div>
@@ -2550,12 +2591,103 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function runs() { return load('run:runs', []); }
 
+  // ---------- 12-week mileage chart (same bar-chart + tooltip pattern as
+  // running.html's Training Analytics, just a longer window) ----------
+  function fmtWeekRange(wkStart) {
+    const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
+    const opts = { day: 'numeric', month: 'short' };
+    return wkStart.toLocaleDateString('en-AU', opts) + ' – ' + wkEnd.toLocaleDateString('en-AU', opts);
+  }
+  function weeklyMileageSeries12() {
+    const monday = mondayOf(new Date());
+    const allRuns = runs();
+    const out = [];
+    for (let i = 11; i >= 0; i--) {
+      const wkStart = new Date(monday); wkStart.setDate(wkStart.getDate() - 7 * i);
+      const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
+      const startKey = dateKeyOf(wkStart), endKey = dateKeyOf(wkEnd);
+      const total = allRuns.filter(function (r) { return r.date >= startKey && r.date <= endKey; })
+        .reduce(function (s, r) { return s + (r.distanceKm || 0); }, 0);
+      out.push({ value: total, sub: fmtWeekRange(wkStart) });
+    }
+    return out;
+  }
+  function wireMileageChartHover() {
+    const wrap = document.getElementById('roChartWrap');
+    const svg = wrap.querySelector('svg');
+    const hit = wrap.querySelector('.run-chart-hitarea');
+    const tip = document.getElementById('roChartTip');
+    if (!hit || wrap.dataset.hoverWired) return;
+    wrap.dataset.hoverWired = '1';
+    function hide() { tip.classList.remove('show'); }
+    function move(clientX) {
+      const bars = wrap._chartBars;
+      if (!bars || !bars.length) return;
+      const svgRect = svg.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const vbX = (clientX - svgRect.left) / svgRect.width * 320;
+      const bar = bars.find(function (b) { return vbX >= b.x && vbX <= b.x + b.w; }) || bars[bars.length - 1];
+      const pxX = svgRect.left - wrapRect.left + ((bar.x + bar.w / 2) / 320) * svgRect.width;
+      const pxY = svgRect.top - wrapRect.top + (bar.y / 104) * svgRect.height;
+      tip.style.left = pxX + 'px';
+      tip.style.top = pxY + 'px';
+      tip.querySelector('.run-chart-tooltip-val').textContent = bar.label;
+      tip.querySelector('.run-chart-tooltip-label').textContent = bar.sub || '';
+      tip.classList.add('show');
+    }
+    hit.addEventListener('mousemove', function (e) { move(e.clientX); });
+    hit.addEventListener('mouseleave', hide);
+    hit.addEventListener('touchstart', function (e) { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchmove', function (e) { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchend', hide);
+  }
+  function renderMileageChart() {
+    const wrap = document.getElementById('roChartWrap');
+    if (!wrap) return;
+    const empty = document.getElementById('roChartEmpty');
+    const content = document.getElementById('roChartContent');
+    const series = weeklyMileageSeries12();
+    const data = series.map(function (d) { return d.value; });
+    const nonZero = data.filter(function (v) { return v > 0; });
+    if (nonZero.length === 0) {
+      empty.style.display = 'block';
+      content.innerHTML = '';
+      wrap.querySelector('svg').style.display = 'none';
+      wrap.querySelector('.run-chart-yaxis').style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    wrap.querySelector('svg').style.display = 'block';
+    wrap.querySelector('.run-chart-yaxis').style.display = 'flex';
+
+    const max = Math.max.apply(null, data) || 1;
+    const xLeft = 6, xRight = 314, yTop = 8, yBot = 96;
+    const n = data.length;
+    const gap = 4;
+    const barW = (xRight - xLeft - gap * (n - 1)) / n;
+    let html = '';
+    const bars = [];
+    series.forEach(function (d, i) {
+      const h = (d.value / max) * (yBot - yTop);
+      const x = xLeft + i * (barW + gap);
+      const y = yBot - h;
+      html += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + Math.max(1, h).toFixed(2) + '" rx="2.5" fill="#20A5A0" opacity="' + (i === n - 1 ? '1' : '0.55') + '"></rect>';
+      bars.push({ x: x, w: barW, y: y, label: fmtKm(d.value) || '0 km', sub: d.sub });
+    });
+    content.innerHTML = html;
+    wrap._chartBars = bars;
+    document.getElementById('roChartMax').textContent = fmtKm(max) || '—';
+    document.getElementById('roChartMin').textContent = '0 km';
+    wireMileageChartHover();
+  }
+
   function renderRunningOverview() {
     const card = document.getElementById('runningOverview');
     if (!card) return;
     const allRuns = runs();
     const snap = load('run:garminSnapshot', null);
     const goal = load('run:goal', null);
+    renderMileageChart();
 
     // Latest run — sort by date, then time-of-day where known (Garmin runs
     // carry it; see running.html's sortedRuns for why that matters).

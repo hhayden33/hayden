@@ -139,6 +139,7 @@ html, body {
   padding: 22px 20px 18px;
   margin-bottom: 14px;
 }
+html.is-embedded #historyCard { display: none; }
 
 /* ----- Water hero ----- */
 .water-label {
@@ -463,6 +464,13 @@ html, body {
 </style>
 </head>
 <body>
+<script>
+// Embedded in main.html's Water Tracker section — keep it to the essential
+// today's-progress card so it doesn't dominate the dashboard's scroll; the
+// 14-day history stays available on this page standalone.
+try { if (window.self !== window.top) document.documentElement.classList.add('is-embedded'); }
+catch (e) { document.documentElement.classList.add('is-embedded'); }
+</script>
 
 <div class="shell">
 
@@ -515,7 +523,7 @@ html, body {
     <div class="why-body" id="whyBody"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="historyCard">
     <div class="water-label">LAST 14 DAYS</div>
     <div class="spark-wrap">
       <svg class="spark-svg" id="sparkSvg" viewBox="0 0 280 70" preserveAspectRatio="none"></svg>
