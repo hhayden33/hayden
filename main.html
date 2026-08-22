@@ -128,17 +128,19 @@ body::after {
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.03em;
+  text-transform: uppercase;
   /* Tight negative tracking shrinks this box's calculated width past the
      last glyph's actual ink (e.g. the S's curve) — background-clip:text
      only paints within the box, so without this the last letter loses
      its gradient fill and looks clipped. A little padding-right gives
      the paint area room to cover it. */
   padding-right: 0.08em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
+  background: linear-gradient(120deg, #FFFFFF 0%, #EAF1F5 38%, #9FD9DA 68%, #C9A6EE 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  filter: drop-shadow(0 0 26px rgba(85, 32, 128, 0.35));
 }
 .dash-title-kicker {
   font-size: 10px;
@@ -977,7 +979,7 @@ body::after {
 <div class="page">
 
   <div class="dash-header">
-    <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-kicker">Dashboard</span></h1>
+    <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-kicker">AIO</span></h1>
     <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
   </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
