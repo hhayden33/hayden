@@ -94,6 +94,61 @@ body::after {
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
+/* ===== wordmark (icon-matched lockup) ===== */
+.wordmark {
+  margin: 0 0 4px;
+  position: relative;
+}
+.wordmark-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wordmark-main {
+  font-family: var(--font);
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #FFFFFF 0%, #EAF1F5 38%, #9FD9DA 68%, #C9A6EE 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 26px rgba(85, 32, 128, 0.35));
+}
+.wordmark-orb {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #F1E0FF 0%, #B98AE0 45%, #552080 100%);
+  box-shadow: 0 0 16px 3px rgba(168, 63, 175, 0.55), 0 0 32px 10px rgba(8, 124, 163, 0.22);
+  animation: orb-pulse 3.6s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.18); opacity: 0.8; }
+}
+.wordmark-sub {
+  margin: 3px 0 18px 2px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+@media (max-width: 480px) {
+  .wordmark-main { font-size: 30px; }
+  .wordmark-sub { font-size: 10px; letter-spacing: 0.36em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-orb { animation: none; }
+}
+
 /* ===== Hero greeting ===== */
 .hero-greeting {
   margin: 0 0 18px;
@@ -199,7 +254,13 @@ body::after {
 <body>
 <div class="page">
 
-  <h1 class="dash-title">Welcome to 88YYDS AIO</h1>
+  <div class="wordmark">
+    <div class="wordmark-row">
+      <span class="wordmark-main">88YYDS</span>
+      <span class="wordmark-orb"></span>
+    </div>
+    <div class="wordmark-sub">A&nbsp;·&nbsp;I&nbsp;·&nbsp;O</div>
+  </div>
   <div class="hero-greeting" id="heroGreetingSub">Good morning</div>
 
   <div class="bento-grid">
