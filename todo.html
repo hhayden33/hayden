@@ -202,6 +202,7 @@ body::after {
 .gm-row:hover .td-icon-btn { opacity: 1; }
 .td-icon-btn:hover { color: var(--text-primary); }
 .td-icon-btn.td-icon-delete:hover { color: var(--danger); }
+.td-icon-btn.cal-add-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 
 /* ===== Filters ===== */
 .td-filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -482,6 +483,82 @@ body::after {
   function pad2(n) { return String(n).padStart(2, '0'); }
   function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+
+  // ---------- Calendar quick-add ----------
+  // Detects a time (and optionally a date) typed directly into a task's own
+  // text — e.g. "Dinner with Lachlan and friends 06/09/2026 4:30pm" or just
+  // "Call the dentist 3:30pm" — and builds a Google Calendar quick-add link
+  // for it. No API/OAuth: just the public calendar.google.com render URL.
+  // No date in the text -> defaults to fallbackDateStr (the day the task
+  // itself belongs to), not necessarily today.
+  function detectTaskSchedule(text, fallbackDateStr) {
+    if (!text) return null;
+    // Minutes may be written with a colon (3:30pm) or bare, concatenated
+    // straight onto the hour (330pm, 1145am) — two alternatives so both
+    // "330" (hour 3 + min 30) and "1145" (hour 11 + min 45) parse correctly.
+    const time12 = text.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d)|([0-5]\d))?\s*(am|pm)\b/i);
+    const time24 = !time12 && text.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/);
+    if (!time12 && !time24) return null;
+
+    let hour, minute, timeMatchStr;
+    if (time12) {
+      hour = parseInt(time12[1], 10) % 12;
+      const minStr = time12[2] || time12[3];
+      minute = minStr ? parseInt(minStr, 10) : 0;
+      if (/pm/i.test(time12[4])) hour += 12;
+      timeMatchStr = time12[0];
+    } else {
+      hour = parseInt(time24[1], 10);
+      minute = parseInt(time24[2], 10);
+      timeMatchStr = time24[0];
+    }
+
+    const dateMatch = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    let day, month, year;
+    if (dateMatch) {
+      day = parseInt(dateMatch[1], 10);
+      month = parseInt(dateMatch[2], 10);
+      year = parseInt(dateMatch[3], 10);
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    } else if (fallbackDateStr) {
+      const parts = fallbackDateStr.split('-').map(Number);
+      year = parts[0]; month = parts[1]; day = parts[2];
+    } else {
+      const now = new Date();
+      year = now.getFullYear(); month = now.getMonth() + 1; day = now.getDate();
+    }
+
+    let title = text.replace(timeMatchStr, '');
+    if (dateMatch) title = title.replace(dateMatch[0], '');
+    title = title.replace(/\s{2,}/g, ' ').replace(/[\s,-]+$/, '').trim();
+    if (!title) title = text.trim();
+
+    return { year: year, month: month, day: day, hour: hour, minute: minute, title: title };
+  }
+  function googleCalendarUrl(sched, durationMinutes) {
+    durationMinutes = durationMinutes || 60;
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    const start = new Date(sched.year, sched.month - 1, sched.day, sched.hour, sched.minute);
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+    const fmt = function (d) {
+      return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+    };
+    const params = new URLSearchParams({ action: 'TEMPLATE', text: sched.title, dates: fmt(start) + '/' + fmt(end) });
+    return 'https://calendar.google.com/calendar/render?' + params.toString();
+  }
+  function appendCalendarButton(parent, text, fallbackDateStr) {
+    const sched = detectTaskSchedule(text, fallbackDateStr);
+    if (!sched) return;
+    const cal = document.createElement('a');
+    cal.className = 'td-icon-btn cal-add-btn';
+    cal.href = googleCalendarUrl(sched);
+    cal.target = '_blank';
+    cal.rel = 'noopener';
+    cal.title = 'Add to Google Calendar';
+    cal.setAttribute('aria-label', 'Add to Google Calendar');
+    cal.textContent = '📅';
+    parent.appendChild(cal);
+  }
   function mondayOf(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -705,6 +782,8 @@ body::after {
     editBtn.setAttribute('aria-label', 'Edit task');
     editBtn.addEventListener('click', function () { openEditModal(task.id); });
     actions.appendChild(editBtn);
+
+    appendCalendarButton(actions, task.text, dateStr);
 
     const delBtn = document.createElement('button');
     delBtn.type = 'button';

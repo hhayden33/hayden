@@ -580,6 +580,18 @@ body::after {
 .gm-row:hover .goal-delete { opacity: 1; }
 .goal-delete:hover { color: var(--danger); }
 
+.cal-add-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
+  padding: 0 4px;
+  opacity: 0.55;
+  text-decoration: none;
+  filter: grayscale(100%);
+  transition: opacity 0.2s, filter 0.2s;
+}
+.gm-row:hover .cal-add-btn { opacity: 1; }
+.cal-add-btn:hover { filter: grayscale(0%); }
+
 .gm-show-toggle {
   width: 100%;
   margin: 6px 0 0;
@@ -1545,6 +1557,87 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // ---------- Calendar quick-add ----------
+  // Detects a time (and optionally a date) typed directly into a task's own
+  // text — e.g. "Dinner with Lachlan and friends 06/09/2026 4:30pm" or just
+  // "Call the dentist 3:30pm" — and builds a Google Calendar quick-add link
+  // for it. No API/OAuth: just the public calendar.google.com render URL,
+  // which opens a pre-filled "create event" page for the user to confirm.
+  // No date in the text -> defaults to fallbackDateStr (the day the task
+  // itself belongs to), not necessarily today.
+  function detectTaskSchedule(text, fallbackDateStr) {
+    if (!text) return null;
+    // Minutes may be written with a colon (3:30pm) or bare, concatenated
+    // straight onto the hour (330pm, 1145am) — two alternatives so both
+    // "330" (hour 3 + min 30) and "1145" (hour 11 + min 45) parse correctly.
+    const time12 = text.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d)|([0-5]\d))?\s*(am|pm)\b/i);
+    const time24 = !time12 && text.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/);
+    if (!time12 && !time24) return null;
+
+    let hour, minute, timeMatchStr;
+    if (time12) {
+      hour = parseInt(time12[1], 10) % 12;
+      const minStr = time12[2] || time12[3];
+      minute = minStr ? parseInt(minStr, 10) : 0;
+      if (/pm/i.test(time12[4])) hour += 12;
+      timeMatchStr = time12[0];
+    } else {
+      hour = parseInt(time24[1], 10);
+      minute = parseInt(time24[2], 10);
+      timeMatchStr = time24[0];
+    }
+
+    const dateMatch = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    let day, month, year;
+    if (dateMatch) {
+      day = parseInt(dateMatch[1], 10);
+      month = parseInt(dateMatch[2], 10);
+      year = parseInt(dateMatch[3], 10);
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    } else if (fallbackDateStr) {
+      const parts = fallbackDateStr.split('-').map(Number);
+      year = parts[0]; month = parts[1]; day = parts[2];
+    } else {
+      const now = new Date();
+      year = now.getFullYear(); month = now.getMonth() + 1; day = now.getDate();
+    }
+
+    let title = text.replace(timeMatchStr, '');
+    if (dateMatch) title = title.replace(dateMatch[0], '');
+    title = title.replace(/\s{2,}/g, ' ').replace(/[\s,-]+$/, '').trim();
+    if (!title) title = text.trim();
+
+    return { year: year, month: month, day: day, hour: hour, minute: minute, title: title };
+  }
+  function googleCalendarUrl(sched, durationMinutes) {
+    durationMinutes = durationMinutes || 60;
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    const start = new Date(sched.year, sched.month - 1, sched.day, sched.hour, sched.minute);
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+    const fmt = function (d) {
+      return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+    };
+    const params = new URLSearchParams({ action: 'TEMPLATE', text: sched.title, dates: fmt(start) + '/' + fmt(end) });
+    return 'https://calendar.google.com/calendar/render?' + params.toString();
+  }
+  function appendCalendarButton(li, text, fallbackDateStr) {
+    const sched = detectTaskSchedule(text, fallbackDateStr);
+    if (!sched) return;
+    const cal = document.createElement('a');
+    cal.className = 'cal-add-btn';
+    cal.href = googleCalendarUrl(sched);
+    cal.target = '_blank';
+    cal.rel = 'noopener';
+    cal.title = 'Add to Google Calendar';
+    cal.setAttribute('aria-label', 'Add to Google Calendar');
+    cal.textContent = '📅';
+    li.appendChild(cal);
+  }
+  // The 7-Day Planner's per-day list lives in a separate <script> below
+  // (its own IIFE) — expose these so it can reuse the same detection
+  // instead of duplicating it.
+  window.appendCalendarButton = appendCalendarButton;
+
   function buildGoalRow(goal, idx, key, readOnly, reload) {
     const li = document.createElement('li');
     li.className = 'gm-row';
@@ -1594,6 +1687,8 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(reload, 480);
     });
     li.appendChild(queueBtn);
+
+    appendCalendarButton(li, goal.text, key.replace('goals:', ''));
 
     const del = document.createElement('button');
     del.type = 'button';
@@ -2145,7 +2240,11 @@ document.addEventListener('DOMContentLoaded', function () {
           renderTodoList();
         });
 
-        li.append(cb, text, del);
+        li.append(cb, text);
+        if (typeof window.appendCalendarButton === 'function') {
+          window.appendCalendarButton(li, g.text, activeDate);
+        }
+        li.append(del);
         todoListEl.appendChild(li);
       });
     }

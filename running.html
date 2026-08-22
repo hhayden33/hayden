@@ -154,6 +154,11 @@ body::after {
   letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.15;
 }
 .stat-num-status { display: flex; align-items: center; gap: 7px; }
+.stat-num-sub {
+  font-family: var(--font-mono); font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary); margin-top: 2px; min-height: 14px;
+}
 .status-dot {
   width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
   background: var(--text-tertiary);
@@ -426,7 +431,7 @@ body::after {
       </div>
       <div class="stat-grid">
         <div class="stat"><div class="stat-num" id="runStatPB">—</div><div class="stat-label">Marathon PB</div></div>
-        <div class="stat"><div class="stat-num" id="runStatTarget">—</div><div class="stat-label">Target Time</div></div>
+        <div class="stat"><div class="stat-num" id="runStatTarget">—</div><div class="stat-num-sub" id="runStatTargetPace"></div><div class="stat-label">Target Time</div></div>
         <div class="stat"><div class="stat-num" id="runStatPredicted">—</div><div class="stat-label">Predicted</div></div>
         <div class="stat"><div class="stat-num" id="runStatWeek">—</div><div class="stat-label">Training Week</div></div>
       </div>
@@ -684,11 +689,6 @@ body::after {
     </div>
 
     <div class="run-set-section">
-      <h4>Weekly Distance Target (km)</h4>
-      <div class="run-field"><input type="number" id="setWeeklyTarget" placeholder="47"></div>
-    </div>
-
-    <div class="run-set-section">
       <h4>Training Status</h4>
       <div class="run-field">
         <select id="setStatusOverride">
@@ -884,6 +884,7 @@ body::after {
 
     document.getElementById('runStatPB').textContent = p.marathon ? fmtClock(p.marathon) : '—';
     document.getElementById('runStatTarget').textContent = g.targetTimeSec ? fmtClock(g.targetTimeSec) : '—';
+    document.getElementById('runStatTargetPace').textContent = g.targetTimeSec ? fmtPace(g.targetTimeSec / DIST_KM.marathon) : '';
     const predicted = predictFor('marathon', p);
     document.getElementById('runStatPredicted').textContent = predicted ? fmtClock(predicted) : '—';
     document.getElementById('runStatWeek').textContent = 'Week ' + currentTrainingWeek(g) + ' / ' + (g.planTotalWeeks || '—');
@@ -1486,7 +1487,6 @@ body::after {
     document.getElementById('setPbMarathon').value = secToClockInput(p.marathon);
     document.getElementById('setPb30k').value = secToClockInput(p.thirtyK);
     document.getElementById('setPb50k').value = secToClockInput(p.fiftyK);
-    document.getElementById('setWeeklyTarget').value = s.weeklyDistanceTargetKm;
     document.getElementById('setStatusOverride').value = s.trainingStatusOverride || 'auto';
     openModal(runSettingsModalBg);
   });
@@ -1511,7 +1511,7 @@ body::after {
       fiftyK: parseClockToSec(document.getElementById('setPb50k').value)
     });
     save('run:settings', {
-      weeklyDistanceTargetKm: parseFloat(document.getElementById('setWeeklyTarget').value) || 0,
+      weeklyDistanceTargetKm: settings().weeklyDistanceTargetKm,
       trainingStatusOverride: document.getElementById('setStatusOverride').value
     });
     closeModal(runSettingsModalBg);
