@@ -45,6 +45,7 @@
   text-decoration: none; color: #F2F2F2;
   -webkit-tap-highlight-color: transparent;
 }
+.topbar-pill-emoji { font-size: 13px; line-height: 1; flex-shrink: 0; }
 .topbar-water-pill .topbar-pill-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: #087CA3; flex-shrink: 0;
@@ -129,6 +130,7 @@ body.has-bottombar {
   .topbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
   .topbar-split-badge { padding: 7px 11px; font-size: 11.5px; }
   .topbar-water-pill { padding: 8px 11px; gap: 6px; }
+  .topbar-pill-emoji { font-size: 12px; }
   .topbar-pill-count { font-size: 12px; }
   .topbar-water-add { width: 40px; font-size: 18px; }
   .topbar-finance-btn { width: 40px; height: 38px; }
@@ -168,10 +170,11 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   <a href="main.html#wkCard" class="topbar-split-badge" id="topbarSplitBadge" aria-label="Today's training"></a>
   <div class="topbar-water-wrap">
     <a href="main.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
+      <span class="topbar-pill-emoji">🥛</span>
       <span class="topbar-pill-dot"></span>
       <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
     </a>
-    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">🥤</button>
+    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
   <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
     <span class="topbar-finance-icon">📊</span>

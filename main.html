@@ -1949,9 +1949,8 @@ document.addEventListener('DOMContentLoaded', function () {
       return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
     const SPLIT_TAG_COLORS = { push: '#087CA3', pull: '#20A5A0', legs: '#B98AE0', full: '#F2C063', run: '#A83FAF' };
-    // Tag text under each day in the strip — short by design since the
-    // chip is compact; 'full' abbreviates to "FB" rather than "Full".
-    const SPLIT_TAG_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', full: 'FB', run: 'Run', rest: 'Rest' };
+    // Tag text under each day in the strip.
+    const SPLIT_TAG_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', full: 'Full', run: 'Run', rest: 'Rest' };
     function splitTagLabel(s) { return SPLIT_TAG_LABELS[s] || (s.charAt(0).toUpperCase() + s.slice(1)); }
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -2026,23 +2025,30 @@ document.addEventListener('DOMContentLoaded', function () {
       if (v >= 11 && v <= 13) return 'th';
       switch (n % 10) { case 1: return 'st'; case 2: return 'nd'; case 3: return 'rd'; default: return 'th'; }
     }
-    // The only "description" shown for a Run day — the actual Garmin-synced
-    // run on that exact date, in one plain sentence (e.g. "Monday 17th,
-    // 10km run"). No plan, no fallback text: null means nothing renders.
+    // The only "description" shown for a Run day — every actual Garmin-
+    // synced run on that exact date (Garmin often logs a warmup/main/
+    // cooldown as separate same-day activities), in one plain sentence
+    // (e.g. "Monday 17th, 10km run" or "Wednesday 19th, 8.5km + 2.2km +
+    // 6km + 2.3km runs"). No plan, no fallback text: null means nothing
+    // renders.
     function formatGarminRunDescription(dateKey) {
       try {
         const runsRaw = localStorage.getItem('run:runs');
         if (!runsRaw) return null;
         const list = JSON.parse(runsRaw);
         if (!Array.isArray(list)) return null;
-        const logged = list.find(function (r) { return r.date === dateKey; });
-        if (!logged || !(logged.distanceKm > 0)) return null;
+        const logged = list.filter(function (r) { return r.date === dateKey && r.distanceKm > 0; })
+          .sort(function (a, b) { return (a.time || '00:00:00').localeCompare(b.time || '00:00:00'); });
+        if (!logged.length) return null;
         const d = parseYMD(dateKey);
         const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()];
         const day = d.getDate();
-        const km = Math.round(logged.distanceKm * 10) / 10;
-        const kmStr = (km % 1 === 0 ? km.toFixed(0) : km.toFixed(1)) + 'km';
-        return weekday + ' ' + day + ordinalSuffix(day) + ', ' + kmStr + ' run';
+        const kmStrs = logged.map(function (r) {
+          const km = Math.round(r.distanceKm * 10) / 10;
+          return (km % 1 === 0 ? km.toFixed(0) : km.toFixed(1)) + 'km';
+        });
+        const noun = logged.length > 1 ? 'runs' : 'run';
+        return weekday + ' ' + day + ordinalSuffix(day) + ', ' + kmStrs.join(' + ') + ' ' + noun;
       } catch (e) { return null; }
     }
     function loadDoneDays() {

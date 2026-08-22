@@ -13,6 +13,7 @@
 
 <style>
 :root {
+  color-scheme: dark;
   --text-primary: #F2F2F2;
   --text-secondary: #AEB7C0;
   --text-tertiary: #687580;
@@ -151,6 +152,12 @@ body::after {
   font-size: 22px; font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.15;
+}
+.stat-num-status { display: flex; align-items: center; gap: 7px; }
+.status-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  background: var(--text-tertiary);
+  box-shadow: 0 0 6px 0 currentColor;
 }
 .stat-label {
   margin-top: 6px;
@@ -362,6 +369,14 @@ body::after {
   border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary);
   font-family: inherit; font-size: 14px; outline: none;
 }
+.run-field select {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23AEB7C0' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.run-field select option { background: var(--surface-elevated, #26343E); color: var(--text-primary); }
 .run-field textarea { resize: vertical; min-height: 60px; line-height: 1.4; }
 .run-field textarea::placeholder { color: var(--text-tertiary); }
 .run-field-row { display: flex; gap: 10px; }
@@ -432,7 +447,7 @@ body::after {
         <span class="gm-streak" id="runGarminSynced">Not synced yet</span>
       </div>
       <div class="stat-grid">
-        <div class="stat"><div class="stat-num" id="runTrainingStatus">—</div><div class="stat-label">Training Status</div></div>
+        <div class="stat"><div class="stat-num stat-num-status"><span class="status-dot" id="runTrainingStatusDot"></span><span id="runTrainingStatus">—</span></div><div class="stat-label">Training Status</div></div>
         <div class="stat"><div class="stat-num" id="runTrainingLoad">—</div><div class="stat-label">Training Load</div></div>
         <div class="stat"><div class="stat-num" id="runRestingHr">—</div><div class="stat-label">Resting HR</div></div>
         <div class="stat"><div class="stat-num" id="runMonthDist">—</div><div class="stat-label">This Month</div></div>
@@ -675,12 +690,14 @@ body::after {
 
     <div class="run-set-section">
       <h4>Training Status</h4>
-      <select id="setStatusOverride">
-        <option value="auto">Auto (based on weekly progress)</option>
-        <option value="good">On Track</option>
-        <option value="warn">Needs Attention</option>
-        <option value="idle">Recovering</option>
-      </select>
+      <div class="run-field">
+        <select id="setStatusOverride">
+          <option value="auto">Auto (based on weekly progress)</option>
+          <option value="good">On Track</option>
+          <option value="warn">Needs Attention</option>
+          <option value="idle">Recovering</option>
+        </select>
+      </div>
     </div>
     </div>
 
@@ -892,6 +909,16 @@ body::after {
     RECOVERY: 'Recovery', DETRAINING: 'Detraining', OVERREACHING: 'Overreaching',
     UNPRODUCTIVE: 'Unproductive', STRAINED: 'Strained'
   };
+  // Best-effort approximation of Garmin Connect's own training-status
+  // color language (a gray -> blue -> yellow -> green -> red spectrum,
+  // with gray = too little training and red = too much/counterproductive)
+  // — Garmin doesn't publish exact hex values or an icon asset, so this
+  // isn't a pixel copy, just the same color logic.
+  const TRAINING_STATUS_COLOR = {
+    DETRAINING: '#8B92A0', RECOVERY: '#4A9FE0', MAINTAINING: '#F2C063',
+    PRODUCTIVE: '#20A5A0', PEAKING: '#3ED9A0',
+    UNPRODUCTIVE: '#FF6B6B', OVERREACHING: '#FF6B6B', STRAINED: '#FF6B6B'
+  };
   const ACWR_STATUS_LABEL = {
     OPTIMAL: 'Optimal', LOW: 'Low', HIGH: 'High',
     HIGH_RISK: 'High risk', UNDERTRAINING: 'Undertraining'
@@ -920,8 +947,14 @@ body::after {
   function renderGarminCard() {
     const snap = garminSnapshot();
     document.getElementById('runVo2Max').textContent = (snap && snap.vo2Max) ? snap.vo2Max : '—';
-    document.getElementById('runTrainingStatus').textContent = snap && snap.trainingStatus
-      ? (TRAINING_STATUS_LABEL[snap.trainingStatus] || snap.trainingStatus) : '—';
+    const statusKey = snap && snap.trainingStatus;
+    const statusTextEl = document.getElementById('runTrainingStatus');
+    const statusDotEl = document.getElementById('runTrainingStatusDot');
+    statusTextEl.textContent = statusKey ? (TRAINING_STATUS_LABEL[statusKey] || statusKey) : '—';
+    const statusColor = (statusKey && TRAINING_STATUS_COLOR[statusKey]) || '';
+    statusTextEl.style.color = statusColor;
+    statusDotEl.style.background = statusColor;
+    statusDotEl.style.color = statusColor;
     document.getElementById('runTrainingLoad').textContent = (snap && snap.trainingLoadAcute != null)
       ? Math.round(snap.trainingLoadAcute) + (snap.acwrStatus ? ' · ' + normalizeStatusLabel(snap.acwrStatus) : '') : '—';
     document.getElementById('runRestingHr').textContent = (snap && snap.restingHr) ? snap.restingHr + ' bpm' : '—';
