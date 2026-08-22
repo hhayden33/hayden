@@ -247,6 +247,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     push: { icon: '🏋️', label: 'Push Day', color: '#20A5A0' },
     pull: { icon: '🏋️', label: 'Pull Day', color: '#20A5A0' },
     legs: { icon: '🏋️', label: 'Legs Day', color: '#20A5A0' },
+    full: { icon: '🏋️', label: 'Full Body Day', color: '#F2C063' },
     run:  { icon: '🏃', label: 'Run Day',  color: '#A83FAF' },
     rest: { icon: '😴', label: 'Rest Day', color: '#687580' }
   };
@@ -276,7 +277,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
   }
-  const SPLIT_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
+  const SPLIT_ORDER = ['push', 'pull', 'legs', 'full', 'run', 'rest'];
   function renderSplitBadge() {
     const badge = document.getElementById('topbarSplitBadge');
     if (!badge) return;

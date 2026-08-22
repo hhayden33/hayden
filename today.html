@@ -438,9 +438,9 @@ a.card-link:hover .link-arrow { transform: translateX(4px); }
     return Array.isArray(val) ? val : [val];
   }
 
-  var SPLIT_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
-  var SPLIT_LABELS = { push: 'Push Day', pull: 'Pull Day', legs: 'Legs Day', run: 'Run Day', rest: 'Rest Day' };
-  var SPLIT_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
+  var SPLIT_ORDER = ['push', 'pull', 'legs', 'full', 'run', 'rest'];
+  var SPLIT_LABELS = { push: 'Push Day', pull: 'Pull Day', legs: 'Legs Day', full: 'Full Body Day', run: 'Run Day', rest: 'Rest Day' };
+  var SPLIT_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', full: '#F2C063', run: '#A83FAF', rest: '#687580' };
   function hexToRgba(hex, alpha) {
     var h = hex.replace('#', '');
     var r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);

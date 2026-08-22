@@ -1889,9 +1889,9 @@ img, video, canvas, svg { max-width: 100%; }
     const mons = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     return dows[d.getDay()] + ', ' + mons[d.getMonth()] + ' ' + d.getDate();
   }
-  const SPLIT_PILL_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', run: 'Run', rest: 'Rest' };
-  const SPLIT_PILL_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', run: '#A83FAF', rest: '#687580' };
-  const SPLIT_PILL_ORDER = ['push', 'pull', 'legs', 'run', 'rest'];
+  const SPLIT_PILL_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', full: 'Full Body', run: 'Run', rest: 'Rest' };
+  const SPLIT_PILL_COLORS = { push: '#20A5A0', pull: '#20A5A0', legs: '#20A5A0', full: '#F2C063', run: '#A83FAF', rest: '#687580' };
+  const SPLIT_PILL_ORDER = ['push', 'pull', 'legs', 'full', 'run', 'rest'];
   function renderDayPill() {
     const ids = todaySplitIds();
     $('dayPillDate').textContent = todayDateLabel();

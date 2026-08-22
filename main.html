@@ -770,6 +770,7 @@ body::after {
 .wk-day-tag[data-split="push"] { background: rgba(8,124,163,0.16); color: #087CA3; }
 .wk-day-tag[data-split="pull"] { background: rgba(32,165,160,0.16); color: #20A5A0; }
 .wk-day-tag[data-split="legs"] { background: rgba(185,138,224,0.16); color: #B98AE0; }
+.wk-day-tag[data-split="full"] { background: rgba(242,192,99,0.16); color: #F2C063; }
 .wk-day-tag[data-split="run"]  { background: rgba(168,63,175,0.16); color: var(--run); }
 .wk-day-done { color: #20A5A0; margin-left: 2px; }
 
@@ -954,6 +955,7 @@ body::after {
           <button type="button" class="wk-seg-btn" data-split="push">Push</button>
           <button type="button" class="wk-seg-btn" data-split="pull">Pull</button>
           <button type="button" class="wk-seg-btn" data-split="legs">Legs</button>
+          <button type="button" class="wk-seg-btn" data-split="full">Full</button>
           <button type="button" class="wk-seg-btn" data-split="run">Run</button>
           <button type="button" class="wk-seg-btn" data-split="rest">Rest</button>
         </div>
@@ -1878,6 +1880,9 @@ document.addEventListener('DOMContentLoaded', function () {
       legs: { view: 'front', regions: ['quads', 'calves'], accent: 'success',
               title: 'Legs day', sub: 'Quads · Hamstrings · Glutes · Calves',
               fallback: ['Back squat', 'Romanian deadlift', 'Leg press'] },
+      full: { composite: ['push', 'pull', 'legs'], accent: 'success',
+              title: 'Full body day', sub: 'Full-body strength',
+              fallback: ['Squat', 'Bench press', 'Barbell row', 'Overhead press'] },
       run:  { view: 'front', regions: ['quads', 'calves'], accent: 'run',
               title: 'Run day', sub: 'Quads · Calves · Cardio',
               fallback: ['Easy run', 'Tempo run', 'Long run'] }
@@ -1885,6 +1890,19 @@ document.addEventListener('DOMContentLoaded', function () {
     ['push', 'pull', 'legs'].forEach(function (k) {
       if (!MUSCLE_CONFIG[k].accent) MUSCLE_CONFIG[k].accent = 'success';
     });
+    // Most splits map to a single body view (front or back); 'full' is a
+    // composite of push+pull+legs and spans both — this resolves either
+    // shape to a flat [{view, regions}, ...] list so the lighting/view
+    // logic below doesn't need to special-case composites itself.
+    function getViewRegionPairs(splitKey) {
+      const cfg = MUSCLE_CONFIG[splitKey];
+      if (cfg.composite) {
+        return cfg.composite.map(function (k) {
+          return { view: MUSCLE_CONFIG[k].view, regions: MUSCLE_CONFIG[k].regions };
+        });
+      }
+      return [{ view: cfg.view, regions: cfg.regions }];
+    }
 
     // A day's plan value used to be a single split string. It's now an
     // array so a day can be e.g. ['push', 'run']. This normalizes either
@@ -1898,7 +1916,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
       return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
-    const SPLIT_TAG_COLORS = { push: '#087CA3', pull: '#20A5A0', legs: '#B98AE0', run: '#A83FAF' };
+    const SPLIT_TAG_COLORS = { push: '#087CA3', pull: '#20A5A0', legs: '#B98AE0', full: '#F2C063', run: '#A83FAF' };
+    // Tag text under each day in the strip — short by design since the
+    // chip is compact; 'full' abbreviates to "FB" rather than "Full".
+    const SPLIT_TAG_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', full: 'FB', run: 'Run', rest: 'Rest' };
+    function splitTagLabel(s) { return SPLIT_TAG_LABELS[s] || (s.charAt(0).toUpperCase() + s.slice(1)); }
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
     function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -2148,9 +2170,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const splitArr = normalizeSplits(split);
         if (splitArr.length === 1) {
           tagEl.dataset.split = splitArr[0];
-          tagEl.textContent = splitArr[0].charAt(0).toUpperCase() + splitArr[0].slice(1);
+          tagEl.textContent = splitTagLabel(splitArr[0]);
         } else if (splitArr.length > 1) {
-          tagEl.textContent = splitArr.map(function (s) { return s.charAt(0).toUpperCase() + s.slice(1); }).join('+');
+          tagEl.textContent = splitArr.map(splitTagLabel).join('+');
           const colors = splitArr.map(function (s) { return SPLIT_TAG_COLORS[s] || '#687580'; });
           tagEl.style.background = 'linear-gradient(90deg, ' + colors.map(function (c) { return hexToRgba(c, 0.20); }).join(', ') + ')';
           tagEl.style.color = colors[0];
@@ -2191,7 +2213,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!splits.length) {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
-        chartRestEl.textContent = "Pick Push, Pull, Legs, or Run to see the day's focus.";
+        chartRestEl.textContent = "Pick Push, Pull, Legs, Full, or Run to see the day's focus.";
         return;
       }
       if (splits.indexOf('rest') !== -1) {
@@ -2204,8 +2226,9 @@ document.addEventListener('DOMContentLoaded', function () {
       chartRestEl.style.display = 'none';
       chartBodyWrap.style.display = 'flex';
 
-      const needFront = splits.some(function (s) { return MUSCLE_CONFIG[s].view === 'front'; });
-      const needBack  = splits.some(function (s) { return MUSCLE_CONFIG[s].view === 'back'; });
+      const allPairs = splits.reduce(function (acc, s) { return acc.concat(getViewRegionPairs(s)); }, []);
+      const needFront = allPairs.some(function (p) { return p.view === 'front'; });
+      const needBack  = allPairs.some(function (p) { return p.view === 'back'; });
       frontSvg.style.display = needFront ? 'block' : 'none';
       backSvg.style.display  = needBack  ? 'block' : 'none';
 
@@ -2219,27 +2242,29 @@ document.addEventListener('DOMContentLoaded', function () {
       // Legs + Run day doesn't fight itself over quads/calves.
       const claimed = {};
       splits.filter(function (s) { return s !== 'run'; }).forEach(function (s) {
-        const cfg = MUSCLE_CONFIG[s];
-        const svg = cfg.view === 'front' ? frontSvg : backSvg;
-        cfg.regions.forEach(function (region) {
-          svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
-            el.classList.add('is-lit');
+        getViewRegionPairs(s).forEach(function (pair) {
+          const svg = pair.view === 'front' ? frontSvg : backSvg;
+          pair.regions.forEach(function (region) {
+            svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
+              el.classList.add('is-lit');
+            });
+            claimed[pair.view + ':' + region] = true;
           });
-          claimed[cfg.view + ':' + region] = true;
         });
       });
       if (splits.indexOf('run') !== -1) {
-        const cfg = MUSCLE_CONFIG.run;
-        const svg = cfg.view === 'front' ? frontSvg : backSvg;
-        cfg.regions.forEach(function (region) {
-          if (claimed[cfg.view + ':' + region]) return;
-          svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
-            el.classList.add('is-lit-run');
+        getViewRegionPairs('run').forEach(function (pair) {
+          const svg = pair.view === 'front' ? frontSvg : backSvg;
+          pair.regions.forEach(function (region) {
+            if (claimed[pair.view + ':' + region]) return;
+            svg.querySelectorAll('[data-region="' + region + '"]').forEach(function (el) {
+              el.classList.add('is-lit-run');
+            });
           });
         });
       }
 
-      const order = ['push', 'pull', 'legs', 'run'];
+      const order = ['push', 'pull', 'legs', 'full', 'run'];
       const ordered = order.filter(function (s) { return splits.indexOf(s) !== -1; });
       chartTitleEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ') + ' Day';
       chartSubEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
