@@ -307,7 +307,11 @@ body::after {
   width: 168px; height: 168px;
   flex-shrink: 0;
 }
-.day-ring svg { width: 100%; height: 100%; display: block; }
+/* overflow:visible is required here — an <svg> element clips to its own
+   box by default (UA stylesheet), which cuts the glow filter's blur off
+   in a hard square right at the SVG's edge no matter how generous the
+   filter region on #dayRingGlow is. */
+.day-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .day-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
 .day-ring-fill {
   fill: none;
