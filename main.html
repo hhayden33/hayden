@@ -316,8 +316,15 @@ body::after {
   transform: rotate(-90deg);
   transform-origin: 60px 60px;
   transition: stroke 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  filter: drop-shadow(0 0 3px rgba(8, 124, 163, 0.4));
+              stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Same purple sweep as the 88YYDS wordmark's glow — layered so it reads
+     as a gradient (tight, saturated core fading to a soft outer lavender)
+     rather than a single flat-colored halo. */
+  filter:
+    drop-shadow(0 0 3px rgba(91, 58, 142, 0.55))
+    drop-shadow(0 0 7px rgba(111, 74, 168, 0.45))
+    drop-shadow(0 0 13px rgba(169, 139, 203, 0.35));
 }
 .day-ring-overlay {
   position: absolute; inset: 0;
