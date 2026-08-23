@@ -316,15 +316,13 @@ body::after {
   transform: rotate(-90deg);
   transform-origin: 60px 60px;
   transition: stroke 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              filter 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  /* Same purple sweep as the 88YYDS wordmark's glow — layered so it reads
-     as a gradient (tight, saturated core fading to a soft outer lavender)
-     rather than a single flat-colored halo. */
-  filter:
-    drop-shadow(0 0 3px rgba(91, 58, 142, 0.55))
-    drop-shadow(0 0 7px rgba(111, 74, 168, 0.45))
-    drop-shadow(0 0 13px rgba(169, 139, 203, 0.35));
+              stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Same purple sweep as the 88YYDS wordmark's glow — layered via the
+     #dayRingGlow SVG filter (defs above) so it reads as a gradient (tight,
+     saturated core fading to a soft outer lavender) rather than a flat
+     halo. A plain CSS drop-shadow() here clips to a square at this blur
+     radius — see the comment on the filter's <defs>. */
+  filter: url(#dayRingGlow);
 }
 .day-ring-overlay {
   position: absolute; inset: 0;
@@ -1029,6 +1027,19 @@ body::after {
   <div class="day-ring-wrap">
     <div class="day-ring">
       <svg viewBox="0 0 120 120">
+        <defs>
+          <!-- CSS drop-shadow() on an SVG shape clips its blur to a filter
+               region sized off the shape's own bounding box (~110% by
+               default) — fine for a small blur, but a circle this close to
+               its viewBox has no room for a wide blur, so it visibly clips
+               into a square. An explicit region (300% / centered) gives the
+               glow room to actually be round. -->
+          <filter id="dayRingGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#5B3A8E" flood-opacity="0.55" />
+            <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#6F4AA8" flood-opacity="0.45" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6.5" flood-color="#A98BCB" flood-opacity="0.35" />
+          </filter>
+        </defs>
         <circle class="day-ring-track" cx="60" cy="60" r="52" />
         <circle class="day-ring-fill"  cx="60" cy="60" r="52" id="dayRingFill" />
       </svg>
