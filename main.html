@@ -1056,7 +1056,7 @@ body::after {
     <div class="day-ring-text">
       <div class="day-ring-status"    id="dayRingStatus">Loading…</div>
       <div class="day-ring-remaining" id="dayRingRemaining">—</div>
-      <div class="day-ring-hours">8:00 AM – 12:00 AM</div>
+      <div class="day-ring-hours">7:00 AM – 11:30 PM</div>
     </div>
   </div>
 
@@ -1344,8 +1344,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // Paste your Anthropic key here to enable ✨ Polish. Empty = falls back to plain add.
   const ANTHROPIC_API_KEY = '';
 
-  const WAKE_HOUR  = 8;
-  const SLEEP_HOUR = 24;
+  const WAKE_HOUR  = 7;
+  const SLEEP_HOUR = 23.5;
 
   // ---------- storage helpers ----------
   function storeGet(key) {
