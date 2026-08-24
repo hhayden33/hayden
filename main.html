@@ -239,7 +239,7 @@ body::after {
   background: rgba(255,255,255,0.10);
   color: var(--text-primary);
 }
-#todoSection, #runningOverview, #water, #nightRoutine { scroll-margin-top: 56px; }
+#todoSection, #runningOverview, #water, #nightRoutine, #sleep { scroll-margin-top: 56px; }
 
 /* ===== Component 3: Day Ring ===== */
 .status-row {
@@ -1008,15 +1008,51 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
 }
 
-/* ---------- Water Tracker + Night Routine side-by-side row ---------- */
+/* ---------- Water Tracker + Night Routine + Sleep side-by-side row —
+   levelled to equal height (the tallest column's height) rather than
+   each just sitting at its own natural height, which left Sleep's much
+   shorter card trailing well above the other two's bottom edge. Every
+   nesting level between .dual-row and the actual visible card has to
+   pass flex-grow down for this to reach the real box (water nests
+   deeper than the others: section > .water-embed > .shell > .card). ---------- */
 .dual-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 20px;
 }
-.dual-row > .section { flex: 1; min-width: 0; }
-@media (max-width: 700px) {
+.dual-row > .section {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+}
+.dual-row > .section > .water-embed {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+.dual-row > .section > .water-embed > .shell {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+.dual-row > .section > .water-embed > .shell > .card:not(#historyCard) { flex: 1; }
+.dual-row > .section > .gm-card { flex: 1; }
+@media (max-width: 900px) {
   .dual-row { flex-direction: column; gap: 0; }
+}
+
+/* ---------- Sleep ---------- */
+.sleep-time-row { display: flex; gap: 10px; margin: 14px 0 16px; }
+.sleep-time-field { flex: 1; min-width: 0; }
+.sleep-time-field label {
+  display: block;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.sleep-time-field input[type="time"] { color-scheme: dark; width: 100%; }
+.gm-streak.sleep-source-live {
+  background: rgba(32,165,160,0.10);
+  color: var(--success);
+  border-color: rgba(32,165,160,0.32);
 }
 
 /* ---------- Water Tracker (ported natively from po-water.html — was
@@ -1476,6 +1512,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     <a href="#runningOverview" class="quickjump-chip">Running</a>
     <a href="#water" class="quickjump-chip">Water</a>
     <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
+    <a href="#sleep" class="quickjump-chip">Sleep</a>
   </nav>
 
   <div class="status-row">
@@ -1919,6 +1956,48 @@ html.is-embedded .shell { padding-bottom: 20px; }
       <ul id="nightRoutineList" class="goal-list gm-list nr-list"></ul>
     </div>
   </div>
+
+  <!-- SLEEP — sits beside Night Routine and shares its active-day
+       boundary (getActiveDateString()); its sleep:<date> key is ready
+       for a future Garmin sleep sync to write into (source:'garmin'),
+       the same way run:garminSnapshot feeds Running today. -->
+  <div class="section" id="sleep">
+    <div class="section-title">Sleep</div>
+    <div class="gm-card" id="sleepCard">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow">🌙 Last night</div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="sleepHoursNum">—</span>
+            <span class="gm-progress-label" id="sleepHoursLabel">no data yet</span>
+          </div>
+        </div>
+        <div class="gm-streak" id="sleepSourceTag">
+          <span id="sleepSourceLabel">Manual</span>
+        </div>
+      </div>
+      <div class="sleep-time-row">
+        <div class="sleep-time-field">
+          <label for="sleepBedTime">Bedtime</label>
+          <input type="time" id="sleepBedTime" class="gm-input">
+        </div>
+        <div class="sleep-time-field">
+          <label for="sleepWakeTime">Wake time</label>
+          <input type="time" id="sleepWakeTime" class="gm-input">
+        </div>
+      </div>
+      <div class="wk-seg-row">
+        <span class="wk-seg-label">Quality</span>
+        <div class="wk-seg-control" id="sleepQualityControl">
+          <button type="button" class="wk-seg-btn" data-q="1">Poor</button>
+          <button type="button" class="wk-seg-btn" data-q="2">Low</button>
+          <button type="button" class="wk-seg-btn" data-q="3">OK</button>
+          <button type="button" class="wk-seg-btn" data-q="4">Good</button>
+          <button type="button" class="wk-seg-btn" data-q="5">Great</button>
+        </div>
+      </div>
+    </div>
+  </div>
   </div>
 
 </div>
@@ -2039,6 +2118,78 @@ html.is-embedded .shell { padding-bottom: 20px; }
     return list;
   }
   function setNightRoutine(list) { storeSet(nightRoutineKey(), list); }
+
+  // ---------- Sleep ----------
+  // Same 'sleep:<date>' shape a future Garmin sync could write into
+  // directly (source:'garmin', hours set from Garmin's own duration
+  // rather than computed from bed/wake here) — see the section comment
+  // in the markup above. Shares the same active-day boundary as Night
+  // Routine (getActiveDateString()), so logging sleep after waking up
+  // files under the night that just ended, not the new day starting.
+  function sleepKey() { return 'sleep:' + getActiveDateString(); }
+  function getSleep() {
+    const s = storeGet(sleepKey());
+    return (s && typeof s === 'object' && !Array.isArray(s))
+      ? s : { bedTime: null, wakeTime: null, hours: null, quality: null, source: 'manual' };
+  }
+  function setSleep(data) { storeSet(sleepKey(), data); }
+  // Hours between a bedtime and wake time, both 'HH:MM' — always treats
+  // wake as the next clock time after bed, wrapping past midnight (23:15
+  // -> 07:00 is 7h45m, not a negative span).
+  function computeSleepHours(bedTime, wakeTime) {
+    if (!bedTime || !wakeTime) return null;
+    const [bh, bm] = bedTime.split(':').map(Number);
+    const [wh, wm] = wakeTime.split(':').map(Number);
+    let bedMin = bh * 60 + bm, wakeMin = wh * 60 + wm;
+    if (wakeMin <= bedMin) wakeMin += 24 * 60;
+    return Math.round((wakeMin - bedMin) / 60 * 100) / 100;
+  }
+  function formatSleepHours(hours) {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return h + 'h' + (m ? ' ' + m + 'm' : '');
+  }
+  const SLEEP_QUALITY_LABELS = { 1: 'poor night', 2: 'rough night', 3: 'okay night', 4: 'good night', 5: 'great night' };
+  function renderSleep() {
+    const s = getSleep();
+    document.getElementById('sleepBedTime').value = s.bedTime || '';
+    document.getElementById('sleepWakeTime').value = s.wakeTime || '';
+
+    const hoursEl = document.getElementById('sleepHoursNum');
+    const labelEl = document.getElementById('sleepHoursLabel');
+    hoursEl.textContent = s.hours != null ? formatSleepHours(s.hours) : '—';
+    labelEl.textContent = s.hours != null ? (SLEEP_QUALITY_LABELS[s.quality] || 'logged') : 'no data yet';
+
+    const sourceTag = document.getElementById('sleepSourceTag');
+    const isLive = s.source === 'garmin';
+    sourceTag.classList.toggle('sleep-source-live', isLive);
+    document.getElementById('sleepSourceLabel').textContent = isLive ? 'Live from Garmin' : 'Manual';
+
+    document.querySelectorAll('#sleepQualityControl .wk-seg-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.q) === s.quality);
+    });
+  }
+  ['sleepBedTime', 'sleepWakeTime'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const s = getSleep();
+      s.bedTime = document.getElementById('sleepBedTime').value || null;
+      s.wakeTime = document.getElementById('sleepWakeTime').value || null;
+      s.hours = computeSleepHours(s.bedTime, s.wakeTime);
+      s.source = 'manual';
+      setSleep(s);
+      renderSleep();
+    });
+  });
+  document.getElementById('sleepQualityControl').addEventListener('click', (e) => {
+    const btn = e.target.closest('.wk-seg-btn');
+    if (!btn) return;
+    const s = getSleep();
+    const q = Number(btn.dataset.q);
+    s.quality = (s.quality === q) ? null : q;
+    s.source = s.source || 'manual';
+    setSleep(s);
+    renderSleep();
+  });
 
   // ---------- rollover: pull undone older goals into today ----------
   function rollover() {
@@ -2406,19 +2557,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
     li.appendChild(text);
     makeInlineEdit(text, idx, getNightRoutine, setNightRoutine, renderNightRoutine);
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'goal-delete';
-    del.setAttribute('aria-label', 'Remove item');
-    del.textContent = '×';
-    del.addEventListener('click', () => {
-      const list = getNightRoutine();
-      list.splice(idx, 1);
-      setNightRoutine(list);
-      renderNightRoutine();
-    });
-    li.appendChild(del);
-
     return li;
   }
   function renderNightRoutine() {
@@ -2661,13 +2799,14 @@ html.is-embedded .shell { padding-bottom: 20px; }
   loadTomorrow();
   renderStreak();
   renderNightRoutine();
+  renderSleep();
   updateDayRing();
   setInterval(updateDayRing, 60 * 1000);
   renderGoalsSummary();
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderGoalsSummary();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderSleep(); renderGoalsSummary();
   });
   // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
   // todo.html when embedded/bridged) write through storeSet/setGoals, which
@@ -2696,6 +2835,17 @@ document.addEventListener('DOMContentLoaded', function () {
   initCloudSync({
     appKey: 'nightroutine',
     syncedPrefixes: ['nightroutine:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+  // Ready for a future Garmin sleep sync (mirroring garmin-sync.py's
+  // 'running' channel) to push sleep:<date> entries in directly — this
+  // registration is what makes that show up here without any other
+  // change once it exists.
+  initCloudSync({
+    appKey: 'sleep',
+    syncedPrefixes: ['sleep:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
