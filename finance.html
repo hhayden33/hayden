@@ -1481,6 +1481,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   position: absolute;
   opacity: 0;
   pointer-events: none;
+  /* Inside a .quick-add row, the bare ".quick-add input" rule hands
+     every input flex:1 — including this visually-hidden checkbox.
+     Combined with position:absolute (needed to lay it under the
+     visible track/thumb spans below) that flex-basis stretched it
+     into a huge invisible hit box wide enough to overflow the page
+     on mobile. It doesn't participate in flex layout once absolute,
+     so pin it back to its natural tiny size explicitly. */
+  width: 1px;
+  height: 1px;
+  flex: none;
 }
 .sub-auto-track {
   position: relative;
