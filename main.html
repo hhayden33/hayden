@@ -258,6 +258,17 @@ body::after {
 .status-row .day-ring-wrap.is-compact .day-ring {
   width: 72px; height: 72px;
 }
+.status-row .day-ring-wrap.is-compact .day-ring-track {
+  stroke: rgba(255,255,255,0.10);
+}
+.status-row .day-ring-wrap.is-compact .day-ring-fill {
+  /* The multi-layer feDropShadow glow (#dayRingGlow) was tuned for the
+     original 168px hero ring — its blur radii are large relative to
+     this ring's ~5px physical stroke width, so it read as a smudgy haze
+     rather than a crisp arc at this size. A single small drop-shadow
+     scaled to match keeps a touch of glow without the mush. */
+  filter: drop-shadow(0 0 2px rgba(8, 124, 163, 0.55));
+}
 .status-row .day-ring-wrap.is-compact .day-ring-percent { font-size: 19px; letter-spacing: -0.02em; }
 .status-row .day-ring-wrap.is-compact .day-ring-phase { font-size: 7.5px; margin-top: 1px; }
 .status-row .day-ring-wrap.is-compact .day-ring-clock { display: none; }
