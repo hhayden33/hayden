@@ -1196,6 +1196,15 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
    `*`/`html, body` resets (this page already has its own equivalents)
    so nothing here fights main.html's page-level background/color. ---------- */
 .water-embed { margin-top: 8px; }
+/* Same tinted-card treatment as Night Routine's .nr-card (a subtle
+   180deg gradient from an accent color down into the normal card
+   background) — cyan here instead of navy, so Water's hero card reads
+   as its own signature color the way Night Routine and the rest of the
+   accent-coded sections on this page already do. */
+.water-embed .shell > .card:not(#historyCard) {
+  border-color: rgba(8, 124, 163, 0.40);
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.22), var(--bg-card, #19232D) 65%);
+}
 :root {
   --bg: #10151A;
   --bg-card: #19232D;

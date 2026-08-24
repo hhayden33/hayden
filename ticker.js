@@ -27,7 +27,7 @@
 .ticker-banner {
   overflow: hidden;
   white-space: nowrap;
-  padding: 7px 0;
+  padding: max(7px, env(safe-area-inset-top)) 0 7px;
   background: #10151A;
   border-bottom: 1px solid rgba(255,255,255,0.06);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
@@ -58,7 +58,7 @@
   .ticker-banner { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
 }
 @media (max-width: 480px) {
-  .ticker-banner { padding: 6px 0; }
+  .ticker-banner { padding: max(6px, env(safe-area-inset-top)) 0 6px; }
   .ticker-banner-item { font-size: 9px; letter-spacing: 0.08em; }
 }
 `;
@@ -77,12 +77,19 @@
     wrap.className = 'ticker-banner';
     wrap.id = 'tickerBanner';
     wrap.setAttribute('aria-hidden', 'true');
-    wrap.innerHTML =
-      '<div class="ticker-banner-track">' +
-      '<span class="ticker-banner-item" id="tickerBannerItem1">—</span>' +
-      '<span class="ticker-banner-item" id="tickerBannerItem2">—</span>' +
-      '</div>';
+    wrap.innerHTML = '<div class="ticker-banner-track" id="tickerBannerTrack"></div>';
     document.body.insertBefore(wrap, document.body.firstChild);
+    // Every page's <body> carries its own top padding sized for
+    // whatever used to be the first element (topbar, or the page's own
+    // content) to clear the iOS safe area. Now that this banner sits
+    // above all of that as the new first child, that inherited padding
+    // just reads as a stray gap of empty background before the ticker's
+    // own content — cancel it here so the banner sits flush against the
+    // true top of the viewport, then .ticker-banner's own
+    // safe-area-aware padding (see the CSS above) re-adds exactly the
+    // clearance the ticker itself needs, without double-counting it.
+    const bodyPT = getComputedStyle(document.body).paddingTop;
+    if (bodyPT && bodyPT !== '0px') wrap.style.marginTop = 'calc(-1 * ' + bodyPT + ')';
     return wrap;
   }
 
@@ -178,21 +185,56 @@
     return parts.join(' · ') + '   ·   ';
   }
 
-  function render(item1, item2) {
-    const text = buildTickerText();
-    item1.textContent = text;
-    item2.textContent = text;
+  // Fills the track with two IDENTICAL back-to-back "sets" of repeated
+  // copies, each set wide enough on its own to cover the visible banner
+  // (so on a wide desktop window a short ticker string never runs out
+  // partway across, leaving the right side blank — the original bug:
+  // two copies total was only ever enough to fill a narrow phone
+  // screen). Both sets always have the same width by construction
+  // (same copy count, same text), so animating exactly -50% still
+  // loops with no seam regardless of viewport width or string length.
+  function fillTrack(track, text) {
+    const containerWidth = track.parentElement.clientWidth || window.innerWidth;
+    track.innerHTML = '';
+    const probe = document.createElement('span');
+    probe.className = 'ticker-banner-item';
+    probe.textContent = text;
+    track.appendChild(probe);
+    const itemWidth = probe.getBoundingClientRect().width || 1;
+    const copiesPerSet = Math.max(1, Math.ceil(containerWidth / itemWidth));
+    track.innerHTML = '';
+    for (let set = 0; set < 2; set++) {
+      for (let i = 0; i < copiesPerSet; i++) {
+        const span = document.createElement('span');
+        span.className = 'ticker-banner-item';
+        span.textContent = text;
+        track.appendChild(span);
+      }
+    }
+  }
+
+  let currentTickerText = '';
+  function render(track) {
+    currentTickerText = buildTickerText();
+    fillTrack(track, currentTickerText);
   }
 
   function boot() {
     injectStyle();
     const wrap = buildBanner();
-    const item1 = document.getElementById('tickerBannerItem1');
-    const item2 = document.getElementById('tickerBannerItem2');
-    if (!item1 || !item2) return;
-    render(item1, item2);
-    setInterval(function () { render(item1, item2); }, 5 * 60 * 1000);
-    window.addEventListener('storage', function () { render(item1, item2); });
+    const track = document.getElementById('tickerBannerTrack');
+    if (!track) return;
+    render(track);
+    setInterval(function () { render(track); }, 5 * 60 * 1000);
+    window.addEventListener('storage', function () { render(track); });
+    // Re-fill on resize (debounced) — the copy count that avoids a gap
+    // at 375px isn't necessarily enough at 1280px after a window resize
+    // or an iPad rotating.
+    let resizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { fillTrack(track, currentTickerText); }, 200);
+    });
   }
 
   if (document.readyState === 'loading') {
