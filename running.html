@@ -431,7 +431,14 @@ body::after {
 }
 .run-share-canvas-wrap {
   position: relative;
-  width: min(100%, 340px);
+  /* Sized off available *height* (not width) — on a short mobile modal
+     (topbar.js forces full-height, minus the layout toggle, Copy Image
+     button and hint text above/below it) a width-first size can push
+     the actual "Copy Image" CTA below the fold. Capping by vh instead
+     guarantees the primary action stays visible without scrolling. */
+  height: min(40vh, 380px);
+  width: auto;
+  max-width: 100%;
   aspect-ratio: 1080 / 1920;
   margin: 0 auto;
   border-radius: 20px;
@@ -444,9 +451,29 @@ body::after {
 .run-share-canvas-wrap canvas {
   display: block; width: 100%; height: 100%;
 }
+.run-share-copy-btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; margin-top: 14px; padding: 13px;
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 12px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary); font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, filter 0.15s;
+}
+.run-share-copy-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.run-share-copy-btn:active { transform: translateY(0); }
+.run-share-copy-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+.run-share-copy-btn.is-done { background: var(--success, #20A5A0); }
+.run-share-copy-btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
+.run-share-status {
+  min-height: 16px; margin-top: 8px; text-align: center;
+  font-size: 11.5px; font-weight: 600; color: var(--success, #20A5A0);
+}
+.run-share-status.is-error { color: var(--danger, #FF6B6B); }
 .run-share-hint {
-  margin-top: 12px; text-align: center;
-  font-size: 11px; color: var(--text-tertiary);
+  margin-top: 8px; text-align: center;
+  font-size: 11px; line-height: 1.5; color: var(--text-tertiary);
 }
 
 @media (max-width: 480px) {
@@ -777,11 +804,16 @@ body::after {
       <div class="run-share-canvas-wrap">
         <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
       </div>
-      <div class="run-share-hint">Transparent 1080×1920 PNG — ready for Instagram Stories</div>
+      <button class="run-share-copy-btn" id="runShareCopy" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span id="runShareCopyLabel">Copy Image</span>
+      </button>
+      <div class="run-share-status" id="runShareStatus" role="status" aria-live="polite"></div>
+      <div class="run-share-hint" id="runShareHint">Transparent 1080×1920 PNG. Copy, then paste into Instagram Stories — if paste isn't offered there, tap Save Image and add it as a sticker from Photos instead.</div>
     </div>
     <div class="run-modal-actions">
       <button class="gm-ghost" id="runShareCancel" type="button">Cancel</button>
-      <button class="gm-add" id="runShareDownload" type="button">Export PNG</button>
+      <button class="gm-add" id="runShareDownload" type="button">Save Image</button>
     </div>
   </div>
 </div>
@@ -1702,29 +1734,66 @@ body::after {
   // The dashboard's wordmark (index.html / main.html) redrawn in Canvas —
   // same gradient, same orb, same "AIO" caption — so the overlay carries
   // the real 88YYDS AIO identity without the app icon's background box.
-  function drawWordmark(ctx, x, y) {
-    const markSize = 40;
-    const markY = y + markSize * 0.78;
+  // Draws from an explicit baseline (not a "top" offset) so the caller can
+  // line it up exactly with other text on the same header row — that
+  // baseline match is what keeps the logo and the tempo/date eyebrow on
+  // one visually cohesive line instead of one floating above the other.
+  function drawWordmark(ctx, x, baselineY) {
+    const markSize = 34;
     ctx.font = '800 ' + markSize + 'px ' + SHARE_FONT;
     const markW = ctx.measureText('88YYDS').width;
     const grad = ctx.createLinearGradient(x, 0, x + markW, 0);
     grad.addColorStop(0, '#FFFFFF'); grad.addColorStop(0.38, '#EAF1F5');
     grad.addColorStop(0.68, '#9FD9DA'); grad.addColorStop(1, '#C9A6EE');
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.shadowColor = 'rgba(85,32,128,0.45)'; ctx.shadowBlur = 22;
+    // Subtler glow than before — the logo is a signature, not the
+    // headline, so it shouldn't visually outweigh the run's own stats.
+    ctx.shadowColor = 'rgba(85,32,128,0.35)'; ctx.shadowBlur = 14;
     ctx.fillStyle = grad;
-    ctx.fillText('88YYDS', x, markY);
+    ctx.fillText('88YYDS', x, baselineY);
     ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
 
-    const orbX = x + markW + 16, orbY = markY - markSize * 0.34, orbR = 6;
+    const orbX = x + markW + 13, orbY = baselineY - markSize * 0.34, orbR = 5;
     const orbGrad = ctx.createRadialGradient(orbX - orbR * 0.3, orbY - orbR * 0.3, 1, orbX, orbY, orbR);
     orbGrad.addColorStop(0, '#F1E0FF'); orbGrad.addColorStop(0.45, '#B98AE0'); orbGrad.addColorStop(1, '#552080');
     ctx.save();
-    ctx.shadowColor = 'rgba(168,63,175,0.55)'; ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(168,63,175,0.5)'; ctx.shadowBlur = 14;
     ctx.beginPath(); ctx.arc(orbX, orbY, orbR, 0, Math.PI * 2); ctx.fillStyle = orbGrad; ctx.fill();
     ctx.restore();
 
-    drawTrackedText(ctx, 'AIO', x + 2, markY + 30, { size: 15, weight: 700, color: 'rgba(174,183,192,0.85)', spacing: 6, align: 'left' });
+    drawTrackedText(ctx, 'AIO', x + 2, baselineY + 22, { size: 12, weight: 700, color: 'rgba(174,183,192,0.8)', spacing: 5, align: 'left' });
+  }
+
+  // Measures one stat's rendered width (number + unit, same grouping
+  // drawStatValue lays out) at a given size — used to find a font size
+  // that's guaranteed to fit before anything is actually drawn.
+  function measureStatWidth(ctx, numStr, unitStr, numSize, unitSize) {
+    ctx.font = '800 ' + numSize + 'px ' + SHARE_FONT;
+    const numW = ctx.measureText(numStr).width;
+    let unitW = 0;
+    if (unitStr) { ctx.font = '700 ' + unitSize + 'px ' + SHARE_FONT; unitW = ctx.measureText(unitStr).width; }
+    const gap = unitStr ? numSize * 0.12 : 0;
+    return numW + gap + unitW;
+  }
+
+  // Finds the largest numSize (down to a floor) at which every stat in
+  // the group fits within maxWidth — then every stat in that group (a
+  // full row, or both rows together for Full Stats) draws at exactly
+  // that one size. This is what makes the layout "responsive": long
+  // values (e.g. an hour-plus duration, or a wide pace-with-unit) never
+  // overlap their neighbour, they just shrink the whole row slightly to
+  // stay inside its column — no fixed size can guarantee that for every
+  // possible run, so the size itself is solved for instead.
+  function fitSharedStatSize(ctx, statsList, maxWidth, maxNumSize, minNumSize, unitRatio) {
+    let numSize = maxNumSize;
+    while (numSize > minNumSize) {
+      const unitSize = Math.round(numSize * unitRatio);
+      let widest = 0;
+      statsList.forEach(p => { widest = Math.max(widest, measureStatWidth(ctx, p.value, p.unit, numSize, unitSize)); });
+      if (widest <= maxWidth) break;
+      numSize -= 2;
+    }
+    return { numSize, unitSize: Math.round(numSize * unitRatio) };
   }
 
   function renderShareCanvas() {
@@ -1735,10 +1804,42 @@ body::after {
 
     const isFull = shareLayout === 'full';
     const panelX = 64, panelW = SHARE_W - panelX * 2;
-    const panelH = isFull ? 620 : 360;
-    const panelBottom = 1650;
-    const panelY = panelBottom - panelH;
     const pad = 56;
+    const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
+    const colW = contentW / 3;
+
+    // ---- pre-compute every stat's text first — the panel height and
+    // the shared font size both depend on this, so nothing is drawn yet.
+    const rows = [SHARE_LAYOUTS[shareLayout].stats.slice(0, 3)];
+    if (isFull) rows.push(SHARE_LAYOUTS[shareLayout].stats.slice(3));
+    const rowParts = rows.map(keys => keys.map(key => shareStatParts(key, r)));
+
+    // Full Stats explicitly wants both rows to share one visual
+    // hierarchy — so every stat across both rows measures against the
+    // same column width and settles on one common size, not a size per
+    // row. Minimal only ever has the one row anyway.
+    const allParts = rowParts.flat();
+    const maxNumSize = isFull ? 66 : 92;
+    const minNumSize = isFull ? 42 : 56;
+    const { numSize, unitSize } = fitSharedStatSize(ctx, allParts, colW * 0.86, maxNumSize, minNumSize, 0.38);
+    const labelSize = isFull ? 17 : 20;
+    const labelGap = Math.round(numSize * 0.42);
+
+    // ---- vertical rhythm, computed bottom-up from the fitted size so
+    // the panel is only ever as tall as the content actually needs.
+    const headerToDivider = 46;
+    const dividerToRow = Math.round(numSize * 0.86) + 40;
+    const rowToLabel = labelGap;
+    const rowGap = isFull ? Math.round(numSize * 0.66) + 44 : 0;
+    const topMargin = 90, bottomMargin = 54;
+
+    const contentHeight =
+      topMargin + headerToDivider + dividerToRow + rowToLabel +
+      (isFull ? rowGap + dividerToRow + rowToLabel : 0) +
+      bottomMargin;
+    const panelBottom = 1650;
+    const panelH = contentHeight;
+    const panelY = panelBottom - panelH;
 
     // Panel background stays deliberately subtle (~20% opacity) so the
     // overlay reads as a light scrim over a photo, not a solid card —
@@ -1754,45 +1855,35 @@ body::after {
     // applies to all text drawn below, panel above is unaffected.
     ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
 
-    const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
-
-    const headerY = panelY + pad + 24;
-    drawWordmark(ctx, contentX, headerY);
-
+    // ---- header: logo and eyebrow share one baseline so they read as
+    // a single row instead of one floating above the other.
+    const headerBaselineY = panelY + topMargin;
+    drawWordmark(ctx, contentX, headerBaselineY);
     const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
-    drawTrackedText(ctx, eyebrow, contentRight, headerY + 14, { size: 19, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
+    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 17 : 19, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
 
-    const dividerY = headerY + 56;
+    const dividerY = headerBaselineY + headerToDivider;
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
 
-    const colW = contentW / 3;
-    const primaryNumSize = isFull ? 78 : 100;
-    const primaryUnitSize = isFull ? 30 : 38;
-    const primaryLabelSize = isFull ? 20 : 22;
-    const primaryY = dividerY + (isFull ? 140 : 170);
-    SHARE_LAYOUTS[shareLayout].stats.slice(0, 3).forEach((key, i) => {
-      const cx = contentX + colW * i + colW / 2;
-      const parts = shareStatParts(key, r);
-      drawStatValue(ctx, cx, primaryY, parts.value, parts.unit, { numSize: primaryNumSize, unitSize: primaryUnitSize, color: '#FFFFFF', unitColor: 'rgba(255,255,255,0.6)' });
-      drawTrackedText(ctx, parts.label.toUpperCase(), cx, primaryY + (isFull ? 36 : 42), { size: primaryLabelSize, weight: 700, color: 'rgba(255,255,255,0.5)', spacing: 3, align: 'center' });
-    });
-
-    const secondaryKeys = SHARE_LAYOUTS[shareLayout].stats.slice(3);
-    if (secondaryKeys.length) {
-      const secDividerY = primaryY + 96;
-      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-      ctx.beginPath(); ctx.moveTo(contentX, secDividerY); ctx.lineTo(contentRight, secDividerY); ctx.stroke();
-
-      const secY = secDividerY + 96;
-      secondaryKeys.forEach((key, i) => {
+    // ---- stat rows — identical draw call for both rows (same size,
+    // same layout math), so Full Stats reads as one unified system
+    // rather than a primary row and a shrunken secondary one.
+    let cursorY = dividerY + dividerToRow;
+    rowParts.forEach((parts, rowIdx) => {
+      parts.forEach((p, i) => {
         const cx = contentX + colW * i + colW / 2;
-        const parts = shareStatParts(key, r);
-        drawStatValue(ctx, cx, secY, parts.value, parts.unit, { numSize: 46, unitSize: 20, color: 'rgba(255,255,255,0.92)', unitColor: 'rgba(255,255,255,0.55)' });
-        drawTrackedText(ctx, parts.label.toUpperCase(), cx, secY + 30, { size: 15, weight: 700, color: 'rgba(255,255,255,0.45)', spacing: 2.5, align: 'center' });
+        drawStatValue(ctx, cx, cursorY, p.value, p.unit, { numSize, unitSize, color: '#FFFFFF', unitColor: 'rgba(255,255,255,0.62)' });
+        drawTrackedText(ctx, p.label.toUpperCase(), cx, cursorY + rowToLabel, { size: labelSize, weight: 700, color: 'rgba(255,255,255,0.5)', spacing: 2.5, align: 'center' });
       });
-    }
+      if (rowIdx < rowParts.length - 1) {
+        const secDividerY = cursorY + rowToLabel + rowGap / 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.beginPath(); ctx.moveTo(contentX, secDividerY); ctx.lineTo(contentRight, secDividerY); ctx.stroke();
+        cursorY += rowGap + dividerToRow;
+      }
+    });
 
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
@@ -1807,11 +1898,70 @@ body::after {
     renderShareCanvas();
   }
 
+  // ---------------------------------------------------------------
+  // Sharing workflow
+  //
+  // What's actually possible here (checked against current iOS/Safari
+  // and the documented Web platform — not assumed):
+  //
+  // - navigator.clipboard.write() with a ClipboardItem({'image/png': …})
+  //   IS real, supported image-clipboard writing (Safari 13.1+ / iOS
+  //   Safari, Chrome, Edge) — not a text/URL placeholder. The blob is
+  //   passed as a Promise so the async canvas.toBlob() result still
+  //   qualifies as "within the user gesture" the way Safari requires.
+  //   PNG alpha survives this untouched; it's the same bytes.
+  // - Whether Instagram's own Stories composer then offers a "Paste"
+  //   affordance for that clipboard image is NOT a documented, stable
+  //   API — it rides on iOS's general system paste control, which
+  //   varies by iOS/Instagram version and isn't something a web page
+  //   can query, force, or guarantee. So the copy button is real and
+  //   reliable; what happens after switching to Instagram is not
+  //   something this page claims to control.
+  // - Strava's actual "share to story" hop is a *native app* feature:
+  //   it writes to UIPasteboard using Instagram's private pasteboard
+  //   keys (com.instagram.sharedSticker.backgroundImage /
+  //   …stickerImage) and opens the instagram-stories:// URL scheme.
+  //   Both of those require native code with a registered Instagram/
+  //   Facebook app id — the standard Web Clipboard API has no
+  //   equivalent for arbitrary custom pasteboard types, so a website
+  //   cannot reproduce that exact hop. (Confirmed against Meta's own
+  //   "Sharing to Stories" doc, which is iOS/Android SDK-only.)
+  // - The one *reliably* working path end to end on iOS is: save the
+  //   PNG (Web Share API's native share sheet, or a plain download),
+  //   then in Instagram Stories use its own Sticker → Photos picker —
+  //   Instagram already preserves transparency correctly for a PNG
+  //   added that way. That's why "Save Image" stays as a clearly
+  //   offered second option rather than being replaced by Copy.
+  // ---------------------------------------------------------------
+  const CLIPBOARD_IMAGE_SUPPORTED = !!(navigator.clipboard && window.ClipboardItem && navigator.clipboard.write);
+
+  function shareFilename() {
+    return '88yyds-' + (shareActiveRun && shareActiveRun.date || 'run') + '-' + shareLayout + '.png';
+  }
+  function shareCanvasBlob() {
+    return new Promise((resolve, reject) => {
+      runShareCanvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob returned null')), 'image/png');
+    });
+  }
+  function showShareStatus(message, isError) {
+    const el = document.getElementById('runShareStatus');
+    el.textContent = message;
+    el.classList.toggle('is-error', !!isError);
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.textContent = ''; }, 4000);
+  }
+
   function openShareModal(id) {
     const r = runs().find(x => x.id === id);
     if (!r) return;
     shareActiveRun = r;
     document.getElementById('runShareTitle').textContent = 'Share · ' + r.type + ' · ' + fmtDate(r.date);
+    document.getElementById('runShareStatus').textContent = '';
+    const copyBtn = document.getElementById('runShareCopy');
+    copyBtn.style.display = CLIPBOARD_IMAGE_SUPPORTED ? 'flex' : 'none';
+    document.getElementById('runShareHint').textContent = CLIPBOARD_IMAGE_SUPPORTED
+      ? 'Transparent 1080×1920 PNG. Copy, then paste into Instagram Stories — if paste isn’t offered there, tap Save Image and add it as a sticker from Photos instead.'
+      : 'Transparent 1080×1920 PNG. Tap Save Image, then in Instagram Stories add it as a sticker from Photos.';
     setShareLayout('minimal');
     openModal(runShareModalBg);
   }
@@ -1823,29 +1973,50 @@ body::after {
   document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
   runShareModalBg.addEventListener('click', (e) => { if (e.target === runShareModalBg) closeModal(runShareModalBg); });
 
-  document.getElementById('runShareDownload').addEventListener('click', () => {
+  // Primary action — copies the actual rendered PNG's pixel data to the
+  // system clipboard as an image (not a URL/filename placeholder).
+  document.getElementById('runShareCopy').addEventListener('click', async () => {
+    if (!shareActiveRun || !CLIPBOARD_IMAGE_SUPPORTED) return;
+    const btn = document.getElementById('runShareCopy');
+    const label = document.getElementById('runShareCopyLabel');
+    btn.disabled = true;
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': shareCanvasBlob() })
+      ]);
+      btn.classList.add('is-done');
+      label.textContent = 'Copied';
+      showShareStatus('Copied — switch to Instagram Stories and paste.');
+      setTimeout(() => { btn.classList.remove('is-done'); label.textContent = 'Copy Image'; }, 2200);
+    } catch (e) {
+      showShareStatus('Copy failed on this browser — try Save Image instead.', true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Secondary action — native share sheet when available (lets iOS hand
+  // the file straight to any app, Instagram included), otherwise a
+  // plain download. Either way this is the path into Photos that
+  // Instagram's own "add sticker from Photos" flow can then use.
+  document.getElementById('runShareDownload').addEventListener('click', async () => {
     if (!shareActiveRun) return;
-    const filename = '88yyds-' + (shareActiveRun.date || 'run') + '-' + shareLayout + '.png';
-    runShareCanvas.toBlob(async (blob) => {
-      if (!blob) return;
-      // Web Share API with a file lets iOS hand the PNG straight to the
-      // native share sheet (Instagram Stories included) — the exact
-      // "Export → Add over Instagram Story" hop this feature is for.
-      // Anything without that support just falls back to a normal
-      // blob download link.
-      const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: '88YYDS AIO' });
-          return;
-        } catch (e) { /* user cancelled the share sheet — fall back to download */ }
-      }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    }, 'image/png');
+    const filename = shareFilename();
+    let blob;
+    try { blob = await shareCanvasBlob(); } catch (e) { showShareStatus('Export failed — try again.', true); return; }
+
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: '88YYDS AIO' });
+        return;
+      } catch (e) { /* user cancelled the share sheet — fall back to download */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   });
 
   // =============================================================
