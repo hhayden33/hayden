@@ -1008,6 +1008,26 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .wk-chart-meta { flex: 1; min-width: 160px; }
 .wk-chart-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; }
 .wk-chart-exlist { font-size: 15px; color: var(--text-secondary); line-height: 1.65; }
+.wk-complete-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 12px;
+  padding: 7px 14px;
+  border: 1px dashed rgba(255,255,255,0.16);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.wk-complete-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.30); }
+.wk-complete-btn.is-done {
+  border: 1px solid rgba(32,165,160,0.35);
+  background: rgba(32,165,160,0.10);
+  color: var(--success);
+}
+.wk-complete-btn.is-done:hover { background: rgba(32,165,160,0.16); }
 
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
@@ -1816,6 +1836,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
         <div class="wk-chart-meta">
           <div class="wk-chart-title" id="wkChartTitle">—</div>
           <div class="wk-chart-exlist" id="wkChartEx"></div>
+          <button type="button" class="wk-complete-btn" id="wkCompleteBtn">Mark complete</button>
         </div>
       </div>
     </div>
@@ -3424,12 +3445,21 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadDoneDays() {
       try { return JSON.parse(localStorage.getItem('po_coach_workout_done')) || {}; } catch (e) { return {}; }
     }
+    // Same key + shape gym.html's own "Mark workout done" button already
+    // writes ({ [dateKey]: isoTimestampString }, presence = done) — this
+    // is the ONE completion store goals-data.js's Evidence.fitness()
+    // reads for the "Train consistently" habit, so writing here needs no
+    // separate sync path or change to that math, just the same key.
+    function saveDoneDays(d) {
+      try { localStorage.setItem('po_coach_workout_done', JSON.stringify(d)); } catch (e) {}
+    }
 
     const stripEl        = document.getElementById('wkStrip');
     const prevWeekBtn      = document.getElementById('wkPrevWeek');
     const nextWeekBtn       = document.getElementById('wkNextWeek');
     const weekLabelEl        = document.getElementById('wkWeekLabel');
     const segEl           = document.getElementById('wkSegControl');
+    const completeBtn      = document.getElementById('wkCompleteBtn');
     const frontSvg         = document.getElementById('wkChartFront');
     const backSvg           = document.getElementById('wkChartBack');
     const chartTitleEl       = document.getElementById('wkChartTitle');
@@ -3509,17 +3539,20 @@ document.addEventListener('DOMContentLoaded', function () {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = "Pick Push, Pull, Legs, Full, or Run to see the day's focus.";
+        completeBtn.style.display = 'none';
         return;
       }
       if (splits.indexOf('rest') !== -1) {
         chartBodyWrap.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = 'Rest day — recovery in progress.';
+        completeBtn.style.display = 'none';
         return;
       }
 
       chartRestEl.style.display = 'none';
       chartBodyWrap.style.display = 'flex';
+      renderCompleteBtn();
 
       const allPairs = splits.reduce(function (acc, s) { return acc.concat(getViewRegionPairs(s)); }, []);
       const needFront = allPairs.some(function (p) { return p.view === 'front'; });
@@ -3569,6 +3602,24 @@ document.addEventListener('DOMContentLoaded', function () {
       chartExEl.textContent = runDesc || '';
       chartExEl.style.display = runDesc ? '' : 'none';
     }
+
+    // A day only counts toward "Train consistently" once this is
+    // clicked — selecting a split just plans the day, same distinction
+    // the checkmark on the day-strip cards already draws.
+    function renderCompleteBtn() {
+      completeBtn.style.display = '';
+      const isDone = !!loadDoneDays()[activeDate];
+      completeBtn.classList.toggle('is-done', isDone);
+      completeBtn.textContent = isDone ? '✓ Completed' : 'Mark complete';
+    }
+    completeBtn.addEventListener('click', function () {
+      const doneDays = loadDoneDays();
+      if (doneDays[activeDate]) delete doneDays[activeDate];
+      else doneDays[activeDate] = new Date().toISOString();
+      saveDoneDays(doneDays);
+      renderCompleteBtn();
+      renderStrip();
+    });
 
     function renderWeekLabel() {
       const start = parseYMD(weekDates[0]);
@@ -3674,6 +3725,18 @@ document.addEventListener('DOMContentLoaded', function () {
       initCloudSync({
         appKey: 'weekplan',
         syncedPrefixes: [WK_PREFIX],
+        onApplied: renderAll
+      });
+      // Same appKey + syncedKeys goals.html already registers to read
+      // gym.html's workout completion — gym.html pushes po_coach_* keys
+      // through its own bespoke sync, this just pulls (and, now that
+      // the Mark Complete button above writes po_coach_workout_done
+      // locally too, pushes) the same Supabase row via the standard
+      // sync.js path, so a completion marked from either page reaches
+      // both without a second sync mechanism.
+      initCloudSync({
+        appKey: 'po-coach',
+        syncedKeys: ['po_coach_v1', 'po_coach_workout_done', 'po_coach_weights', 'po_coach_photos'],
         onApplied: renderAll
       });
     }
