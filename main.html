@@ -28,6 +28,11 @@
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
 <link rel="stylesheet" href="theme.css">
+<!-- Cursive display face for the hero greeting only — everything else
+     on this page stays on --font (the system sans stack). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --text-primary: #F2F2F2;
@@ -99,25 +104,46 @@ body::after {
   margin: 0 auto;
 }
 
-/* ===== Hero greeting ===== */
+/* ===== Hero greeting — cursive on purpose, the one un-uniform-looking
+   line on the page. Both the greeting and the name repeat the same
+   gradient/clip declarations rather than relying on the child span
+   inheriting them, so the effect renders correctly on both regardless
+   of background-clip's inheritance quirks. ===== */
 .hero-greeting {
-  margin: -6px 0 14px;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-tertiary);
+  margin: -2px 0 14px;
+  font-family: 'Dancing Script', cursive;
+  font-size: 30px;
+  font-weight: 700;
   letter-spacing: 0.01em;
+  line-height: 1.1;
+  background: linear-gradient(120deg, #F1E0FF 0%, #C9A6EE 45%, #A98BCB 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(169, 139, 203, 0.35));
   opacity: 0;
   animation: hero-greeting-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: 0.1s;
 }
-.hero-greeting-name { color: var(--text-secondary); font-weight: 600; }
+.hero-greeting-name {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  background: linear-gradient(120deg, #F1E0FF 0%, #C9A6EE 45%, #A98BCB 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
 @keyframes hero-greeting-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-greeting { animation: none; opacity: 1; }
+}
+@media (max-width: 480px) {
+  .hero-greeting { font-size: 25px; }
 }
 
 /* ===== Component 1: page title — a wordmark, not a heading ===== */
