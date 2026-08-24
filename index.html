@@ -23,11 +23,6 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <link rel="stylesheet" href="theme.css">
-<!-- Cursive display face for the hero greeting only — everything else
-     on this page stays on --font (the system sans stack). -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
 <style>
 :root {
   --text-primary: #F2F2F2;
@@ -154,19 +149,19 @@ body::after {
   .wordmark-orb { animation: none; }
 }
 
-/* ===== Hero greeting — cursive on purpose, the one un-uniform-looking
-   line on the page (matches main.html's treatment). Mrs Saint Delafield:
-   a thinner, plainer script than the more ornate Snell Roundhand/Petit
-   Formal Script tried first — less loop/flourish, reads as refined
-   handwriting rather than calligraphy. ===== */
+/* ===== Hero greeting — cursive attempts (Dancing Script, then Snell
+   Roundhand/Petit Formal Script, then Mrs Saint Delafield) all read as
+   too decorative next to the rest of this UI. Back on --font, just
+   bolder and tighter than plain body text (matches main.html's
+   treatment) so it still reads as its own moment without breaking from
+   the interface's own type system. ===== */
 .hero-greeting {
-  margin: 2px 0 20px;
-  font-family: 'Mrs Saint Delafield', cursive;
-  font-size: 36px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  color: #F5F1EA;
+  margin: 0 0 18px;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-secondary);
   opacity: 0;
   animation: hero-greeting-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: 0.1s;
@@ -176,7 +171,7 @@ body::after {
   to   { opacity: 1; }
 }
 @media (max-width: 480px) {
-  .hero-greeting { font-size: 27px; }
+  .hero-greeting { font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-greeting { animation: none; opacity: 1; }
