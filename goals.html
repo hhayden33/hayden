@@ -397,6 +397,13 @@ body::after {
   font-family: inherit; font-size: 14px; outline: none;
 }
 .gd-field textarea { resize: vertical; min-height: 56px; line-height: 1.4; }
+.gd-checkbox-label {
+  display: flex !important; align-items: center; gap: 8px;
+  text-transform: none !important; letter-spacing: normal !important;
+  font-size: 13px !important; color: var(--text-secondary) !important;
+  cursor: pointer;
+}
+.gd-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--gp-primary); flex-shrink: 0; }
 .gd-field-row { display: flex; gap: 10px; }
 .gd-field-row .gd-field { flex: 1; min-width: 0; }
 .gd-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
@@ -453,6 +460,15 @@ body::after {
     </div>
     <div class="goals-grid" id="goalsGrid"></div>
     <div class="empty-state" id="goalsEmpty" style="display:none;">No active goals in this category yet.</div>
+  </div>
+
+  <!-- ===== Upcoming — goals flagged goal.upcoming === true. These are
+       pulled out of the Active Goals grid below rather than shown in
+       both places (see renderGoals()'s filter). ===== -->
+  <div class="section">
+    <div class="section-title">Upcoming</div>
+    <div class="goals-grid" id="upcomingGrid"></div>
+    <div class="empty-state" id="upcomingEmpty" style="display:none;">No goals marked as upcoming yet.</div>
   </div>
 
   <!-- ===== Completed ===== -->
@@ -561,6 +577,9 @@ body::after {
       </div>
     </div>
     <div class="gd-field"><label>Notes (optional)</label><textarea id="gFNotes" rows="2"></textarea></div>
+    <div class="gd-field">
+      <label class="gd-checkbox-label"><input type="checkbox" id="gFUpcoming"> Feature in "Upcoming" section</label>
+    </div>
     <div class="gd-modal-actions">
       <button type="button" class="gm-ghost gd-delete-btn" id="gDelete" style="display:none;">Delete</button>
       <button type="button" class="gm-ghost" id="gCancel">Cancel</button>
@@ -750,6 +769,22 @@ body::after {
     });
   }
 
+  // One-time move of the marathon and holiday goals into the new
+  // Upcoming section. Guarded on g.upcoming == null (never explicitly
+  // set) rather than a version flag, same as the other migrations here —
+  // once someone toggles "Feature in Upcoming" in Edit Goal, upcoming is
+  // explicitly true/false and this no longer touches that goal.
+  function migrateSeedUpcomingGoals() {
+    var goals = GD.getGoals();
+    if (!goals) return;
+    goals.forEach(function (g) {
+      if (g.upcoming != null) return;
+      if (g.title === 'Run a sub-3:30 marathon' || g.title === 'Book and Organise Holiday') {
+        GD.patchGoal(g.id, { upcoming: true });
+      }
+    });
+  }
+
   // Progress math (GD.computeProgress) and status math (GD.computeStatus)
   // now live in goals-data.js — see the note above CATEGORY_META.
 
@@ -856,10 +891,28 @@ body::after {
   function renderGoals() {
     var all = GD.getGoals() || [];
     var visible = all.filter(function (g) {
-      return !g.archived && !GD.isHabit(g) && (!activeCategoryFilter || g.category === activeCategoryFilter);
+      return !g.archived && !GD.isHabit(g) && !g.upcoming && (!activeCategoryFilter || g.category === activeCategoryFilter);
     });
     var grid = document.getElementById('goalsGrid');
     var empty = document.getElementById('goalsEmpty');
+    if (!visible.length) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = visible.map(goalCardHtml).join('');
+  }
+
+  // =============================================================
+  // RENDER — Upcoming (goal.upcoming === true, pulled out of Active
+  // Goals above rather than shown in both places)
+  // =============================================================
+  function renderUpcoming() {
+    var all = GD.getGoals() || [];
+    var visible = all.filter(function (g) { return !g.archived && !GD.isHabit(g) && g.upcoming; });
+    var grid = document.getElementById('upcomingGrid');
+    var empty = document.getElementById('upcomingEmpty');
     if (!visible.length) {
       grid.innerHTML = '';
       empty.style.display = 'block';
@@ -1032,10 +1085,12 @@ body::after {
     migrateRemoveCareerGoal();
     migrateRenameExperiencesGoal();
     migrateAddDefaultWeights();
+    migrateSeedUpcomingGoals();
     reconcileLinkedMilestones();
     renderNorthStar();
     renderHabits();
     renderGoals();
+    renderUpcoming();
     renderCompleted();
     renderCategories();
     renderTimeline();
@@ -1089,6 +1144,7 @@ body::after {
   }
   bindGoalGridEvents(document.getElementById('goalsGrid'));
   bindGoalGridEvents(document.getElementById('habitsGrid'));
+  bindGoalGridEvents(document.getElementById('upcomingGrid'));
 
   document.getElementById('completedList').addEventListener('click', function (e) {
     var reopenBtn = e.target.closest('.gd-reopen-goal');
@@ -1194,6 +1250,7 @@ body::after {
     document.getElementById('gFDate').value = goal && goal.targetDate ? goal.targetDate : '';
     document.getElementById('gFStatus').value = goal && goal.statusOverride ? goal.statusOverride : 'auto';
     document.getElementById('gFNotes').value = goal && goal.notes ? goal.notes : '';
+    document.getElementById('gFUpcoming').checked = !!(goal && goal.upcoming);
     if (goal && goal.type === 'time') {
       document.getElementById('gFCurrent').value = goal.manualCurrentSec != null ? GD.fmtClock(goal.manualCurrentSec) : '';
       document.getElementById('gFTarget').value = goal.manualTargetSec != null ? GD.fmtClock(goal.manualTargetSec) : '';
@@ -1220,7 +1277,8 @@ body::after {
       weight: GD.isHabit({ type: type }) ? undefined : Number(document.getElementById('gFWeight').value),
       targetDate: document.getElementById('gFDate').value || undefined,
       statusOverride: document.getElementById('gFStatus').value,
-      notes: document.getElementById('gFNotes').value.trim() || undefined
+      notes: document.getElementById('gFNotes').value.trim() || undefined,
+      upcoming: document.getElementById('gFUpcoming').checked
     };
     if (type === 'time') {
       data.manualCurrentSec = GD.parseClockToSec(document.getElementById('gFCurrent').value);
