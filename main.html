@@ -99,13 +99,53 @@ body::after {
   margin: 0 auto;
 }
 
+/* ===== Status ticker ===== */
+.ticker-banner {
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 0 16px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+.ticker-banner-track {
+  display: inline-flex;
+  width: max-content;
+  animation: ticker-scroll 34s linear infinite;
+  will-change: transform;
+}
+.ticker-banner-item {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-banner-track { animation: none; }
+  .ticker-banner { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+}
+@media (max-width: 480px) {
+  .ticker-banner { padding: 6px 0; }
+  .ticker-banner-item { font-size: 9px; letter-spacing: 0.08em; }
+}
+
 /* ===== Hero greeting — cursive attempts (Dancing Script, then Snell
    Roundhand/Petit Formal Script, then Mrs Saint Delafield) all read as
    too decorative next to the rest of this UI. Back on --font, just
    bolder and tighter than plain body text so it still reads as its own
    moment without breaking from the interface's own type system. ===== */
 .hero-greeting {
-  margin: -4px 0 14px;
+  margin: -4px 0 4px;
   font-family: var(--font);
   font-size: 16px;
   font-weight: 700;
@@ -116,6 +156,15 @@ body::after {
   animation-delay: 0.1s;
 }
 .hero-greeting-name { color: var(--text-primary); font-weight: 800; }
+.hero-weather {
+  margin: 0 0 14px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-tertiary);
+  min-height: 15px;
+}
 @keyframes hero-greeting-in {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -1015,20 +1064,31 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
 }
 
-/* ---------- Water Tracker + Night Routine + Sleep side-by-side row —
-   levelled to equal height (the tallest column's height) rather than
-   each just sitting at its own natural height, which left Sleep's much
-   shorter card trailing well above the other two's bottom edge. Every
-   nesting level between .dual-row and the actual visible card has to
-   pass flex-grow down for this to reach the real box (water nests
-   deeper than the others: section > .water-embed > .shell > .card). ---------- */
+/* ---------- Water Tracker + Night Routine + Sleep row ----------
+   flex-wrap + a 480px basis (not a fixed column count) rather than three
+   equal thirds — three-across on this page's 1100px max-width squeezed
+   each card down to ~350px, visibly narrower than every full-width card
+   elsewhere on the page. Two cards' basis fits an 1100px row and grows
+   to fill it (~540px each — comparable to the rest of the page again);
+   the third wraps to its own row and grows to the full row width alone.
+   The same math collapses to one-per-row on mobile with no separate
+   breakpoint needed: two 480px bases plus the gap already don't fit
+   under ~980px, so it wraps that early on its own.
+   Levelled to equal height within a row (align-items:stretch's per-line
+   behavior) rather than each sitting at its own natural height, which
+   used to leave Sleep's shorter card trailing above the taller ones'
+   bottom edge. Every nesting level between .dual-row and the actual
+   visible card has to pass flex-grow down for that to reach the real
+   box (water nests deeper than the others: section > .water-embed >
+   .shell > .card). ---------- */
 .dual-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 20px;
 }
 .dual-row > .section {
-  flex: 1; min-width: 0;
+  flex: 1 1 480px; min-width: 0;
   display: flex; flex-direction: column;
 }
 .dual-row > .section > .water-embed {
@@ -1041,11 +1101,91 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 }
 .dual-row > .section > .water-embed > .shell > .card:not(#historyCard) { flex: 1; }
 .dual-row > .section > .gm-card { flex: 1; }
-@media (max-width: 900px) {
-  .dual-row { flex-direction: column; gap: 0; }
-}
 
 /* ---------- Sleep ---------- */
+/* Score ring + hours/timeline pair — Garmin-watch-face inspired: a
+   compact ticked-track ring with the score dead center, next to a
+   duration readout with a plain overnight bar underneath. */
+.sleep-visuals-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+.sleep-score-wrap {
+  position: relative;
+  width: 76px; height: 76px;
+  flex-shrink: 0;
+}
+.sleep-score-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* Small dash + wide gap on the track circle reads as a ring of ticks
+   rather than a solid line — the "subtle surrounding tick marks" cue —
+   while the fill circle stays a normal smooth arc. */
+.sleep-score-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.16);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1 7.2;
+}
+.sleep-score-fill {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50px 50px;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s;
+}
+.sleep-score-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.sleep-score-num {
+  font-size: 22px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.sleep-score-band {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 7px; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.sleep-hours-wrap { flex: 1; min-width: 0; }
+.sleep-hours-num {
+  font-size: 24px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.sleep-hours-label { margin-left: 6px; font-size: 11.5px; color: var(--text-tertiary); }
+.sleep-timeline {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  margin-top: 10px;
+  gap: 1.5px;
+}
+.sleep-timeline-seg { height: 100%; }
+.sleep-timeline-seg[data-stage="asleep"] { background: linear-gradient(90deg, #087CA3, #A98BCB); }
+.sleep-timeline-seg[data-stage="awake"] { background: rgba(255,107,107,0.55); }
+.sleep-timeline-seg[data-stage="light"] { background: #087CA3; }
+.sleep-timeline-seg[data-stage="deep"]  { background: #552080; }
+.sleep-timeline-seg[data-stage="rem"]   { background: #A98BCB; }
+.sleep-timeline-times {
+  display: flex; justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+}
 .sleep-time-row { display: flex; gap: 10px; margin: 14px 0 16px; }
 .sleep-time-field { flex: 1; min-width: 0; }
 .sleep-time-field label {
@@ -1542,11 +1682,24 @@ html.is-embedded .shell { padding-bottom: 20px; }
 <body>
 <div class="page">
 
+  <!-- STATUS TICKER — date + today's numbers pulled from the same data
+       every other section on this page reads (sleep:<date>, run:runs,
+       goals-data.js's fitness evidence). Two identical copies of the
+       same string back to back, animated -50% — a continuous loop with
+       no seam, not a JS width-measuring trick. -->
+  <div class="ticker-banner" id="tickerBanner" aria-hidden="true">
+    <div class="ticker-banner-track" id="tickerBannerTrack">
+      <span class="ticker-banner-item" id="tickerBannerItem1">—</span>
+      <span class="ticker-banner-item" id="tickerBannerItem2">—</span>
+    </div>
+  </div>
+
   <div class="dash-header">
     <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-orb"></span><span class="dash-title-kicker">AIO</span></h1>
     <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
   </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
+  <div class="hero-weather" id="heroWeather"></div>
 
   <nav class="quickjump" aria-label="Quick jump">
     <a href="#todoSection" class="quickjump-chip">Today</a>
@@ -2008,15 +2161,41 @@ html.is-embedded .shell { padding-bottom: 20px; }
       <div class="gm-header">
         <div class="gm-header-left">
           <div class="gm-eyebrow">🌙 Last night</div>
-          <div class="gm-progress-row">
-            <span class="gm-progress-num" id="sleepHoursNum">—</span>
-            <span class="gm-progress-label" id="sleepHoursLabel">no data yet</span>
-          </div>
         </div>
         <div class="gm-streak" id="sleepSourceTag">
           <span id="sleepSourceLabel">Manual</span>
         </div>
       </div>
+
+      <!-- Garmin-inspired pair: a compact score ring (ticked track, score
+           dead center) beside a duration + overnight timeline. Ring color
+           and timeline segments both key off real data when it's there
+           (source:'garmin', s.score, s.stages[]); until then the ring
+           shows a plain hours/quality-derived estimate and the timeline
+           collapses to a single "asleep" span — see computeSleepScore()
+           and renderSleepTimeline() below for exactly where that split is. -->
+      <div class="sleep-visuals-row">
+        <div class="sleep-score-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle class="sleep-score-track" cx="50" cy="50" r="42" />
+            <circle class="sleep-score-fill" id="sleepScoreFill" cx="50" cy="50" r="42" />
+          </svg>
+          <div class="sleep-score-overlay">
+            <div class="sleep-score-num" id="sleepScoreNum">—</div>
+            <div class="sleep-score-band" id="sleepScoreBand">SCORE</div>
+          </div>
+        </div>
+        <div class="sleep-hours-wrap">
+          <span class="sleep-hours-num" id="sleepHoursNum">—</span>
+          <span class="sleep-hours-label" id="sleepHoursLabel">no data yet</span>
+          <div class="sleep-timeline" id="sleepTimeline"></div>
+          <div class="sleep-timeline-times">
+            <span id="sleepTimelineStart">—</span>
+            <span id="sleepTimelineEnd">—</span>
+          </div>
+        </div>
+      </div>
+
       <div class="sleep-time-row">
         <div class="sleep-time-field">
           <label for="sleepBedTime">Bedtime</label>
@@ -2065,6 +2244,58 @@ html.is-embedded .shell { padding-bottom: 20px; }
   }
   renderGreeting();
   setInterval(renderGreeting, 60 * 1000);
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  // Melbourne current conditions — Open-Meteo, no API key needed. Cached
+  // in localStorage (shared with index.html's identical copy of this
+  // block, same cache key) so hopping between pages doesn't refetch, and
+  // a stale/missing network still shows the last known reading rather
+  // than nothing.
+  const el = document.getElementById('heroWeather');
+  if (!el) return;
+  const CACHE_KEY = 'weather:melbourne';
+  const MAX_AGE_MS = 30 * 60 * 1000;
+  const WEATHER_LABELS = {
+    0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Foggy',
+    51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
+    56: 'Freezing drizzle', 57: 'Freezing drizzle',
+    61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+    66: 'Freezing rain', 67: 'Freezing rain',
+    71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
+    80: 'Rain showers', 81: 'Rain showers', 82: 'Heavy showers',
+    85: 'Snow showers', 86: 'Snow showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'
+  };
+  function render(data) {
+    const label = WEATHER_LABELS[data.code];
+    if (!label || typeof data.temp !== 'number') return;
+    el.textContent = 'Melbourne · ' + Math.round(data.temp) + '°C · ' + label;
+  }
+  function loadCache() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CACHE_KEY));
+      return (raw && typeof raw.temp === 'number') ? raw : null;
+    } catch (e) { return null; }
+  }
+  const cached = loadCache();
+  if (cached) render(cached);
+  if (cached && (Date.now() - cached.fetchedAt) < MAX_AGE_MS) return;
+
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=-37.8136&longitude=144.9631&current=temperature_2m,weather_code&timezone=Australia%2FMelbourne')
+    .then(r => r.json())
+    .then(data => {
+      const cur = data && data.current;
+      if (!cur || typeof cur.temperature_2m !== 'number') return;
+      const out = { temp: cur.temperature_2m, code: cur.weather_code, fetchedAt: Date.now() };
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(out)); } catch (e) {}
+      render(out);
+    })
+    .catch(() => {}); // offline/blocked — leave whatever render() already did (cache or nothing)
 })();
 </script>
 
@@ -2132,6 +2363,10 @@ html.is-embedded .shell { padding-bottom: 20px; }
     return Array.isArray(g) ? g : [];
   }
   function setGoals(key, list) { storeSet(key, list); }
+  // Same id scheme todo.html's newId() uses — a task created here already
+  // carries a real id instead of relying on todo.html's lazy id-backfill
+  // (getGoals() there assigns one the first time it reads an id-less task).
+  function newTaskId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
   // ---------- Night Routine ----------
   const NIGHT_ROUTINE_ITEMS = [
@@ -2195,6 +2430,100 @@ html.is-embedded .shell { padding-bottom: 20px; }
     return h + 'h' + (m ? ' ' + m + 'm' : '');
   }
   const SLEEP_QUALITY_LABELS = { 1: 'poor night', 2: 'rough night', 3: 'okay night', 4: 'good night', 5: 'great night' };
+
+  // ---------- Sleep Score ring ----------
+  // s.score is Garmin-authoritative when a future sync sets it directly;
+  // until then this is a plain estimate from what we actually collect —
+  // hours slept (up to 70 of the 100 points, scaled against an 8h night)
+  // plus the manual quality rating (up to 30, defaulting to a neutral
+  // half-credit if no rating's been given yet). Never persisted — it's
+  // recomputed on every render, so it can't drift from source data.
+  const SLEEP_SCORE_BANDS = [
+    { max: 49,  label: 'Poor',      color: 'var(--danger)' },
+    { max: 69,  label: 'Fair',      color: 'var(--warning)' },
+    { max: 84,  label: 'Good',      color: 'var(--success)' },
+    { max: 100, label: 'Excellent', color: '#B98AE0' }
+  ];
+  function sleepScoreBand(score) {
+    return SLEEP_SCORE_BANDS.find(b => score <= b.max) || SLEEP_SCORE_BANDS[SLEEP_SCORE_BANDS.length - 1];
+  }
+  function computeSleepScore(s) {
+    if (s.score != null) return Math.max(0, Math.min(100, Math.round(s.score)));
+    if (s.hours == null) return null;
+    const hoursPts = Math.max(0, Math.min(70, s.hours / 8 * 70));
+    const qualityPts = s.quality != null ? (s.quality / 5 * 30) : 15;
+    return Math.round(hoursPts + qualityPts);
+  }
+  const SLEEP_RING_C = 2 * Math.PI * 42;
+  const sleepScoreFillEl = document.getElementById('sleepScoreFill');
+  if (sleepScoreFillEl) {
+    sleepScoreFillEl.setAttribute('stroke-dasharray', SLEEP_RING_C);
+    sleepScoreFillEl.setAttribute('stroke-dashoffset', SLEEP_RING_C);
+  }
+  function renderSleepScoreRing(score) {
+    if (!sleepScoreFillEl) return;
+    const numEl = document.getElementById('sleepScoreNum');
+    const bandEl = document.getElementById('sleepScoreBand');
+    if (score == null) {
+      sleepScoreFillEl.setAttribute('stroke-dashoffset', SLEEP_RING_C);
+      sleepScoreFillEl.style.stroke = 'rgba(255,255,255,0.16)';
+      numEl.textContent = '—';
+      bandEl.textContent = 'SCORE';
+      return;
+    }
+    const band = sleepScoreBand(score);
+    sleepScoreFillEl.setAttribute('stroke-dashoffset', SLEEP_RING_C * (1 - score / 100));
+    sleepScoreFillEl.style.stroke = band.color;
+    numEl.textContent = String(score);
+    bandEl.textContent = band.label.toUpperCase();
+  }
+
+  // ---------- Sleep Hours timeline ----------
+  const SLEEP_STAGE_LABELS = { awake: 'Awake', light: 'Light', deep: 'Deep', rem: 'REM' };
+  function formatTime12(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const ampm = h >= 12 ? 'pm' : 'am';
+    let hh = h % 12; if (hh === 0) hh = 12;
+    return hh + ':' + pad2(m) + ampm;
+  }
+  // Real Garmin stage data (s.stages: [{stage, durMin}, ...]) renders as
+  // proper Awake/Light/Deep/REM segments; without it (every night today)
+  // this collapses to one plain "asleep" span rather than inventing a
+  // stage breakdown we have no way to actually know.
+  function renderSleepTimeline(s) {
+    const wrap = document.getElementById('sleepTimeline');
+    const startEl = document.getElementById('sleepTimelineStart');
+    const endEl = document.getElementById('sleepTimelineEnd');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    if (!s.bedTime || !s.wakeTime) {
+      startEl.textContent = '—';
+      endEl.textContent = '—';
+      return;
+    }
+    startEl.textContent = formatTime12(s.bedTime);
+    endEl.textContent = formatTime12(s.wakeTime);
+
+    if (Array.isArray(s.stages) && s.stages.length) {
+      const total = s.stages.reduce((sum, st) => sum + (st.durMin || 0), 0) || 1;
+      s.stages.forEach(st => {
+        const seg = document.createElement('div');
+        seg.className = 'sleep-timeline-seg';
+        seg.dataset.stage = st.stage;
+        seg.style.width = (st.durMin / total * 100) + '%';
+        seg.title = (SLEEP_STAGE_LABELS[st.stage] || st.stage) + ' · ' + st.durMin + 'm';
+        wrap.appendChild(seg);
+      });
+    } else {
+      const seg = document.createElement('div');
+      seg.className = 'sleep-timeline-seg';
+      seg.dataset.stage = 'asleep';
+      seg.style.width = '100%';
+      seg.title = 'Asleep';
+      wrap.appendChild(seg);
+    }
+  }
+
   function renderSleep() {
     const s = getSleep();
     document.getElementById('sleepBedTime').value = s.bedTime || '';
@@ -2214,6 +2543,8 @@ html.is-embedded .shell { padding-bottom: 20px; }
       btn.classList.toggle('active', Number(btn.dataset.q) === s.quality);
     });
 
+    renderSleepScoreRing(computeSleepScore(s));
+    renderSleepTimeline(s);
     renderSleepChart();
   }
   // Minimal 7-night trend — bar height is hours slept that active date,
@@ -2761,7 +3092,14 @@ html.is-embedded .shell { padding-bottom: 20px; }
     const tomorrow = getGoals(tomorrowKey());
     const seen = new Set(tomorrow.map(g => g.text));
     remaining.forEach(g => {
-      if (!seen.has(g.text)) { tomorrow.push({ text: g.text, done: false }); seen.add(g.text); }
+      if (seen.has(g.text)) return;
+      // Carry the whole task forward (id/priority/category/notes/etc.),
+      // same as rollover() does for stale undone goals — not a fresh
+      // bare {text,done} that drops everything todo.html added.
+      const carried = Object.assign({}, g, { done: false });
+      delete carried.doneAt;
+      tomorrow.push(carried);
+      seen.add(g.text);
     });
     setGoals(tomorrowKey(), tomorrow);
     setGoals(todayKey(), today.filter(g => g.done));
@@ -2806,7 +3144,15 @@ html.is-embedded .shell { padding-bottom: 20px; }
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
     function plainAdd(text) {
       const list = getGoals(key);
-      list.push({ text, done: false });
+      // Same shape todo.html's addTask() builds — id/priority/category/
+      // createdAt included from the moment of creation, so a task added
+      // here (Today or Plan Tomorrow) is already a full-fledged todo.html
+      // task rather than a bare {text,done} it has to patch up later.
+      list.push({
+        id: newTaskId(), text, done: false,
+        priority: 'medium', category: 'other',
+        createdAt: Date.now()
+      });
       setGoals(key, list);
       input.value = '';
       reload();
@@ -2882,6 +3228,95 @@ html.is-embedded .shell { padding-bottom: 20px; }
     renderNorthStarMini();
   }
 
+  // ---------- Status ticker ----------
+  // Same-week Monday–Sunday distance run:runs already uses (Running
+  // Overview computes this itself too, in its own separate IIFE below —
+  // duplicated here rather than shared since that module doesn't expose
+  // it, same read-only localStorage key either way).
+  function tickerWeekRunningKm() {
+    try {
+      const runs = JSON.parse(localStorage.getItem('run:runs'));
+      if (!Array.isArray(runs) || !runs.length) return null;
+      const now = new Date();
+      const monday = new Date(now);
+      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      monday.setHours(0, 0, 0, 0);
+      const days = [];
+      for (let i = 0; i < 7; i++) { const d = new Date(monday); d.setDate(d.getDate() + i); days.push(dateToKey(d)); }
+      const startKey = days[0], endKey = days[6];
+      return runs.filter(r => r.date >= startKey && r.date <= endKey).reduce((sum, r) => sum + (r.distanceKm || 0), 0);
+    } catch (e) { return null; }
+  }
+  function tickerFmtKm(km) {
+    const r = Math.round(km * 10) / 10;
+    return r % 1 === 0 ? r.toFixed(0) : r.toFixed(1);
+  }
+  // Split-type coverage for the week (push/pull/legs/full), same figure
+  // goals.html's "Train consistently" habit shows — the one existing
+  // definition of what a completed "session" means here.
+  function tickerWeekSessions() {
+    const GD = window.GoalsData;
+    if (!GD) return null;
+    const ev = GD.Evidence.fitness();
+    if (!ev) return null;
+    return { done: ev.weekTypesDone.length, total: ev.weekTypesRequired.length };
+  }
+  function buildTickerText() {
+    const now = new Date();
+    const dow = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const day = now.getDate();
+    const month = now.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+    const parts = [dow, day + ' ' + month];
+
+    const sleep = getSleep();
+    if (sleep.hours != null) parts.push('SLEEP ' + formatSleepHours(sleep.hours).toUpperCase());
+    const score = computeSleepScore(sleep);
+    if (score != null) parts.push('SCORE ' + score);
+
+    const weekKm = tickerWeekRunningKm();
+    if (weekKm != null) parts.push(tickerFmtKm(weekKm) + ' KM THIS WEEK');
+
+    const sessions = tickerWeekSessions();
+    if (sessions) parts.push(sessions.done + ' / ' + sessions.total + ' SESSIONS');
+
+    // Trailing separator baked into the string itself (not padding) so
+    // the two identical copies read as one continuous stream with no
+    // double-gap or missing-gap seam where they meet mid-loop.
+    return parts.join(' · ') + '   ·   ';
+  }
+  function renderTicker() {
+    const item1 = document.getElementById('tickerBannerItem1');
+    const item2 = document.getElementById('tickerBannerItem2');
+    if (!item1 || !item2) return;
+    const text = buildTickerText();
+    item1.textContent = text;
+    item2.textContent = text;
+  }
+
+  // Detects the active day flipping (the 6 AM boundary, or just plain
+  // midnight rollovers) while the tab is left open and never touched —
+  // without this, Today/Tomorrow/Night Routine/Sleep would all keep
+  // showing the day that was "today" when the page loaded until the
+  // user reloads or edits something. goals:<tomorrow-date> already
+  // *is* goals:<the-new-active-date> once this flips (see
+  // getTomorrowDateString()/getActiveDateString() above) — nothing else
+  // has to move the data, this just makes the open tab notice and
+  // re-render against it.
+  let lastActiveDate = getActiveDateString();
+  function checkDayBoundary() {
+    const current = getActiveDateString();
+    if (current === lastActiveDate) return;
+    lastActiveDate = current;
+    rollover();
+    processStreak();
+    loadToday();
+    loadTomorrow();
+    renderStreak();
+    renderNightRoutine();
+    renderSleep();
+    renderTicker();
+  }
+
   // ---------- Boot ----------
   rollover();
   processStreak();
@@ -2890,13 +3325,15 @@ html.is-embedded .shell { padding-bottom: 20px; }
   renderStreak();
   renderNightRoutine();
   renderSleep();
+  renderTicker();
   updateDayRing();
-  setInterval(updateDayRing, 60 * 1000);
+  setInterval(() => { updateDayRing(); checkDayBoundary(); }, 60 * 1000);
+  setInterval(renderTicker, 5 * 60 * 1000);
   renderGoalsSummary();
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderSleep(); renderGoalsSummary();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderSleep(); renderTicker(); renderGoalsSummary();
   });
   // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
   // todo.html when embedded/bridged) write through storeSet/setGoals, which
