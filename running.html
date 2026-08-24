@@ -1739,7 +1739,7 @@ body::after {
   // baseline match is what keeps the logo and the tempo/date eyebrow on
   // one visually cohesive line instead of one floating above the other.
   function drawWordmark(ctx, x, baselineY) {
-    const markSize = 34;
+    const markSize = 40;
     ctx.font = '800 ' + markSize + 'px ' + SHARE_FONT;
     const markW = ctx.measureText('88YYDS').width;
     const grad = ctx.createLinearGradient(x, 0, x + markW, 0);
@@ -1860,7 +1860,7 @@ body::after {
     const headerBaselineY = panelY + topMargin;
     drawWordmark(ctx, contentX, headerBaselineY);
     const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
-    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 17 : 19, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
+    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 20 : 22, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
 
     const dividerY = headerBaselineY + headerToDivider;
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
