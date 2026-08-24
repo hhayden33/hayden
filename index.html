@@ -27,7 +27,7 @@
      on this page stays on --font (the system sans stack). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Petit+Formal+Script&display=swap" rel="stylesheet">
 <style>
 :root {
   --text-primary: #F2F2F2;
@@ -155,20 +155,18 @@ body::after {
 }
 
 /* ===== Hero greeting — cursive on purpose, the one un-uniform-looking
-   line on the page (matches main.html's treatment). ===== */
+   line on the page (matches main.html's treatment). Snell Roundhand is
+   Apple's own bundled handwriting face (Notes/Pages) — it's what
+   actually renders on a Mac/iPhone; Petit Formal Script is the closest
+   free web equivalent for anything else. ===== */
 .hero-greeting {
   margin: 2px 0 20px;
-  font-family: 'Dancing Script', cursive;
-  font-size: 34px;
-  font-weight: 700;
+  font-family: 'Snell Roundhand', 'Petit Formal Script', cursive;
+  font-size: 36px;
+  font-weight: 400;
   letter-spacing: 0.01em;
-  line-height: 1.1;
-  background: linear-gradient(120deg, #F1E0FF 0%, #C9A6EE 45%, #A98BCB 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  filter: drop-shadow(0 0 18px rgba(169, 139, 203, 0.35));
+  line-height: 1.15;
+  color: #F5F1EA;
   opacity: 0;
   animation: hero-greeting-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: 0.1s;
