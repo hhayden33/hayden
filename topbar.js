@@ -124,6 +124,14 @@
   filter: grayscale(100%) brightness(1.6); opacity: 1;
 }
 .bottombar-tab:active .bottombar-tab-icon { transform: scale(0.92); }
+/* The memo emoji (To-Do tab) renders with its own ink sitting noticeably
+   higher inside its line box than the other tabs' icons — confirmed via
+   getBoundingClientRect that the layout boxes are pixel-identical across
+   every tab, so this is purely how that one glyph is drawn, not a CSS
+   layout gap. Nudge it down to visually match; keep the :active press
+   scale working by composing both transforms rather than overriding. */
+.bottombar-tab[data-page="todo"] .bottombar-tab-icon { transform: translateY(4px); }
+.bottombar-tab[data-page="todo"]:active .bottombar-tab-icon { transform: translateY(4px) scale(0.92); }
 body.has-bottombar {
   padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
 }
