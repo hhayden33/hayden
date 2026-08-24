@@ -32,7 +32,7 @@
      on this page stays on --font (the system sans stack). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Petit+Formal+Script&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&display=swap" rel="stylesheet">
 <style>
 :root {
   --text-primary: #F2F2F2;
@@ -105,14 +105,14 @@ body::after {
 }
 
 /* ===== Hero greeting — cursive on purpose, the one un-uniform-looking
-   line on the page. Snell Roundhand is Apple's own bundled handwriting
-   face (Notes/Pages) — it's what actually renders on a Mac/iPhone;
-   Petit Formal Script is the closest free web equivalent for anything
-   else. Plain off-white rather than a gradient/glow treatment, kept
+   line on the page. Mrs Saint Delafield: a thinner, plainer script than
+   the more ornate Snell Roundhand/Petit Formal Script tried first — less
+   loop/flourish, reads as refined handwriting rather than calligraphy.
+   Plain off-white rather than a gradient/glow treatment, kept
    deliberately understated rather than a loud accent color. ===== */
 .hero-greeting {
   margin: -2px 0 14px;
-  font-family: 'Snell Roundhand', 'Petit Formal Script', cursive;
+  font-family: 'Mrs Saint Delafield', cursive;
   font-size: 32px;
   font-weight: 400;
   letter-spacing: 0.01em;
@@ -123,7 +123,7 @@ body::after {
   animation-delay: 0.1s;
 }
 .hero-greeting-name {
-  font-family: 'Snell Roundhand', 'Petit Formal Script', cursive;
+  font-family: 'Mrs Saint Delafield', cursive;
   color: #F5F1EA;
 }
 @keyframes hero-greeting-in {
@@ -1071,6 +1071,40 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   color: var(--success);
   border-color: rgba(32,165,160,0.32);
 }
+.sleep-chart {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.sleep-chart-label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+.sleep-chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 48px; }
+.sleep-chart-bar-wrap {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  gap: 5px;
+  height: 100%;
+}
+.sleep-chart-bar {
+  width: 100%; max-width: 20px;
+  border-radius: 4px 4px 2px 2px;
+  background: var(--success);
+  opacity: 0.75;
+  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sleep-chart-bar.is-today { opacity: 1; box-shadow: 0 0 8px rgba(32,165,160,0.5); }
+.sleep-chart-bar.is-empty { background: rgba(255,255,255,0.08); }
+.sleep-chart-day {
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 700;
+  color: var(--text-tertiary);
+}
+.sleep-chart-day.is-today { color: var(--text-primary); }
 
 /* ---------- Water Tracker (ported natively from po-water.html — was
    an <iframe src="po-water.html"> until it was inlined here; see the
@@ -2013,6 +2047,10 @@ html.is-embedded .shell { padding-bottom: 20px; }
           <button type="button" class="wk-seg-btn" data-q="5">Great</button>
         </div>
       </div>
+      <div class="sleep-chart">
+        <div class="sleep-chart-label">Last 7 Nights</div>
+        <div class="sleep-chart-bars" id="sleepChartBars"></div>
+      </div>
     </div>
   </div>
   </div>
@@ -2184,6 +2222,51 @@ html.is-embedded .shell { padding-bottom: 20px; }
 
     document.querySelectorAll('#sleepQualityControl .wk-seg-btn').forEach(btn => {
       btn.classList.toggle('active', Number(btn.dataset.q) === s.quality);
+    });
+
+    renderSleepChart();
+  }
+  // Minimal 7-night trend — bar height is hours slept that active date,
+  // scaled against whichever is bigger: an 8h reference or the tallest
+  // night in the window (so one very long night doesn't flatten the
+  // rest). A day with no sleep:<date> entry at all renders as a faint
+  // empty stub rather than a 0-height gap.
+  const SLEEP_CHART_DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  function renderSleepChart() {
+    const wrap = document.getElementById('sleepChartBars');
+    if (!wrap) return;
+    const todayActive = getActiveDateString();
+    const [y, m, d] = todayActive.split('-').map(Number);
+    const days = [];
+    for (let i = 6; i >= 0; i--) days.push(dateToKey(new Date(y, m - 1, d - i)));
+
+    const hoursArr = days.map(k => {
+      const raw = storeGet('sleep:' + k);
+      return (raw && typeof raw === 'object' && !Array.isArray(raw) && raw.hours != null) ? raw.hours : 0;
+    });
+    const max = Math.max(8, ...hoursArr);
+
+    wrap.innerHTML = '';
+    days.forEach((k, i) => {
+      const hours = hoursArr[i];
+      const isToday = k === todayActive;
+      const pct = hours > 0 ? Math.max(6, Math.round(hours / max * 100)) : 6;
+
+      const barWrap = document.createElement('div');
+      barWrap.className = 'sleep-chart-bar-wrap';
+      barWrap.title = hours > 0 ? (formatSleepHours(hours) + ' · ' + k) : 'No data logged';
+
+      const bar = document.createElement('div');
+      bar.className = 'sleep-chart-bar' + (isToday ? ' is-today' : '') + (hours > 0 ? '' : ' is-empty');
+      bar.style.height = pct + '%';
+      barWrap.appendChild(bar);
+
+      const label = document.createElement('div');
+      label.className = 'sleep-chart-day' + (isToday ? ' is-today' : '');
+      label.textContent = SLEEP_CHART_DOW[new Date(k + 'T00:00:00').getDay()];
+      barWrap.appendChild(label);
+
+      wrap.appendChild(barWrap);
     });
   }
   ['sleepBedTime', 'sleepWakeTime'].forEach(id => {
