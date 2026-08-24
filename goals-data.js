@@ -369,6 +369,22 @@
   // goal's math, a time goal's (lower-is-better) math, a milestone
   // goal's math, all live in exactly one place.
   // ---------------------------------------------------------------
+  // 'weekly'/'daily' goals are recurring practices with no finish line
+  // (train consistently, drink water) rather than outcomes with an end
+  // state — they get their own section on goals.html and are excluded
+  // from the North Star average below, so a habit you're already doing
+  // every week doesn't quietly dilute (or inflate) how "done" your real
+  // goals are. isHabit() is the one place this distinction is made, so
+  // goals.html never has to duplicate the type list.
+  function isHabit(goal) { return goal.type === 'weekly' || goal.type === 'daily'; }
+
+  var WEIGHT_META = {
+    1: { label: 'Low' },
+    2: { label: 'Medium' },
+    3: { label: 'High' }
+  };
+  var DEFAULT_WEIGHT = 2;
+
   var CATEGORY_META = {
     health:      { label: 'Health',      icon: '❤️',  color: '#20A5A0' },
     wealth:      { label: 'Wealth',      icon: '💰', color: '#6F4AA8' },
@@ -530,17 +546,27 @@
 
   // Overall North Star progress — the one number both the full page
   // and the main.html preview show. Respects a manual override if the
-  // user set one, otherwise it's the average of every active goal's
-  // own computeProgress().pct.
+  // user set one; otherwise it's a WEIGHTED average of every active,
+  // non-habit goal's computeProgress().pct — a flat average across
+  // everything from a marathon PB to a milestone checklist to "drink
+  // water" was exactly the kind of comfortable-but-meaningless number
+  // that hides which goals actually matter, so completed goals, habits,
+  // and low-importance goals no longer get to move this number as much
+  // (or at all) as the goal you actually weighted as High.
   function computeOverallProgress() {
     var ns = getNorthStar();
     if (ns.progressOverride != null && ns.progressOverride !== '') {
       return Math.max(0, Math.min(100, Math.round(ns.progressOverride)));
     }
-    var goals = (getGoals() || []).filter(function (g) { return !g.archived; });
+    var goals = (getGoals() || []).filter(function (g) { return !g.archived && !isHabit(g); });
     if (!goals.length) return 0;
-    var sum = goals.reduce(function (s, g) { return s + computeProgress(g).pct; }, 0);
-    return Math.round(sum / goals.length);
+    var weightSum = 0, weightedPct = 0;
+    goals.forEach(function (g) {
+      var w = g.weight || DEFAULT_WEIGHT;
+      weightSum += w;
+      weightedPct += computeProgress(g).pct * w;
+    });
+    return weightSum ? Math.round(weightedPct / weightSum) : 0;
   }
 
   global.GoalsData = {
@@ -553,6 +579,7 @@
     Evidence: Evidence,
     newId: newId, todayKeyStr: todayKeyStr,
     CATEGORY_META: CATEGORY_META, CATEGORY_ORDER: CATEGORY_ORDER, SOURCE_LABELS: SOURCE_LABELS, STATUS_META: STATUS_META,
+    WEIGHT_META: WEIGHT_META, DEFAULT_WEIGHT: DEFAULT_WEIGHT, isHabit: isHabit,
     fmtMoney: fmtMoney, fmtClock: fmtClock, parseClockToSec: parseClockToSec,
     computeProgress: computeProgress, computeStatus: computeStatus, computeOverallProgress: computeOverallProgress
   };

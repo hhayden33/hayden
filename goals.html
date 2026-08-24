@@ -223,7 +223,32 @@ body::after {
 .goal-source-dot { width: 6px; height: 6px; border-radius: 50%; }
 .goal-source-tag.is-live .goal-source-dot { background: var(--success); box-shadow: 0 0 6px rgba(32,165,160,0.6); }
 .goal-source-tag.is-manual .goal-source-dot { background: var(--text-tertiary); }
+.goal-weight-tag { display: inline-flex; align-items: center; gap: 3px; letter-spacing: 0.04em; }
+.goal-weight-tag.is-high { color: var(--gp-soft); }
 .goal-actions-row { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.gd-icon-btn.gd-complete-goal:hover { color: var(--success); }
+
+/* ===== Habits (recurring, no finish line — kept out of Active Goals
+   and out of the North Star average, see isHabit() in goals-data.js) ===== */
+.habits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.habit-card { padding: 18px 20px; }
+
+/* ===== Completed goals ===== */
+.completed-list { display: flex; flex-direction: column; gap: 8px; }
+.completed-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 11px 14px;
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 12px;
+}
+.completed-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.completed-title {
+  flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere;
+  font-size: 13.5px; font-weight: 600; color: var(--text-primary);
+  text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.35);
+}
+.completed-date { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); flex-shrink: 0; }
 
 .goal-milestones { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
 .goal-milestones-head {
@@ -337,6 +362,18 @@ body::after {
 .tl-date { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--gp-soft); margin-bottom: 3px; }
 .tl-title { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; word-break: break-word; }
 .tl-goal-tag { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; overflow-wrap: anywhere; }
+.tl-countdown { font-family: var(--font-mono); font-weight: 700; }
+.tl-countdown.is-overdue { color: var(--danger); }
+.tl-countdown.is-soon { color: var(--warning); }
+
+.tl-group-header {
+  position: relative;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0 0 10px;
+}
+.tl-group-header:not(:first-child) { margin-top: 22px; }
+.tl-group-header.is-overdue { color: var(--danger); }
 
 /* ===== Modal (matches the rest of the dashboard, mobile handling via topbar.js) ===== */
 .modal-bg {
@@ -400,6 +437,14 @@ body::after {
     </div>
   </div>
 
+  <!-- ===== Habits — recurring, no finish line, kept out of the North
+       Star average (see isHabit() in goals-data.js) ===== -->
+  <div class="section">
+    <div class="section-title">Habits</div>
+    <div class="habits-grid" id="habitsGrid"></div>
+    <div class="empty-state" id="habitsEmpty" style="display:none;">No habits being tracked yet.</div>
+  </div>
+
   <!-- ===== Active Goals ===== -->
   <div class="section">
     <div class="section-header-row">
@@ -408,6 +453,15 @@ body::after {
     </div>
     <div class="goals-grid" id="goalsGrid"></div>
     <div class="empty-state" id="goalsEmpty" style="display:none;">No active goals in this category yet.</div>
+  </div>
+
+  <!-- ===== Completed ===== -->
+  <div class="section">
+    <div class="section-title">Completed</div>
+    <div class="gm-card">
+      <div class="completed-list" id="completedList"></div>
+      <div class="empty-state" id="completedEmpty" style="display:none;">Nothing marked complete yet.</div>
+    </div>
   </div>
 
   <!-- ===== Goal Categories ===== -->
@@ -436,7 +490,7 @@ body::after {
     <h3>Edit North Star</h3>
     <div class="gd-field"><label>Statement</label><textarea id="nsFStatement" rows="2"></textarea></div>
     <div class="gd-field"><label>Pillars (comma-separated)</label><input type="text" id="nsFPillars" placeholder="Health, Wealth, Career"></div>
-    <div class="gd-field"><label>Overall Progress Override (blank = auto-average of active goals)</label><input type="number" id="nsFOverride" min="0" max="100" placeholder="Auto"></div>
+    <div class="gd-field"><label>Overall Progress Override (blank = weighted average of active goals, habits excluded)</label><input type="number" id="nsFOverride" min="0" max="100" placeholder="Auto"></div>
     <div class="gd-modal-actions">
       <button type="button" class="gm-ghost" id="nsCancel">Cancel</button>
       <button type="button" class="gm-add" id="nsSave">Save</button>
@@ -457,24 +511,38 @@ body::after {
       <div class="gd-field">
         <label>Progress Type</label>
         <select id="gFType">
-          <option value="currency">Currency ($ current → target)</option>
-          <option value="time">Time (lower is better, e.g. race goal)</option>
-          <option value="weekly">Weekly count (e.g. sessions/week)</option>
-          <option value="daily">Daily amount (e.g. mL/day)</option>
-          <option value="number">Plain number (current → target)</option>
-          <option value="milestones">Milestones only (% = milestones done)</option>
+          <optgroup label="Goals (count toward North Star %)">
+            <option value="currency">Currency ($ current → target)</option>
+            <option value="time">Time (lower is better, e.g. race goal)</option>
+            <option value="number">Plain number (current → target)</option>
+            <option value="milestones">Milestones only (% = milestones done)</option>
+          </optgroup>
+          <optgroup label="Habits (recurring, own section, not counted)">
+            <option value="weekly">Weekly count (e.g. sessions/week)</option>
+            <option value="daily">Daily amount (e.g. mL/day)</option>
+          </optgroup>
         </select>
       </div>
     </div>
-    <div class="gd-field">
-      <label>Data Source</label>
-      <select id="gFSource">
-        <option value="manual">Manual</option>
-        <option value="finance">Finance (nw:history)</option>
-        <option value="running">Running (running.html)</option>
-        <option value="fitness">Fitness (gym.html)</option>
-        <option value="water">Water (po-water.html)</option>
-      </select>
+    <div class="gd-field-row">
+      <div class="gd-field">
+        <label>Data Source</label>
+        <select id="gFSource">
+          <option value="manual">Manual</option>
+          <option value="finance">Finance (nw:history)</option>
+          <option value="running">Running (running.html)</option>
+          <option value="fitness">Fitness (gym.html)</option>
+          <option value="water">Water (po-water.html)</option>
+        </select>
+      </div>
+      <div class="gd-field" id="gFWeightWrap">
+        <label>Importance (weights the North Star %)</label>
+        <select id="gFWeight">
+          <option value="1">Low</option>
+          <option value="2" selected>Medium</option>
+          <option value="3">High</option>
+        </select>
+      </div>
     </div>
     <div class="gd-field-row" id="gFManualCurrentWrap">
       <div class="gd-field"><label id="gFCurrentLabel">Current (used until the source above is live)</label><input type="text" id="gFCurrent" placeholder="33771"></div>
@@ -553,6 +621,29 @@ body::after {
     if (isNaN(d)) return dateStr;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function ymdFromTimestamp(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function todayMidnight() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  // Whole-day difference between a 'YYYY-MM-DD' date and today, rounded
+  // to sidestep DST half-hour shifts landing on a .99 or 1.01 day count.
+  function daysUntil(dateStr) {
+    var d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d)) return null;
+    return Math.round((d - todayMidnight()) / 86400000);
+  }
+  function countdownLabel(daysDiff) {
+    if (daysDiff < 0) return Math.abs(daysDiff) + (daysDiff === -1 ? ' day overdue' : ' days overdue');
+    if (daysDiff === 0) return 'Today';
+    if (daysDiff === 1) return 'Tomorrow';
+    return 'in ' + daysDiff + ' days';
+  }
 
   // =============================================================
   // FIRST-RUN SEED DATA — only written if strategic:goals has never
@@ -567,7 +658,7 @@ body::after {
     var gRunning = GD.addGoal({
       category: 'health', title: 'Run a sub-3:30 marathon', type: 'time', source: 'running',
       manualCurrentSec: null, manualTargetSec: 3 * 3600 + 29 * 60 + 59,
-      targetDate: '2026-10-18', statusOverride: 'auto'
+      targetDate: '2026-10-18', statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
     });
     var gFitness = GD.addGoal({
       category: 'health', title: 'Train consistently', type: 'weekly', source: 'fitness',
@@ -579,15 +670,15 @@ body::after {
     });
     var gWealth = GD.addGoal({
       category: 'wealth', title: 'Build $55,000 invested', type: 'currency', source: 'finance',
-      manualCurrent: 33771, manualTarget: 55000, targetDate: '2026-12-31', statusOverride: 'auto'
+      manualCurrent: 33771, manualTarget: 55000, targetDate: '2026-12-31', statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
     });
     var gBusiness = GD.addGoal({
       category: 'business', title: 'Launch a profitable ecommerce business', type: 'milestones', source: 'manual',
-      statusOverride: 'auto'
+      statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
     });
     var gExperiences = GD.addGoal({
       category: 'experiences', title: 'Book and Organise Holiday', type: 'milestones', source: 'manual',
-      statusOverride: 'auto'
+      statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
     });
 
     [
@@ -643,6 +734,22 @@ body::after {
     });
   }
 
+  // Backfills a default Medium weight onto any non-habit goal saved before
+  // importance weighting existed, so computeOverallProgress() always has a
+  // weight to work with. Everyone starts at the same weight on purpose —
+  // this fixes the MECHANISM (the top % no longer treats every goal, done
+  // or not, as equally important), it doesn't guess which of your goals
+  // actually matters more. Go set the real weights in Edit Goal.
+  function migrateAddDefaultWeights() {
+    var goals = GD.getGoals();
+    if (!goals) return;
+    goals.forEach(function (g) {
+      if (!GD.isHabit(g) && g.weight == null) {
+        GD.patchGoal(g.id, { weight: GD.DEFAULT_WEIGHT });
+      }
+    });
+  }
+
   // Progress math (GD.computeProgress) and status math (GD.computeStatus)
   // now live in goals-data.js — see the note above CATEGORY_META.
 
@@ -664,18 +771,25 @@ body::after {
   // =============================================================
   var activeCategoryFilter = null;
 
+  // isHabit goals (weekly/daily — recurring, no finish line) render a
+  // lighter card: no status pill (meaningless without a target date), no
+  // importance weight (they're not part of the North Star average), and
+  // no Mark Complete (a habit doesn't finish, it just continues).
   function goalCardHtml(goal) {
+    var isHabit = GD.isHabit(goal);
     var cat = CATEGORY_META[goal.category] || CATEGORY_META.personal;
     var prog = GD.computeProgress(goal);
-    var status = GD.computeStatus(goal, prog.pct);
-    var statusMeta = STATUS_META[status] || STATUS_META.on_track;
     var milestones = GD.milestonesForGoal(goal.id);
 
     var html = '';
-    html += '<div class="gm-card goal-card" data-goal-id="' + goal.id + '">';
+    html += '<div class="gm-card ' + (isHabit ? 'habit-card' : 'goal-card') + '" data-goal-id="' + goal.id + '">';
     html += '  <div class="goal-card-head">';
     html += '    <span class="goal-cat-badge" style="color:' + cat.color + '"><span class="goal-cat-dot" style="background:' + cat.color + '"></span>' + escapeHtml(cat.label) + '</span>';
-    html += '    <span class="goal-status-pill" style="color:' + statusMeta.color + '">' + statusMeta.label + '</span>';
+    if (!isHabit) {
+      var status = GD.computeStatus(goal, prog.pct);
+      var statusMeta = STATUS_META[status] || STATUS_META.on_track;
+      html += '    <span class="goal-status-pill" style="color:' + statusMeta.color + '">' + statusMeta.label + '</span>';
+    }
     html += '  </div>';
     html += '  <h3 class="goal-title">' + escapeHtml(goal.title) + '</h3>';
     html += '  <div class="goal-progress-row">';
@@ -685,9 +799,15 @@ body::after {
     html += '  <div class="goal-progress-track"><div class="goal-progress-fill" style="width:' + prog.pct + '%"></div></div>';
     html += '  <div class="goal-meta-row">';
     html += '    <span class="goal-source-tag ' + (prog.isLive ? 'is-live' : 'is-manual') + '"><span class="goal-source-dot"></span>' + (prog.isLive ? 'Live from ' + escapeHtml(prog.sourceLabel) : 'Manual') + '</span>';
+    if (!isHabit) {
+      var w = goal.weight || GD.DEFAULT_WEIGHT;
+      var wLabel = (GD.WEIGHT_META[w] || GD.WEIGHT_META[GD.DEFAULT_WEIGHT]).label;
+      html += '    <span class="goal-weight-tag' + (w >= 3 ? ' is-high' : '') + '">' + escapeHtml(wLabel) + ' priority</span>';
+    }
     if (goal.targetDate) html += '    <span>Target: ' + escapeHtml(fmtDate(goal.targetDate)) + '</span>';
     if (prog.remainingLabel) html += '    <span>' + escapeHtml(prog.remainingLabel) + '</span>';
     html += '    <span class="goal-actions-row">';
+    if (!isHabit) html += '      <button type="button" class="gd-icon-btn gd-complete-goal" data-id="' + goal.id + '" aria-label="Mark complete">✓</button>';
     html += '      <button type="button" class="gd-icon-btn gd-edit-goal" data-id="' + goal.id + '" aria-label="Edit goal">✎</button>';
     html += '    </span>';
     html += '  </div>';
@@ -735,7 +855,9 @@ body::after {
 
   function renderGoals() {
     var all = GD.getGoals() || [];
-    var visible = all.filter(function (g) { return !g.archived && (!activeCategoryFilter || g.category === activeCategoryFilter); });
+    var visible = all.filter(function (g) {
+      return !g.archived && !GD.isHabit(g) && (!activeCategoryFilter || g.category === activeCategoryFilter);
+    });
     var grid = document.getElementById('goalsGrid');
     var empty = document.getElementById('goalsEmpty');
     if (!visible.length) {
@@ -745,6 +867,52 @@ body::after {
     }
     empty.style.display = 'none';
     grid.innerHTML = visible.map(goalCardHtml).join('');
+  }
+
+  // =============================================================
+  // RENDER — Habits (recurring, own section — see isHabit() note)
+  // =============================================================
+  function renderHabits() {
+    var all = GD.getGoals() || [];
+    var habits = all.filter(function (g) { return !g.archived && GD.isHabit(g); });
+    var grid = document.getElementById('habitsGrid');
+    var empty = document.getElementById('habitsEmpty');
+    if (!habits.length) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = habits.map(goalCardHtml).join('');
+  }
+
+  // =============================================================
+  // RENDER — Completed goals
+  // =============================================================
+  function renderCompleted() {
+    var all = GD.getGoals() || [];
+    var completed = all.filter(function (g) { return g.archived; })
+      .sort(function (a, b) { return (b.completedAt || 0) - (a.completedAt || 0); });
+    var list = document.getElementById('completedList');
+    var empty = document.getElementById('completedEmpty');
+    if (!completed.length) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = completed.map(function (g) {
+      var cat = CATEGORY_META[g.category] || CATEGORY_META.personal;
+      var dateStr = g.completedAt ? fmtDateShort(ymdFromTimestamp(g.completedAt)) : '';
+      return (
+        '<div class="completed-row" data-goal-id="' + g.id + '">' +
+        '  <span class="completed-cat-dot" style="background:' + cat.color + '"></span>' +
+        '  <span class="completed-title">' + escapeHtml(g.title) + '</span>' +
+        (dateStr ? '<span class="completed-date">' + escapeHtml(dateStr) + '</span>' : '') +
+        '  <button type="button" class="gm-ghost gd-reopen-goal" data-id="' + g.id + '">↺ Reopen</button>' +
+        '</div>'
+      );
+    }).join('');
   }
 
   // =============================================================
@@ -773,13 +941,23 @@ body::after {
   // =============================================================
   // RENDER — Upcoming Milestones timeline
   // =============================================================
+  // Grouped into Overdue / Next 30 Days / Later (by date only — done
+  // milestones stay in their natural bucket rather than disappearing,
+  // just faded via the existing .is-done styling) with a day countdown
+  // per item. Milestones belonging to an already-completed goal are
+  // dropped — they're not "upcoming" if the goal they belong to is done.
   function renderTimeline() {
-    var all = GD.getMilestones() || [];
+    var allMs = GD.getMilestones() || [];
     var goals = GD.getGoals() || [];
     var goalById = {};
     goals.forEach(function (g) { goalById[g.id] = g; });
 
-    var dated = all.filter(function (m) { return !!m.date; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var dated = allMs.filter(function (m) {
+      if (!m.date) return false;
+      var g = goalById[m.goalId];
+      return !g || !g.archived;
+    }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
     var wrap = document.getElementById('milestoneTimeline');
     var empty = document.getElementById('milestoneEmpty');
     if (!dated.length) {
@@ -788,15 +966,30 @@ body::after {
       return;
     }
     empty.style.display = 'none';
-    wrap.innerHTML = dated.map(function (m) {
+
+    var buckets = { overdue: [], soon: [], later: [] };
+    dated.forEach(function (m) {
+      var diff = daysUntil(m.date);
+      if (diff < 0) buckets.overdue.push(m);
+      else if (diff <= 30) buckets.soon.push(m);
+      else buckets.later.push(m);
+    });
+
+    function itemHtml(m) {
       var goal = goalById[m.goalId];
       var cat = goal ? (CATEGORY_META[goal.category] || CATEGORY_META.personal) : null;
+      var countdownHtml = '';
+      if (!m.done) {
+        var diff = daysUntil(m.date);
+        var cls = diff < 0 ? 'is-overdue' : (diff <= 7 ? 'is-soon' : '');
+        countdownHtml = ' <span class="tl-countdown' + (cls ? ' ' + cls : '') + '">· ' + escapeHtml(countdownLabel(diff)) + '</span>';
+      }
       return (
         '<div class="timeline-item' + (m.done ? ' is-done' : '') + '" data-milestone-id="' + m.id + '">' +
         '  <div class="timeline-dot"></div>' +
         '  <div class="timeline-card">' +
         '    <div class="tl-main">' +
-        '      <div class="tl-date">' + escapeHtml(fmtDateShort(m.date)) + '</div>' +
+        '      <div class="tl-date">' + escapeHtml(fmtDateShort(m.date)) + countdownHtml + '</div>' +
         '      <div class="tl-title">' + escapeHtml(m.title) + '</div>' +
         (goal ? '<div class="tl-goal-tag" style="color:' + cat.color + '">' + cat.icon + ' ' + escapeHtml(goal.title) + '</div>' : '') +
         '    </div>' +
@@ -804,7 +997,13 @@ body::after {
         '  </div>' +
         '</div>'
       );
-    }).join('');
+    }
+
+    var html = '';
+    if (buckets.overdue.length) html += '<div class="tl-group-header is-overdue">Overdue</div>' + buckets.overdue.map(itemHtml).join('');
+    if (buckets.soon.length) html += '<div class="tl-group-header">Next 30 Days</div>' + buckets.soon.map(itemHtml).join('');
+    if (buckets.later.length) html += '<div class="tl-group-header">Later</div>' + buckets.later.map(itemHtml).join('');
+    wrap.innerHTML = html;
   }
 
   // Todo -> milestone direction of the two-way sync: if a linked task's
@@ -832,9 +1031,12 @@ body::after {
     migrateWaterGoalTarget();
     migrateRemoveCareerGoal();
     migrateRenameExperiencesGoal();
+    migrateAddDefaultWeights();
     reconcileLinkedMilestones();
     renderNorthStar();
+    renderHabits();
     renderGoals();
+    renderCompleted();
     renderCategories();
     renderTimeline();
   }
@@ -843,32 +1045,56 @@ body::after {
   // EVENTS — delegated, since goal/milestone rows are rebuilt on
   // every render.
   // =============================================================
-  document.getElementById('goalsGrid').addEventListener('click', function (e) {
-    var editBtn = e.target.closest('.gd-edit-goal');
-    if (editBtn) { openGoalModal(editBtn.dataset.id); return; }
+  // Shared between #goalsGrid and #habitsGrid — both render the same
+  // goalCardHtml() markup (habit cards just never include the Mark
+  // Complete button, so that branch is simply never hit there).
+  function bindGoalGridEvents(el) {
+    el.addEventListener('click', function (e) {
+      var editBtn = e.target.closest('.gd-edit-goal');
+      if (editBtn) { openGoalModal(editBtn.dataset.id); return; }
 
-    var addMsBtn = e.target.closest('.gd-add-milestone-for');
-    if (addMsBtn) { openMilestoneModal(addMsBtn.dataset.goalId); return; }
+      var completeBtn = e.target.closest('.gd-complete-goal');
+      if (completeBtn) {
+        var goal = (GD.getGoals() || []).find(function (g) { return g.id === completeBtn.dataset.id; });
+        if (goal && confirm('Mark "' + goal.title + '" as complete?')) {
+          GD.patchGoal(goal.id, { archived: true, completedAt: Date.now() });
+          renderAll();
+        }
+        return;
+      }
 
-    var sendTodoBtn = e.target.closest('.gd-send-todo');
-    if (sendTodoBtn) {
-      var found = findMilestone(sendTodoBtn.dataset.id);
-      if (found) { GD.createTaskFromMilestone(found); renderAll(); }
-      return;
-    }
-    var delBtn = e.target.closest('.gd-del-milestone');
-    if (delBtn) {
-      if (confirm('Delete this milestone?')) { GD.deleteMilestone(delBtn.dataset.id); renderAll(); }
-      return;
-    }
-    var check = e.target.closest('.gd-milestone-check');
-    if (check) {
-      var row = check.closest('.gm-milestone-row');
-      var id = row.dataset.milestoneId;
-      GD.patchMilestone(id, { done: check.checked, doneAt: check.checked ? Date.now() : null });
-      GD.syncLinkedTaskDone(findMilestone(id) || { id: id }, check.checked);
-      renderAll();
-    }
+      var addMsBtn = e.target.closest('.gd-add-milestone-for');
+      if (addMsBtn) { openMilestoneModal(addMsBtn.dataset.goalId); return; }
+
+      var sendTodoBtn = e.target.closest('.gd-send-todo');
+      if (sendTodoBtn) {
+        var found = findMilestone(sendTodoBtn.dataset.id);
+        if (found) { GD.createTaskFromMilestone(found); renderAll(); }
+        return;
+      }
+      var delBtn = e.target.closest('.gd-del-milestone');
+      if (delBtn) {
+        if (confirm('Delete this milestone?')) { GD.deleteMilestone(delBtn.dataset.id); renderAll(); }
+        return;
+      }
+      var check = e.target.closest('.gd-milestone-check');
+      if (check) {
+        var row = check.closest('.gm-milestone-row');
+        var id = row.dataset.milestoneId;
+        GD.patchMilestone(id, { done: check.checked, doneAt: check.checked ? Date.now() : null });
+        GD.syncLinkedTaskDone(findMilestone(id) || { id: id }, check.checked);
+        renderAll();
+      }
+    });
+  }
+  bindGoalGridEvents(document.getElementById('goalsGrid'));
+  bindGoalGridEvents(document.getElementById('habitsGrid'));
+
+  document.getElementById('completedList').addEventListener('click', function (e) {
+    var reopenBtn = e.target.closest('.gd-reopen-goal');
+    if (!reopenBtn) return;
+    GD.patchGoal(reopenBtn.dataset.id, { archived: false, completedAt: null });
+    renderAll();
   });
 
   document.getElementById('milestoneTimeline').addEventListener('click', function (e) {
@@ -951,6 +1177,7 @@ body::after {
       curInput.placeholder = ''; tgtInput.placeholder = '';
     }
     document.getElementById('gFManualCurrentWrap').style.display = (type === 'milestones') ? 'none' : 'flex';
+    document.getElementById('gFWeightWrap').style.display = GD.isHabit({ type: type }) ? 'none' : 'block';
   }
   document.getElementById('gFType').addEventListener('change', updateGoalFieldLabels);
 
@@ -963,6 +1190,7 @@ body::after {
     document.getElementById('gFCategory').value = goal ? goal.category : 'health';
     document.getElementById('gFType').value = goal ? goal.type : 'number';
     document.getElementById('gFSource').value = goal ? goal.source : 'manual';
+    document.getElementById('gFWeight').value = goal && goal.weight != null ? goal.weight : GD.DEFAULT_WEIGHT;
     document.getElementById('gFDate').value = goal && goal.targetDate ? goal.targetDate : '';
     document.getElementById('gFStatus').value = goal && goal.statusOverride ? goal.statusOverride : 'auto';
     document.getElementById('gFNotes').value = goal && goal.notes ? goal.notes : '';
@@ -989,6 +1217,7 @@ body::after {
       category: document.getElementById('gFCategory').value,
       type: type,
       source: document.getElementById('gFSource').value,
+      weight: GD.isHabit({ type: type }) ? undefined : Number(document.getElementById('gFWeight').value),
       targetDate: document.getElementById('gFDate').value || undefined,
       statusOverride: document.getElementById('gFStatus').value,
       notes: document.getElementById('gFNotes').value.trim() || undefined
