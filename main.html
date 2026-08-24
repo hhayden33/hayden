@@ -977,30 +977,7 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .wk-chart-view-label { fill: var(--text-tertiary); font-family: inherit; font-size: 6.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 .wk-chart-meta { flex: 1; min-width: 160px; }
 .wk-chart-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; }
-.wk-chart-sub { font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px; }
 .wk-chart-exlist { font-size: 15px; color: var(--text-secondary); line-height: 1.65; }
-
-.wk-todo-section {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.wk-todo-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px;
-}
-.wk-todo-label {
-  font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-.wk-todo-count {
-  font-family: var(--font-mono);
-  font-size: 11px; font-weight: 700;
-  color: var(--text-secondary);
-  padding: 3px 8px; border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-}
 
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
@@ -1634,21 +1611,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
         </svg>
         <div class="wk-chart-meta">
           <div class="wk-chart-title" id="wkChartTitle">—</div>
-          <div class="wk-chart-sub" id="wkChartSub">—</div>
           <div class="wk-chart-exlist" id="wkChartEx"></div>
-        </div>
-      </div>
-
-      <div class="wk-todo-section">
-        <div class="wk-todo-header">
-          <span class="wk-todo-label">To Do List</span>
-          <span class="wk-todo-count" id="wkTodoCount">0/0</span>
-        </div>
-        <ul id="wkTodoList" class="goal-list gm-list"></ul>
-        <div id="wkTodoEmpty" class="empty-state">No goals for this day yet.</div>
-        <div class="goal-input-wrap gm-input-wrap">
-          <input id="wkTodoInput" class="gm-input" type="text" placeholder="Add a goal for this day…" autocomplete="off">
-          <button type="button" id="wkTodoAddBtn" class="gm-add">+ Add</button>
         </div>
       </div>
     </div>
@@ -2729,21 +2692,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const WK_PREFIX = 'weekplan:';
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // No per-split 'sub'/'fallback' text here anymore — push/pull/legs/full
+    // exercise descriptions are moving to the Hevy API integration. Run's
+    // only description is the dated Garmin sentence built in
+    // formatGarminRunDescription(), or nothing.
     const MUSCLE_CONFIG = {
-      push: { view: 'front', regions: ['shoulders', 'chest', 'arms'],
-              title: 'Push day', sub: 'Chest · Shoulders · Triceps',
-              fallback: ['Bench press', 'Overhead press', 'Tricep pushdown'] },
-      pull: { view: 'back', regions: ['back', 'biceps'],
-              title: 'Pull day', sub: 'Back · Lats · Biceps',
-              fallback: ['Pull-ups', 'Barbell row', 'Bicep curl'] },
-      legs: { view: 'front', regions: ['quads', 'calves'], accent: 'success',
-              title: 'Legs day', sub: 'Quads · Hamstrings · Glutes · Calves',
-              fallback: ['Back squat', 'Romanian deadlift', 'Leg press'] },
-      full: { composite: ['push', 'pull', 'legs'], accent: 'success',
-              title: 'Full body day', sub: 'Full-body strength',
-              fallback: ['Squat', 'Bench press', 'Barbell row', 'Overhead press'] },
-      // No 'sub'/'fallback' here — Run's only description is the dated
-      // Garmin sentence built in formatGarminRunDescription(), or nothing.
+      push: { view: 'front', regions: ['shoulders', 'chest', 'arms'], title: 'Push day' },
+      pull: { view: 'back', regions: ['back', 'biceps'], title: 'Pull day' },
+      legs: { view: 'front', regions: ['quads', 'calves'], accent: 'success', title: 'Legs day' },
+      full: { composite: ['push', 'pull', 'legs'], accent: 'success', title: 'Full body day' },
       run:  { view: 'front', regions: ['quads', 'calves'], accent: 'run', title: 'Run day' }
     };
     ['push', 'pull', 'legs'].forEach(function (k) {
@@ -2834,17 +2791,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function savePlan(plan) {
       try { localStorage.setItem(STORE_KEY, JSON.stringify(plan)); } catch (e) {}
     }
-    function loadGymExercises(split) {
-      try {
-        const raw = localStorage.getItem('po_coach_v1');
-        if (!raw) return null;
-        const state = JSON.parse(raw);
-        const names = (state.exercises || [])
-          .filter(function (e) { return e.day === split; })
-          .map(function (e) { return e.name; });
-        return names.length ? names : null;
-      } catch (e) { return null; }
-    }
     function fmtKm(km) {
       if (km == null || !isFinite(km) || km <= 0) return null;
       const r = Math.round(km * 10) / 10;
@@ -2898,114 +2844,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const frontSvg         = document.getElementById('wkChartFront');
     const backSvg           = document.getElementById('wkChartBack');
     const chartTitleEl       = document.getElementById('wkChartTitle');
-    const chartSubEl         = document.getElementById('wkChartSub');
     const chartExEl           = document.getElementById('wkChartEx');
     const chartRestEl         = document.getElementById('wkChartRest');
     const chartBodyWrap       = document.getElementById('wkChartBodyWrap');
-    const todoListEl            = document.getElementById('wkTodoList');
-    const todoEmptyEl            = document.getElementById('wkTodoEmpty');
-    const todoCountEl             = document.getElementById('wkTodoCount');
-    const todoInputEl              = document.getElementById('wkTodoInput');
-    const todoAddBtn                = document.getElementById('wkTodoAddBtn');
     if (!stripEl) return;
-
-    // ---------- per-day To Do list (same 'goals:<date>' storage the main
-    // To Do List / Plan Tomorrow cards use, so it's the same synced data) ----------
-    function loadTodoGoals(dateKey) {
-      try { return JSON.parse(localStorage.getItem('goals:' + dateKey)) || []; }
-      catch (e) { return []; }
-    }
-    function saveTodoGoals(dateKey, list) {
-      localStorage.setItem('goals:' + dateKey, JSON.stringify(list));
-      window.dispatchEvent(new CustomEvent('goals-changed'));
-    }
-
-    function renderTodoList() {
-      const goals = loadTodoGoals(activeDate);
-      const done = goals.filter(function (g) { return g.done; }).length;
-      todoCountEl.textContent = done + '/' + goals.length;
-      todoListEl.innerHTML = '';
-      todoEmptyEl.style.display = goals.length === 0 ? 'block' : 'none';
-
-      goals.forEach(function (g, idx) {
-        const li = document.createElement('li');
-        li.className = 'gm-row' + (g.done ? ' gm-row-done' : '');
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'gm-check';
-        cb.checked = !!g.done;
-        cb.addEventListener('change', function () {
-          const list = loadTodoGoals(activeDate);
-          if (!list[idx]) return;
-          list[idx].done = cb.checked;
-          saveTodoGoals(activeDate, list);
-          renderTodoList();
-        });
-
-        const text = document.createElement('div');
-        text.className = 'gm-text';
-        text.textContent = g.text;
-        text.addEventListener('click', function () {
-          if (text.getAttribute('contenteditable') === 'true') return;
-          text.contentEditable = 'true';
-          text.focus();
-          const range = document.createRange();
-          range.selectNodeContents(text);
-          range.collapse(false);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-        });
-        text.addEventListener('blur', function () {
-          text.removeAttribute('contenteditable');
-          const v = text.textContent.trim();
-          const list = loadTodoGoals(activeDate);
-          if (!list[idx]) return;
-          if (v) { list[idx].text = v; saveTodoGoals(activeDate, list); }
-          else { list.splice(idx, 1); saveTodoGoals(activeDate, list); renderTodoList(); }
-        });
-        text.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter') { e.preventDefault(); text.blur(); }
-        });
-
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'goal-delete';
-        del.textContent = '×';
-        del.addEventListener('click', function () {
-          const list = loadTodoGoals(activeDate);
-          list.splice(idx, 1);
-          saveTodoGoals(activeDate, list);
-          renderTodoList();
-        });
-
-        li.append(cb, text);
-        if (typeof window.appendCalendarButton === 'function') {
-          window.appendCalendarButton(li, g.text, activeDate);
-        }
-        li.append(del);
-        todoListEl.appendChild(li);
-      });
-    }
-
-    function addTodoGoal() {
-      const v = todoInputEl.value.trim();
-      if (!v) return;
-      const list = loadTodoGoals(activeDate);
-      list.push({ text: v, done: false });
-      saveTodoGoals(activeDate, list);
-      todoInputEl.value = '';
-      renderTodoList();
-    }
-    todoAddBtn.addEventListener('click', addTodoGoal);
-    todoInputEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') addTodoGoal();
-    });
-    // Pick up goals added/edited from the main To Do List / Plan Tomorrow
-    // cards (and remote changes applied by the 'goals' cloud sync above).
-    window.addEventListener('goals-changed', renderTodoList);
-    window.addEventListener('storage', renderTodoList);
 
     function renderStrip() {
       const plan = loadPlan();
@@ -3057,7 +2899,6 @@ document.addEventListener('DOMContentLoaded', function () {
           renderStrip();
           renderSeg();
           renderChart();
-          renderTodoList();
         });
         stripEl.appendChild(card);
       });
@@ -3131,20 +2972,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const ordered = orderedSplits(splits);
       chartTitleEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ') + ' Day';
-      // Run has no generic muscle-focus blurb here — its only description
-      // is the dated Garmin sentence below (or nothing at all).
-      const subText = ordered.filter(function (s) { return s !== 'run'; })
-        .map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
-      chartSubEl.textContent = subText;
-      chartSubEl.style.display = subText ? '' : 'none';
 
-      const exParts = ordered.map(function (s) {
-        if (s === 'run') return formatGarminRunDescription(activeDate);
-        const parts = loadGymExercises(s);
-        const list = (parts || MUSCLE_CONFIG[s].fallback).join(' · ');
-        return ordered.length > 1 ? (MUSCLE_CONFIG[s].title.replace(/ day$/i, '') + ': ' + list) : list;
-      }).filter(Boolean);
-      chartExEl.textContent = exParts.join('     |     ');
+      // No per-split exercise description for push/pull/legs/full anymore —
+      // that's moving to the Hevy API integration. Run keeps its own
+      // dated Garmin sentence, which has nothing to do with Hevy.
+      const runDesc = ordered.indexOf('run') !== -1 ? formatGarminRunDescription(activeDate) : null;
+      chartExEl.textContent = runDesc || '';
+      chartExEl.style.display = runDesc ? '' : 'none';
     }
 
     function renderWeekLabel() {
@@ -3163,7 +2997,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderStrip();
       renderSeg();
       renderChart();
-      renderTodoList();
       if (typeof window.refreshTodaySplitBadge === 'function') window.refreshTodaySplitBadge();
     }
 
