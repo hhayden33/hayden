@@ -586,7 +586,7 @@ body::after {
       statusOverride: 'auto'
     });
     var gExperiences = GD.addGoal({
-      category: 'experiences', title: 'Complete planned travel experiences', type: 'milestones', source: 'manual',
+      category: 'experiences', title: 'Book and Organise Holiday', type: 'milestones', source: 'manual',
       statusOverride: 'auto'
     });
 
@@ -628,6 +628,17 @@ body::after {
     goals.forEach(function (g) {
       if (g.category === 'career' && g.source === 'manual' && g.title === 'Move toward a tech/SaaS career') {
         GD.deleteGoal(g.id);
+      }
+    });
+  }
+
+  // Renames the auto-seeded travel-experiences goal to match its new title.
+  function migrateRenameExperiencesGoal() {
+    var goals = GD.getGoals();
+    if (!goals) return;
+    goals.forEach(function (g) {
+      if (g.category === 'experiences' && g.source === 'manual' && g.title === 'Complete planned travel experiences') {
+        GD.patchGoal(g.id, { title: 'Book and Organise Holiday' });
       }
     });
   }
@@ -820,6 +831,7 @@ body::after {
     seedIfEmpty();
     migrateWaterGoalTarget();
     migrateRemoveCareerGoal();
+    migrateRenameExperiencesGoal();
     reconcileLinkedMilestones();
     renderNorthStar();
     renderGoals();
