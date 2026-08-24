@@ -387,17 +387,6 @@ a.gm-card.card-link:hover {
   border-color: #6F4AA8;
   box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 24px -10px #6F4AA8;
 }
-.card-footer-link {
-  display: flex; align-items: center; justify-content: flex-end; gap: 6px;
-  margin-top: 14px; padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  text-decoration: none; color: var(--text-primary);
-  font-size: 12px; font-weight: 600;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s;
-}
-.card-footer-link:hover { color: #A98BCB; }
-
 .northstar-mini-card {
   padding: 22px 24px;
   background:
@@ -433,24 +422,9 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   -webkit-text-fill-color: transparent; color: transparent;
 }
 
-.goals-preview-list { display: flex; flex-direction: column; gap: 12px; }
-.goal-preview-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.goal-preview-icon { font-size: 18px; flex-shrink: 0; line-height: 1; }
-.goal-preview-main { flex: 1; min-width: 0; }
-.goal-preview-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.goal-preview-title {
-  flex: 1; min-width: 0;
-  font-size: 13.5px; font-weight: 600; color: var(--text-primary); line-height: 1.3;
-  overflow-wrap: anywhere; word-break: break-word;
-}
-.goal-preview-pct { flex-shrink: 0; font-size: 12.5px; font-weight: 700; color: #A98BCB; font-variant-numeric: tabular-nums; }
-.goal-preview-track { height: 5px; border-radius: 999px; background: var(--surface-hover, #202B35); overflow: hidden; }
-.goal-preview-fill { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
-
 @media (max-width: 480px) {
   .northstar-mini-card { padding: 18px; }
   .ns-mini-statement { font-size: 17px; }
-  .goal-preview-title { font-size: 13px; }
 }
 
 /* ===== Component 4: section + To Do List ===== */
@@ -1159,18 +1133,6 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
       <span class="ns-mini-pct" id="nsMiniPct">0%</span>
     </div>
   </a>
-
-  <!-- YOUR GOALS (preview) — one representative goal per life pillar,
-       highest-progress first within a pillar. Full list + editing
-       lives on goals.html; this is a glance, not a duplicate. -->
-  <div class="section">
-    <div class="section-title">Your Goals</div>
-    <div class="gm-card">
-      <div class="goals-preview-list" id="goalsPreviewList"></div>
-      <div class="empty-state" id="goalsPreviewEmpty" style="display:none;">No goals yet — add one on the Goals page.</div>
-      <a href="goals.html" class="card-footer-link">View all goals →</a>
-    </div>
-  </div>
 
   <div class="section">
     <div class="section-title">To Do List</div>
@@ -2228,75 +2190,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('nsMiniFill').style.width = pct + '%';
   }
 
-  function renderGoalsPreview() {
-    const GD = window.GoalsData;
-    if (!GD) return;
-    const listEl = document.getElementById('goalsPreviewList');
-    const emptyEl = document.getElementById('goalsPreviewEmpty');
-    const all = (GD.getGoals() || []).filter(g => !g.archived);
-    if (!all.length) {
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'block';
-      return;
-    }
-    emptyEl.style.display = 'none';
-
-    // One representative per life pillar — its highest-progress active
-    // goal — in GD.CATEGORY_ORDER, capped at 4. Mirrors the pillars the
-    // North Star statement itself names, rather than an arbitrary
-    // "first N goals" slice that could just repeat one category.
-    const picks = [];
-    GD.CATEGORY_ORDER.forEach(cat => {
-      const inCat = all.filter(g => g.category === cat);
-      if (!inCat.length) return;
-      const best = inCat.reduce((a, b) => (GD.computeProgress(b).pct > GD.computeProgress(a).pct ? b : a));
-      picks.push(best);
-    });
-
-    listEl.innerHTML = '';
-    picks.slice(0, 4).forEach(goal => {
-      const cat = GD.CATEGORY_META[goal.category] || GD.CATEGORY_META.personal;
-      const prog = GD.computeProgress(goal);
-
-      const row = document.createElement('div');
-      row.className = 'goal-preview-row';
-
-      const icon = document.createElement('span');
-      icon.className = 'goal-preview-icon';
-      icon.textContent = cat.icon;
-      row.appendChild(icon);
-
-      const main = document.createElement('div');
-      main.className = 'goal-preview-main';
-
-      const top = document.createElement('div');
-      top.className = 'goal-preview-top';
-      const title = document.createElement('span');
-      title.className = 'goal-preview-title';
-      title.textContent = goal.title;
-      title.title = goal.title;
-      const pctEl = document.createElement('span');
-      pctEl.className = 'goal-preview-pct';
-      pctEl.textContent = prog.pct + '%';
-      top.append(title, pctEl);
-
-      const track = document.createElement('div');
-      track.className = 'goal-preview-track';
-      const fill = document.createElement('div');
-      fill.className = 'goal-preview-fill';
-      fill.style.width = prog.pct + '%';
-      fill.style.background = cat.color;
-      track.appendChild(fill);
-
-      main.append(top, track);
-      row.appendChild(main);
-      listEl.appendChild(row);
-    });
-  }
-
+  // Kept as the single name event listeners call — main.html only shows
+  // the North Star card now (the "Your Goals" preview list lives on
+  // goals.html only), but this indirection means adding another
+  // main.html-only summary widget later doesn't mean touching every
+  // call site again.
   function renderGoalsSummary() {
     renderNorthStarMini();
-    renderGoalsPreview();
   }
 
   // ---------- Boot ----------
@@ -2321,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // *other* tabs) — without this, editing today's/tomorrow's goals from the
   // 7-Day Overview panel wouldn't refresh these two cards until reload.
   window.addEventListener('goals-changed', () => {
-    loadToday(); loadTomorrow(); renderGoalsPreview();
+    loadToday(); loadTomorrow(); renderNorthStarMini();
   });
   // strategic:* writes (goals.html, or a milestone linked to a task here)
   // dispatch this instead — same-tab equivalent of the storage event above.
