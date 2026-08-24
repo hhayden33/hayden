@@ -3,3 +3,9 @@
 .vscode/
 .idea/
 *.swp
+
+# Garmin sync automation — logs, lock file, and fetched-data scratch
+# files are machine-local; node_modules is reinstallable via npm install.
+automation/node_modules/
+automation/logs/
+automation/tmp/

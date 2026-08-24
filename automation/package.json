@@ -1,0 +1,9 @@
+{
+  "name": "garmin-dashboard-automation",
+  "private": true,
+  "type": "module",
+  "description": "Standalone Garmin -> Supabase sync, driven by launchd. No Claude Code involved at runtime — see garmin-cron-sync.mjs.",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

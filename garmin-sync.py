@@ -155,15 +155,21 @@ def main():
             pbs[k] = v
             pb_filled.append(k)
 
+    # Merge, don't replace — a given run (e.g. an automated one that only
+    # re-checks a subset of metrics) shouldn't blank out snapshot fields it
+    # didn't recompute this time (e.g. the all-time longest-run PR).
+    snapshot = current.get('run:garminSnapshot') or {}
+    snapshot.update(wellness)
+
     current['run:runs'] = runs
     current['run:pbs'] = pbs
-    current['run:garminSnapshot'] = wellness
+    current['run:garminSnapshot'] = snapshot
 
     supa_upsert(APP_KEY, current)
     print(f'Synced to Supabase app_state[{APP_KEY}].')
     print(f'  Runs: +{added} new, {updated} refreshed, {len(runs)} total.')
     print(f'  PBs filled from Garmin: {pb_filled or "none (already set or none provided)"}.')
-    print(f'  Snapshot: {json.dumps(wellness)}')
+    print(f'  Snapshot: {json.dumps(snapshot)}')
 
 
 if __name__ == '__main__':
