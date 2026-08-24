@@ -956,29 +956,7 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   font-style: italic; text-align: center;
   padding: 22px 0;
 }
-.wk-chart-summary-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0 2px;
-}
-.wk-chart-summary {
-  font-size: 14px; font-weight: 600; color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-.wk-chart-toggle {
-  flex-shrink: 0;
-  border: 1px dashed rgba(255,255,255,0.16);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-family: inherit; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-}
-.wk-chart-toggle:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.30); }
-.wk-chart-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.wk-chart-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
 .wk-chart-svg { width: 128px; height: 184px; flex-shrink: 0; }
 .wk-muscle { fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.05); stroke-width: 0.5; transition: fill 0.35s, filter 0.35s; }
 .wk-muscle.is-lit { fill: var(--success); filter: drop-shadow(0 0 5px rgba(32,165,160,0.65)) drop-shadow(0 0 12px rgba(32,165,160,0.35)); }
@@ -1592,10 +1570,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
       </div>
 
       <div class="wk-chart-rest" id="wkChartRest">Pick Push, Pull, or Legs to see the day's focus.</div>
-      <div class="wk-chart-summary-row" id="wkChartSummaryRow" style="display:none;">
-        <div class="wk-chart-summary" id="wkChartSummary">—</div>
-        <button type="button" class="wk-chart-toggle" id="wkChartToggle" aria-expanded="false">Show diagram ▾</button>
-      </div>
       <div class="wk-chart-wrap" id="wkChartBodyWrap" style="display:none;">
         <svg id="wkChartFront" class="wk-chart-svg" viewBox="0 0 100 180" xmlns="http://www.w3.org/2000/svg">
           <!-- head + neck -->
@@ -1655,18 +1629,15 @@ html.is-embedded .shell { padding-bottom: 20px; }
       </div>
 
       <div class="wk-todo-section">
-        <div id="wkTodoPointer" class="empty-state" style="display:none;">Today's list is above ↑</div>
-        <div id="wkTodoBody">
-          <div class="wk-todo-header">
-            <span class="wk-todo-label">To Do List</span>
-            <span class="wk-todo-count" id="wkTodoCount">0/0</span>
-          </div>
-          <ul id="wkTodoList" class="goal-list gm-list"></ul>
-          <div id="wkTodoEmpty" class="empty-state">No goals for this day yet.</div>
-          <div class="goal-input-wrap gm-input-wrap">
-            <input id="wkTodoInput" class="gm-input" type="text" placeholder="Add a goal for this day…" autocomplete="off">
-            <button type="button" id="wkTodoAddBtn" class="gm-add">+ Add</button>
-          </div>
+        <div class="wk-todo-header">
+          <span class="wk-todo-label">To Do List</span>
+          <span class="wk-todo-count" id="wkTodoCount">0/0</span>
+        </div>
+        <ul id="wkTodoList" class="goal-list gm-list"></ul>
+        <div id="wkTodoEmpty" class="empty-state">No goals for this day yet.</div>
+        <div class="goal-input-wrap gm-input-wrap">
+          <input id="wkTodoInput" class="gm-input" type="text" placeholder="Add a goal for this day…" autocomplete="off">
+          <button type="button" id="wkTodoAddBtn" class="gm-add">+ Add</button>
         </div>
       </div>
     </div>
@@ -2920,9 +2891,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartExEl           = document.getElementById('wkChartEx');
     const chartRestEl         = document.getElementById('wkChartRest');
     const chartBodyWrap       = document.getElementById('wkChartBodyWrap');
-    const chartSummaryRowEl   = document.getElementById('wkChartSummaryRow');
-    const chartSummaryEl      = document.getElementById('wkChartSummary');
-    const chartToggleBtn      = document.getElementById('wkChartToggle');
     const todoListEl            = document.getElementById('wkTodoList');
     const todoEmptyEl            = document.getElementById('wkTodoEmpty');
     const todoCountEl             = document.getElementById('wkTodoCount');
@@ -2942,18 +2910,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderTodoList() {
-      // Today's tasks already have a single source of truth up in the
-      // Today card (#gmCardToday) — showing them again here too would be
-      // the same list rendered twice on one screen. Collapse this section
-      // to a pointer whenever the selected day is today; any other day
-      // still gets the full inline list below.
-      const isToday = activeDate === todayKey;
-      const bodyEl = document.getElementById('wkTodoBody');
-      const pointerEl = document.getElementById('wkTodoPointer');
-      if (bodyEl) bodyEl.style.display = isToday ? 'none' : '';
-      if (pointerEl) pointerEl.style.display = isToday ? 'block' : 'none';
-      if (isToday) return;
-
       const goals = loadTodoGoals(activeDate);
       const done = goals.filter(function (g) { return g.done; }).length;
       todoCountEl.textContent = done + '/' + goals.length;
@@ -3110,27 +3066,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (!splits.length) {
         chartBodyWrap.style.display = 'none';
-        chartSummaryRowEl.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = "Pick Push, Pull, Legs, Full, or Run to see the day's focus.";
         return;
       }
       if (splits.indexOf('rest') !== -1) {
         chartBodyWrap.style.display = 'none';
-        chartSummaryRowEl.style.display = 'none';
         chartRestEl.style.display = 'block';
         chartRestEl.textContent = 'Rest day — recovery in progress.';
         return;
       }
 
       chartRestEl.style.display = 'none';
-      chartSummaryRowEl.style.display = 'flex';
-      // Collapsed by default every time a split/day is (re)selected — the
-      // full muscle-map diagram is reference detail, not a daily-glance
-      // signal, so it stays behind the toggle below until explicitly opened.
-      chartBodyWrap.style.display = 'none';
-      chartToggleBtn.setAttribute('aria-expanded', 'false');
-      chartToggleBtn.textContent = 'Show diagram ▾';
+      chartBodyWrap.style.display = 'flex';
 
       const allPairs = splits.reduce(function (acc, s) { return acc.concat(getViewRegionPairs(s)); }, []);
       const needFront = allPairs.some(function (p) { return p.view === 'front'; });
@@ -3171,18 +3119,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const ordered = orderedSplits(splits);
-      const titleShort = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ');
-      chartTitleEl.textContent = titleShort + ' Day';
+      chartTitleEl.textContent = ordered.map(function (s) { return MUSCLE_CONFIG[s].title.replace(/ day$/i, ''); }).join(' + ') + ' Day';
       // Run has no generic muscle-focus blurb here — its only description
       // is the dated Garmin sentence below (or nothing at all).
       const subText = ordered.filter(function (s) { return s !== 'run'; })
         .map(function (s) { return MUSCLE_CONFIG[s].sub; }).join('   +   ');
       chartSubEl.textContent = subText;
       chartSubEl.style.display = subText ? '' : 'none';
-      // One-line collapsed summary — same title/sub, just squeezed onto a
-      // single row (e.g. "Push — Chest · Shoulders · Triceps") so a
-      // glance at the day's split doesn't require the full diagram.
-      chartSummaryEl.textContent = titleShort + (subText ? ' — ' + subText.replace(/\s+\+\s+/g, ' + ') : '');
 
       const exParts = ordered.map(function (s) {
         if (s === 'run') return formatGarminRunDescription(activeDate);
@@ -3247,13 +3190,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderSeg();
       renderChart();
       if (typeof window.refreshTodaySplitBadge === 'function') window.refreshTodaySplitBadge();
-    });
-
-    chartToggleBtn.addEventListener('click', function () {
-      const expanded = chartToggleBtn.getAttribute('aria-expanded') === 'true';
-      chartBodyWrap.style.display = expanded ? 'none' : 'flex';
-      chartToggleBtn.setAttribute('aria-expanded', String(!expanded));
-      chartToggleBtn.textContent = expanded ? 'Show diagram ▾' : 'Hide diagram ▴';
     });
 
     // Pointer-drag-to-scroll for desktop/mouse users (touch already scrolls natively).
