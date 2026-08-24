@@ -290,6 +290,156 @@
     }
   };
 
+  // ---------------------------------------------------------------
+  // Category system + progress computation — the single place both
+  // goals.html and any preview (main.html) get a goal's percentage
+  // from. Neither page is allowed its own copy of this logic: it's
+  // the whole point of "single source of truth" here — a currency
+  // goal's math, a time goal's (lower-is-better) math, a milestone
+  // goal's math, all live in exactly one place.
+  // ---------------------------------------------------------------
+  var CATEGORY_META = {
+    health:      { label: 'Health',      icon: '❤️',  color: '#20A5A0' },
+    wealth:      { label: 'Wealth',      icon: '💰', color: '#6F4AA8' },
+    career:      { label: 'Career',      icon: '💼', color: '#087CA3' },
+    business:    { label: 'Business',    icon: '🚀', color: '#A98BCB' },
+    experiences: { label: 'Experiences', icon: '🌤️', color: '#D8C9E8' },
+    personal:    { label: 'Personal',    icon: '🌱', color: '#B98AE0' }
+  };
+  var CATEGORY_ORDER = ['health', 'wealth', 'career', 'business', 'experiences', 'personal'];
+  var SOURCE_LABELS = { manual: 'Manual', finance: 'Finance', running: 'Running', fitness: 'Fitness', water: 'Water' };
+  var STATUS_META = {
+    on_track: { label: 'On Track', color: 'var(--success)' },
+    at_risk:  { label: 'At Risk',  color: 'var(--warning)' },
+    behind:   { label: 'Behind',   color: 'var(--danger)' }
+  };
+
+  function fmtMoney(n) {
+    if (n == null || !isFinite(n)) return '—';
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+  function fmtClock(sec) {
+    if (sec == null || !isFinite(sec)) return '—';
+    sec = Math.round(sec);
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0 ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
+  }
+  function parseClockToSec(str) {
+    if (!str) return null;
+    var parts = String(str).trim().split(':').map(Number);
+    if (parts.some(isNaN)) return null;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0];
+  }
+
+  function computeProgress(goal) {
+    var ev = null;
+    if (goal.source === 'finance') ev = Evidence.finance();
+    else if (goal.source === 'running') ev = Evidence.running();
+    else if (goal.source === 'fitness') ev = Evidence.fitness();
+    else if (goal.source === 'water') ev = Evidence.water();
+
+    if (goal.type === 'milestones') {
+      var ms = milestonesForGoal(goal.id);
+      var total = ms.length, done = ms.filter(function (m) { return m.done; }).length;
+      var pct = total ? Math.round(done / total * 100) : 0;
+      return {
+        pct: pct, isLive: false, sourceLabel: 'Manual',
+        currentLabel: total ? (done + ' / ' + total + ' milestones') : 'No milestones yet',
+        targetLabel: '', remainingLabel: null
+      };
+    }
+
+    if (goal.type === 'currency') {
+      var current = (ev && ev.currentTotal != null) ? ev.currentTotal : goal.manualCurrent;
+      var isLive = !!(ev && ev.currentTotal != null);
+      var target = goal.manualTarget;
+      var pct2 = (target > 0 && current != null) ? Math.min(100, Math.max(0, Math.round(current / target * 100))) : 0;
+      return {
+        pct: pct2, isLive: isLive, sourceLabel: isLive ? SOURCE_LABELS[goal.source] : 'Manual',
+        currentLabel: fmtMoney(current), targetLabel: fmtMoney(target),
+        remainingLabel: (current != null && target != null) ? fmtMoney(Math.max(0, target - current)) + ' to go' : null
+      };
+    }
+
+    if (goal.type === 'time') {
+      var currentSec = null, isLive3 = false;
+      if (ev && ev.pbs && ev.pbs.marathon) { currentSec = ev.pbs.marathon; isLive3 = true; }
+      else currentSec = goal.manualCurrentSec;
+      var targetSec = goal.manualTargetSec;
+      var pct3 = (currentSec && targetSec) ? Math.min(100, Math.max(0, Math.round(targetSec / currentSec * 100))) : 0;
+      return {
+        pct: pct3, isLive: isLive3, sourceLabel: isLive3 ? SOURCE_LABELS[goal.source] : 'Manual',
+        currentLabel: currentSec ? fmtClock(currentSec) : 'No time recorded yet', targetLabel: fmtClock(targetSec),
+        remainingLabel: null
+      };
+    }
+
+    if (goal.type === 'weekly') {
+      var current4 = (ev && ev.sessionsLast7Days != null) ? ev.sessionsLast7Days : goal.manualCurrent;
+      var isLive4 = !!(ev && ev.sessionsLast7Days != null);
+      var target4 = goal.manualTarget;
+      var pct4 = target4 ? Math.min(100, Math.max(0, Math.round((current4 || 0) / target4 * 100))) : 0;
+      return {
+        pct: pct4, isLive: isLive4, sourceLabel: isLive4 ? SOURCE_LABELS[goal.source] : 'Manual',
+        currentLabel: (current4 || 0) + ' / ' + target4 + ' this week', targetLabel: '', remainingLabel: null
+      };
+    }
+
+    if (goal.type === 'daily') {
+      var currentMl = (ev && ev.todayMl != null) ? ev.todayMl : goal.manualCurrent;
+      var isLive5 = !!(ev && ev.todayMl != null);
+      var targetMl = goal.manualTarget;
+      var pct5 = targetMl ? Math.min(100, Math.max(0, Math.round((currentMl || 0) / targetMl * 100))) : 0;
+      return {
+        pct: pct5, isLive: isLive5, sourceLabel: isLive5 ? SOURCE_LABELS[goal.source] : 'Manual',
+        currentLabel: ((currentMl || 0) / 1000).toFixed(1) + 'L today', targetLabel: (targetMl / 1000).toFixed(1) + 'L target',
+        remainingLabel: null
+      };
+    }
+
+    // 'number' — plain manual current/target
+    var current6 = goal.manualCurrent || 0, target6 = goal.manualTarget || 0;
+    var pct6 = target6 ? Math.min(100, Math.max(0, Math.round(current6 / target6 * 100))) : 0;
+    return {
+      pct: pct6, isLive: false, sourceLabel: 'Manual',
+      currentLabel: String(current6), targetLabel: String(target6), remainingLabel: null
+    };
+  }
+
+  function computeStatus(goal, pct) {
+    if (goal.statusOverride && goal.statusOverride !== 'auto') return goal.statusOverride;
+    if (!goal.targetDate || !goal.createdAt) return 'on_track';
+    var now = Date.now();
+    var start = goal.createdAt;
+    var end = new Date(goal.targetDate + 'T23:59:59').getTime();
+    if (isNaN(end)) return 'on_track';
+    if (now >= end) return pct >= 100 ? 'on_track' : 'behind';
+    if (end <= start) return 'on_track';
+    var elapsedFrac = Math.min(1, Math.max(0, (now - start) / (end - start)));
+    var expectedPct = elapsedFrac * 100;
+    var diff = pct - expectedPct;
+    if (diff >= -5) return 'on_track';
+    if (diff >= -20) return 'at_risk';
+    return 'behind';
+  }
+
+  // Overall North Star progress — the one number both the full page
+  // and the main.html preview show. Respects a manual override if the
+  // user set one, otherwise it's the average of every active goal's
+  // own computeProgress().pct.
+  function computeOverallProgress() {
+    var ns = getNorthStar();
+    if (ns.progressOverride != null && ns.progressOverride !== '') {
+      return Math.max(0, Math.min(100, Math.round(ns.progressOverride)));
+    }
+    var goals = (getGoals() || []).filter(function (g) { return !g.archived; });
+    if (!goals.length) return 0;
+    var sum = goals.reduce(function (s, g) { return s + computeProgress(g).pct; }, 0);
+    return Math.round(sum / goals.length);
+  }
+
   global.GoalsData = {
     getNorthStar: getNorthStar, setNorthStar: setNorthStar,
     getGoals: getGoals, setGoals: setGoals, addGoal: addGoal, patchGoal: patchGoal, deleteGoal: deleteGoal,
@@ -298,6 +448,9 @@
     createTaskFromMilestone: createTaskFromMilestone, findTaskById: findTaskById,
     linkedTaskDone: linkedTaskDone, syncLinkedTaskDone: syncLinkedTaskDone, allTasksForGoal: allTasksForGoal,
     Evidence: Evidence,
-    newId: newId, todayKeyStr: todayKeyStr
+    newId: newId, todayKeyStr: todayKeyStr,
+    CATEGORY_META: CATEGORY_META, CATEGORY_ORDER: CATEGORY_ORDER, SOURCE_LABELS: SOURCE_LABELS, STATUS_META: STATUS_META,
+    fmtMoney: fmtMoney, fmtClock: fmtClock, parseClockToSec: parseClockToSec,
+    computeProgress: computeProgress, computeStatus: computeStatus, computeOverallProgress: computeOverallProgress
   };
 })(window);

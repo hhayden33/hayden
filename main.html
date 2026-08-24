@@ -26,6 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<script src="goals-data.js"></script>
 <link rel="stylesheet" href="theme.css">
 <style>
 :root {
@@ -366,6 +367,90 @@ body::after {
   .day-ring { width: 144px; height: 144px; }
   .day-ring-percent { font-size: 32px; }
   .day-ring-status { font-size: 13px; }
+}
+
+/* ===== Component 3b: North Star + Goals preview — the bridge between
+   "today" (goal ticker, day ring above) and "what to do about it"
+   (To Do List below). Percentages here are never hand-typed: both
+   read goals-data.js's GD.computeOverallProgress()/GD.computeProgress()
+   directly, the exact same functions goals.html itself renders from —
+   see the render function below for the wiring. ===== */
+:root {
+  --gp-gradient: linear-gradient(135deg, #5B3A8E 0%, #6F4AA8 45%, #A98BCB 80%, #D8C9E8 100%);
+}
+a.gm-card.card-link {
+  display: block; text-decoration: none; color: inherit;
+  transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), border-color 0.2s, box-shadow 0.2s;
+}
+a.gm-card.card-link:hover {
+  transform: translateY(-2px);
+  border-color: #6F4AA8;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 24px -10px #6F4AA8;
+}
+.card-footer-link {
+  display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  text-decoration: none; color: var(--text-primary);
+  font-size: 12px; font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.card-footer-link:hover { color: #A98BCB; }
+
+.northstar-mini-card {
+  padding: 22px 24px;
+  background:
+    radial-gradient(circle at 85% -20%, rgba(111, 74, 168, 0.20), transparent 55%),
+    var(--surface, #19232D);
+  border-color: rgba(169, 139, 203, 0.22);
+}
+.ns-mini-eyebrow-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ns-mini-eyebrow {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase;
+  color: #A98BCB;
+}
+.ns-mini-link {
+  font-size: 12px; font-weight: 700; color: var(--text-secondary);
+  flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), color 0.15s;
+}
+a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: translateX(3px); }
+.ns-mini-statement {
+  margin: 0 0 6px;
+  font-size: 20px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.25;
+  color: #F3EFE8;
+  overflow-wrap: anywhere;
+}
+.ns-mini-pillars { font-size: 12px; color: var(--text-tertiary); margin-bottom: 16px; overflow-wrap: anywhere; }
+.ns-mini-progress-row { display: flex; align-items: center; gap: 12px; }
+.ns-mini-track { flex: 1; min-width: 0; height: 7px; border-radius: 999px; background: var(--surface-hover, #202B35); overflow: hidden; }
+.ns-mini-fill { height: 100%; border-radius: 999px; background: var(--gp-gradient); transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+.ns-mini-pct {
+  flex-shrink: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  background: var(--gp-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.goals-preview-list { display: flex; flex-direction: column; gap: 12px; }
+.goal-preview-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.goal-preview-icon { font-size: 18px; flex-shrink: 0; line-height: 1; }
+.goal-preview-main { flex: 1; min-width: 0; }
+.goal-preview-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.goal-preview-title {
+  flex: 1; min-width: 0;
+  font-size: 13.5px; font-weight: 600; color: var(--text-primary); line-height: 1.3;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+.goal-preview-pct { flex-shrink: 0; font-size: 12.5px; font-weight: 700; color: #A98BCB; font-variant-numeric: tabular-nums; }
+.goal-preview-track { height: 5px; border-radius: 999px; background: var(--surface-hover, #202B35); overflow: hidden; }
+.goal-preview-fill { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+
+@media (max-width: 480px) {
+  .northstar-mini-card { padding: 18px; }
+  .ns-mini-statement { font-size: 17px; }
+  .goal-preview-title { font-size: 13px; }
 }
 
 /* ===== Component 4: section + To Do List ===== */
@@ -1057,6 +1142,33 @@ body::after {
       <div class="day-ring-status"    id="dayRingStatus">Loading…</div>
       <div class="day-ring-remaining" id="dayRingRemaining">—</div>
       <div class="day-ring-hours">7:00 AM – 11:30 PM</div>
+    </div>
+  </div>
+
+  <!-- NORTH STAR (compact) — same statement/progress goals.html shows,
+       both read from GD.getNorthStar()/GD.computeOverallProgress(). -->
+  <a href="goals.html" class="gm-card card-link northstar-mini-card">
+    <div class="ns-mini-eyebrow-row">
+      <span class="ns-mini-eyebrow">North Star</span>
+      <span class="ns-mini-link">View Goals →</span>
+    </div>
+    <div class="ns-mini-statement" id="nsMiniStatement">—</div>
+    <div class="ns-mini-pillars" id="nsMiniPillars">—</div>
+    <div class="ns-mini-progress-row">
+      <div class="ns-mini-track"><div class="ns-mini-fill" id="nsMiniFill" style="width:0%"></div></div>
+      <span class="ns-mini-pct" id="nsMiniPct">0%</span>
+    </div>
+  </a>
+
+  <!-- YOUR GOALS (preview) — one representative goal per life pillar,
+       highest-progress first within a pillar. Full list + editing
+       lives on goals.html; this is a glance, not a duplicate. -->
+  <div class="section">
+    <div class="section-title">Your Goals</div>
+    <div class="gm-card">
+      <div class="goals-preview-list" id="goalsPreviewList"></div>
+      <div class="empty-state" id="goalsPreviewEmpty" style="display:none;">No goals yet — add one on the Goals page.</div>
+      <a href="goals.html" class="card-footer-link">View all goals →</a>
     </div>
   </div>
 
@@ -2100,6 +2212,93 @@ document.addEventListener('DOMContentLoaded', function () {
     loadTomorrow
   );
 
+  // ---------- North Star (compact) + Your Goals preview ----------
+  // Both read goals-data.js directly rather than computing their own
+  // percentages — GD.computeOverallProgress()/GD.computeProgress() are
+  // the exact same functions goals.html's full page renders from, so
+  // there is exactly one place goal-progress math can live.
+  function renderNorthStarMini() {
+    const GD = window.GoalsData;
+    if (!GD) return;
+    const ns = GD.getNorthStar();
+    document.getElementById('nsMiniStatement').textContent = ns.statement;
+    document.getElementById('nsMiniPillars').textContent = (ns.pillars || []).join(' · ');
+    const pct = GD.computeOverallProgress();
+    document.getElementById('nsMiniPct').textContent = pct + '%';
+    document.getElementById('nsMiniFill').style.width = pct + '%';
+  }
+
+  function renderGoalsPreview() {
+    const GD = window.GoalsData;
+    if (!GD) return;
+    const listEl = document.getElementById('goalsPreviewList');
+    const emptyEl = document.getElementById('goalsPreviewEmpty');
+    const all = (GD.getGoals() || []).filter(g => !g.archived);
+    if (!all.length) {
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    // One representative per life pillar — its highest-progress active
+    // goal — in GD.CATEGORY_ORDER, capped at 4. Mirrors the pillars the
+    // North Star statement itself names, rather than an arbitrary
+    // "first N goals" slice that could just repeat one category.
+    const picks = [];
+    GD.CATEGORY_ORDER.forEach(cat => {
+      const inCat = all.filter(g => g.category === cat);
+      if (!inCat.length) return;
+      const best = inCat.reduce((a, b) => (GD.computeProgress(b).pct > GD.computeProgress(a).pct ? b : a));
+      picks.push(best);
+    });
+
+    listEl.innerHTML = '';
+    picks.slice(0, 4).forEach(goal => {
+      const cat = GD.CATEGORY_META[goal.category] || GD.CATEGORY_META.personal;
+      const prog = GD.computeProgress(goal);
+
+      const row = document.createElement('div');
+      row.className = 'goal-preview-row';
+
+      const icon = document.createElement('span');
+      icon.className = 'goal-preview-icon';
+      icon.textContent = cat.icon;
+      row.appendChild(icon);
+
+      const main = document.createElement('div');
+      main.className = 'goal-preview-main';
+
+      const top = document.createElement('div');
+      top.className = 'goal-preview-top';
+      const title = document.createElement('span');
+      title.className = 'goal-preview-title';
+      title.textContent = goal.title;
+      title.title = goal.title;
+      const pctEl = document.createElement('span');
+      pctEl.className = 'goal-preview-pct';
+      pctEl.textContent = prog.pct + '%';
+      top.append(title, pctEl);
+
+      const track = document.createElement('div');
+      track.className = 'goal-preview-track';
+      const fill = document.createElement('div');
+      fill.className = 'goal-preview-fill';
+      fill.style.width = prog.pct + '%';
+      fill.style.background = cat.color;
+      track.appendChild(fill);
+
+      main.append(top, track);
+      row.appendChild(main);
+      listEl.appendChild(row);
+    });
+  }
+
+  function renderGoalsSummary() {
+    renderNorthStarMini();
+    renderGoalsPreview();
+  }
+
   // ---------- Boot ----------
   rollover();
   processStreak();
@@ -2110,10 +2309,11 @@ document.addEventListener('DOMContentLoaded', function () {
   updateDayRing();
   setInterval(updateDayRing, 60 * 1000);
   startTicker();
+  renderGoalsSummary();
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderGoalsSummary();
   });
   // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
   // todo.html when embedded/bridged) write through storeSet/setGoals, which
@@ -2121,8 +2321,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // *other* tabs) — without this, editing today's/tomorrow's goals from the
   // 7-Day Overview panel wouldn't refresh these two cards until reload.
   window.addEventListener('goals-changed', () => {
-    loadToday(); loadTomorrow();
+    loadToday(); loadTomorrow(); renderGoalsPreview();
   });
+  // strategic:* writes (goals.html, or a milestone linked to a task here)
+  // dispatch this instead — same-tab equivalent of the storage event above.
+  window.addEventListener('strategic-goals-changed', renderGoalsSummary);
 })();
 </script>
 <script>
@@ -2141,6 +2344,19 @@ document.addEventListener('DOMContentLoaded', function () {
     syncedPrefixes: ['nightroutine:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
+    }
+  });
+  // North Star + Your Goals preview read goals-data.js's 'strategic:'
+  // keys — this channel keeps that data pulled in from another device
+  // (e.g. a goal edited on goals.html on your phone) even if goals.html
+  // itself hasn't been opened on this device yet. The preview here is
+  // read-only, but registering the channel is still what makes edits
+  // made through goals-data.js (from anywhere) actually push.
+  initCloudSync({
+    appKey: 'strategicGoals',
+    syncedPrefixes: ['strategic:'],
+    onApplied: function () {
+      window.dispatchEvent(new CustomEvent('strategic-goals-changed'));
     }
   });
 });
