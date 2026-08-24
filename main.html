@@ -813,7 +813,19 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .nr-card.nr-all-done .gm-progress-label { color: var(--success, #20A5A0); }
 .nr-list { margin-top: 4px; }
 .nr-row { cursor: default; }
-.nr-text { flex: 1; font-size: 14px; color: var(--text-primary); line-height: 1.4; }
+.nr-text {
+  flex: 1; min-width: 0;
+  font-size: 14px; color: var(--text-primary); line-height: 1.4;
+  overflow-wrap: anywhere; word-break: break-word;
+  cursor: text; outline: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+.nr-text[contenteditable="true"] {
+  outline: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28);
+}
 .nr-row.gm-row-done .nr-text {
   color: var(--text-tertiary);
   text-decoration: line-through;
@@ -994,6 +1006,17 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
      of leaving them stranded flush-left with empty space beside them. */
   .wk-chart-wrap { justify-content: center; }
   .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
+}
+
+/* ---------- Water Tracker + Night Routine side-by-side row ---------- */
+.dual-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.dual-row > .section { flex: 1; min-width: 0; }
+@media (max-width: 700px) {
+  .dual-row { flex-direction: column; gap: 0; }
 }
 
 /* ---------- Water Tracker (ported natively from po-water.html — was
@@ -1675,6 +1698,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     </div>
   </div>
 
+  <div class="dual-row">
   <!-- WATER TRACKER (moved in from health.html; ported natively from
        po-water.html — see the water tracker's script and style blocks
        below for the full copyright/license header this code carries). -->
@@ -1894,6 +1918,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
       </div>
       <ul id="nightRoutineList" class="goal-list gm-list nr-list"></ul>
     </div>
+  </div>
   </div>
 
 </div>
@@ -2143,7 +2168,11 @@ html.is-embedded .shell { padding-bottom: 20px; }
   }
 
   // ---------- Row building ----------
-  function makeInlineEdit(textEl, goals, idx, key, reload) {
+  // getList/setList let this be reused for any {text, ...}[] localStorage
+  // list keyed by idx — both the goals:<date> lists (via getGoals/setGoals)
+  // and the nightroutine:<date> list (via getNightRoutine/setNightRoutine)
+  // share this exact same edit-in-place shape.
+  function makeInlineEdit(textEl, idx, getList, setList, reload) {
     textEl.addEventListener('click', () => {
       if (textEl.getAttribute('contenteditable') === 'true') return;
       const original = textEl.textContent;
@@ -2159,8 +2188,8 @@ html.is-embedded .shell { padding-bottom: 20px; }
         const next = textEl.textContent.trim();
         textEl.removeAttribute('contenteditable');
         if (next && next !== original) {
-          const list = getGoals(key);
-          if (list[idx]) { list[idx].text = next; setGoals(key, list); }
+          const list = getList();
+          if (list[idx]) { list[idx].text = next; setList(list); }
           reload();
         } else {
           textEl.textContent = original;
@@ -2316,7 +2345,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     text.className = 'gm-text';
     text.textContent = goal.text;
     li.appendChild(text);
-    makeInlineEdit(text, null, idx, key, reload);
+    makeInlineEdit(text, idx, () => getGoals(key), (list) => setGoals(key, list), reload);
 
     const queueBtn = document.createElement('button');
     queueBtn.type = 'button';
@@ -2375,6 +2404,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     text.className = 'nr-text';
     text.textContent = item.text;
     li.appendChild(text);
+    makeInlineEdit(text, idx, getNightRoutine, setNightRoutine, renderNightRoutine);
 
     const del = document.createElement('button');
     del.type = 'button';
