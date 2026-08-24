@@ -677,7 +677,7 @@ body::after {
     var gRunning = GD.addGoal({
       category: 'health', title: 'Run a sub-3:30 marathon', type: 'time', source: 'running',
       manualCurrentSec: null, manualTargetSec: 3 * 3600 + 29 * 60 + 59,
-      targetDate: '2026-10-18', statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
+      targetDate: '2026-10-11', statusOverride: 'auto', weight: GD.DEFAULT_WEIGHT
     });
     var gFitness = GD.addGoal({
       category: 'health', title: 'Train consistently', type: 'weekly', source: 'fitness',
@@ -703,7 +703,7 @@ body::after {
     [
       { title: 'Reach $35k invested', date: '2026-08-31', goalId: gWealth.id },
       { title: 'Reach 50km/week running', date: '2026-09-15', goalId: gRunning.id },
-      { title: 'Melbourne Marathon', date: '2026-10-18', goalId: gRunning.id },
+      { title: 'Melbourne Marathon', date: '2026-10-11', goalId: gRunning.id },
       { title: 'Hong Kong trip', date: '2026-11-01', goalId: gExperiences.id },
       { title: 'Reach $55k invested', date: '2026-12-31', goalId: gWealth.id },
       { title: 'Validate product', date: null, goalId: gBusiness.id },
@@ -767,6 +767,31 @@ body::after {
         GD.patchGoal(g.id, { weight: GD.DEFAULT_WEIGHT });
       }
     });
+  }
+
+  // Corrects the marathon goal's target date and its "Melbourne Marathon"
+  // milestone from the placeholder 18 Oct 2026 to the real race date,
+  // 11 Oct 2026 (matches run:goal.raceDate, running.html's own source of
+  // truth — that one was already right, this file's copy had drifted).
+  // Only touches values still sitting at the old placeholder, so an
+  // already-corrected or manually-edited date is left alone.
+  function migrateFixMarathonDate() {
+    var goals = GD.getGoals();
+    if (goals) {
+      goals.forEach(function (g) {
+        if (g.title === 'Run a sub-3:30 marathon' && g.targetDate === '2026-10-18') {
+          GD.patchGoal(g.id, { targetDate: '2026-10-11' });
+        }
+      });
+    }
+    var milestones = GD.getMilestones();
+    if (milestones) {
+      milestones.forEach(function (m) {
+        if (m.title === 'Melbourne Marathon' && m.date === '2026-10-18') {
+          GD.patchMilestone(m.id, { date: '2026-10-11' });
+        }
+      });
+    }
   }
 
   // One-time move of the marathon and holiday goals into the new
@@ -1085,6 +1110,7 @@ body::after {
     migrateRemoveCareerGoal();
     migrateRenameExperiencesGoal();
     migrateAddDefaultWeights();
+    migrateFixMarathonDate();
     migrateSeedUpcomingGoals();
     reconcileLinkedMilestones();
     renderNorthStar();
