@@ -585,10 +585,6 @@ body::after {
       category: 'business', title: 'Launch a profitable ecommerce business', type: 'milestones', source: 'manual',
       statusOverride: 'auto'
     });
-    var gCareer = GD.addGoal({
-      category: 'career', title: 'Move toward a tech/SaaS career', type: 'milestones', source: 'manual',
-      statusOverride: 'auto'
-    });
     var gExperiences = GD.addGoal({
       category: 'experiences', title: 'Complete planned travel experiences', type: 'milestones', source: 'manual',
       statusOverride: 'auto'
@@ -620,6 +616,18 @@ body::after {
     goals.forEach(function (g) {
       if (g.source === 'water' && g.type === 'daily' && g.title === 'Drink 2.5L/day' && g.manualTarget === 2500) {
         GD.patchGoal(g.id, { title: 'Drink 3L/day', manualTarget: 3000 });
+      }
+    });
+  }
+
+  // The auto-seeded "Move toward a tech/SaaS career" goal was removed from
+  // seedIfEmpty() above; this drops it from anyone who already had it saved.
+  function migrateRemoveCareerGoal() {
+    var goals = GD.getGoals();
+    if (!goals) return;
+    goals.forEach(function (g) {
+      if (g.category === 'career' && g.source === 'manual' && g.title === 'Move toward a tech/SaaS career') {
+        GD.deleteGoal(g.id);
       }
     });
   }
@@ -811,6 +819,7 @@ body::after {
   function renderAll() {
     seedIfEmpty();
     migrateWaterGoalTarget();
+    migrateRemoveCareerGoal();
     reconcileLinkedMilestones();
     renderNorthStar();
     renderGoals();
