@@ -259,10 +259,13 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   // agrees on what today's split is (this used to drift — gym.html had
   // its own separate day-rotation system that could disagree with
   // main.html's, showing conflicting "today" splits across pages).
+  // Colors match main.html's own SPLIT_TAG_COLORS (the 7-Day Overview's
+  // per-day tags) exactly, so today's split reads as the same color
+  // whether you're looking at the topbar badge or the strip below.
   const SPLIT_META = {
-    push: { icon: '🏋️', label: 'Push Day', color: '#20A5A0' },
+    push: { icon: '🏋️', label: 'Push Day', color: '#087CA3' },
     pull: { icon: '🏋️', label: 'Pull Day', color: '#20A5A0' },
-    legs: { icon: '🏋️', label: 'Legs Day', color: '#20A5A0' },
+    legs: { icon: '🏋️', label: 'Legs Day', color: '#B98AE0' },
     full: { icon: '🏋️', label: 'Full Body Day', color: '#F2C063' },
     run:  { icon: '🏃', label: 'Run Day',  color: '#A83FAF' },
     rest: { icon: '😴', label: 'Rest Day', color: '#687580' }
