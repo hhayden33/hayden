@@ -229,6 +229,25 @@
     }
     return out;
   }
+  function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function mondayOf(date) {
+    var d = new Date(date);
+    var day = d.getDay();
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  // Same ISO-week algorithm main.html uses for its 'weekplan:<ISO-week>'
+  // keys — duplicated here (not imported) since main.html has no shared
+  // module to pull from, but it's pure date math, not business logic.
+  function isoWeekKey(date) {
+    var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    var dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return d.getUTCFullYear() + '-W' + pad2(weekNo);
+  }
 
   var Evidence = {
     // running.html — run:goal / run:pbs / run:runs
@@ -251,15 +270,66 @@
       return { goal: goal, pbs: pbs, runsLogged: (runs || []).length, weekDistanceKm: weekDistanceKm };
     },
     // gym.html — po_coach_workout_done (bespoke sync, not sync.js, but
-    // same localStorage/app_state pattern)
+    // same localStorage/app_state pattern) crossed with main.html's own
+    // 'weekplan:<ISO-week>' split assignments, so a "session" only counts
+    // toward a split type if that day was both planned as that split AND
+    // marked done in the gym coach.
     fitness: function () {
       var doneDays = storeGet('po_coach_workout_done', null);
       if (!doneDays) return null;
       var sessionsLast7Days = 0;
       trailingDayKeys(7).forEach(function (k) { if (doneDays[k]) sessionsLast7Days++; });
-      return { sessionsLast7Days: sessionsLast7Days };
+
+      var REQUIRED_SPLITS = ['push', 'pull', 'legs', 'full'];
+      function splitsForDate(dateKey) {
+        var d = new Date(dateKey + 'T00:00:00');
+        if (isNaN(d)) return [];
+        var plan = storeGet('weekplan:' + isoWeekKey(mondayOf(d)), null);
+        var v = plan && plan[dateKey];
+        if (!v) return [];
+        return Array.isArray(v) ? v : [v];
+      }
+      function typesDoneForWeek(monday) {
+        var found = {};
+        for (var i = 0; i < 7; i++) {
+          var d = new Date(monday); d.setDate(d.getDate() + i);
+          var dk = ymd(d);
+          if (!doneDays[dk]) continue;
+          splitsForDate(dk).forEach(function (s) { if (REQUIRED_SPLITS.indexOf(s) !== -1) found[s] = true; });
+        }
+        return Object.keys(found);
+      }
+
+      var thisMonday = mondayOf(new Date());
+      var weekTypesDone = typesDoneForWeek(thisMonday);
+
+      // Streak of consecutive fully-complete weeks (all 4 splits done).
+      // The current week only joins the streak once it's actually
+      // complete — being mid-week and not done yet doesn't break it,
+      // it just isn't counted until it is.
+      var streakWeeks = weekTypesDone.length >= REQUIRED_SPLITS.length ? 1 : 0;
+      var cursor = new Date(thisMonday);
+      cursor.setDate(cursor.getDate() - 7);
+      for (var w = 0; w < 208; w++) {
+        if (typesDoneForWeek(cursor).length >= REQUIRED_SPLITS.length) {
+          streakWeeks++;
+          cursor.setDate(cursor.getDate() - 7);
+        } else break;
+      }
+
+      return {
+        sessionsLast7Days: sessionsLast7Days,
+        weekTypesDone: weekTypesDone,
+        weekTypesRequired: REQUIRED_SPLITS,
+        streakWeeks: streakWeeks
+      };
     },
-    // po-water.html — po_water_v1
+    // po-water.html — po_water_v1. Target mirrors the coach's own manual
+    // target (its default mode) so the goal never drifts out of sync with
+    // what the live widget on main.html shows; auto/calculated-target mode
+    // runs a personalized weight/activity/substance formula that lives
+    // entirely in po-water.html, so that mode falls back to the goal's own
+    // manualTarget rather than duplicating that calculator here.
     water: function () {
       var w = storeGet('po_water_v1', null);
       if (!w) return null;
@@ -267,7 +337,8 @@
       var servings = (w.logs && w.logs[todayKey]) || 0;
       var unit = w.unit || 'bottle';
       var unitMl = unit === 'bottle' ? (w.bottleMl || 500) : unit === 'glass' ? (w.glassMl || 250) : unit === 'oz' ? 30 : 1;
-      return { todayMl: servings * unitMl, unit: unit };
+      var targetMl = (w.useManualTarget && w.manualTargetMl) ? w.manualTargetMl : null;
+      return { todayMl: servings * unitMl, unit: unit, targetMl: targetMl };
     },
     // finance.html — nw:history (best), falls back to summing nw:bank/
     // stocks/crypto/other if no snapshot has been logged yet
@@ -332,6 +403,7 @@
     if (parts.length === 2) return parts[0] * 60 + parts[1];
     return parts[0];
   }
+  var SPLIT_LABELS = { push: 'Push', pull: 'Pull', legs: 'Legs', full: 'Full Body' };
 
   function computeProgress(goal) {
     var ev = null;
@@ -377,6 +449,26 @@
     }
 
     if (goal.type === 'weekly') {
+      // Fitness weekly goals track split-type coverage (one push, one pull,
+      // one legs, one full-body day per week) rather than a plain session
+      // count — see Evidence.fitness(). Any other 'weekly' source falls
+      // back to the plain sessions-vs-target math below.
+      if (goal.source === 'fitness' && ev && ev.weekTypesDone) {
+        var required = ev.weekTypesRequired;
+        var done = ev.weekTypesDone;
+        var doneLabels = done.map(function (s) { return SPLIT_LABELS[s] || s; });
+        var missingLabels = required.filter(function (s) { return done.indexOf(s) === -1; })
+          .map(function (s) { return SPLIT_LABELS[s] || s; });
+        var pct4f = Math.round(done.length / required.length * 100);
+        return {
+          pct: pct4f, isLive: true, sourceLabel: SOURCE_LABELS[goal.source],
+          currentLabel: done.length + ' / ' + required.length + ' this week'
+            + (doneLabels.length ? ' (' + doneLabels.join(', ') + ')' : '')
+            + (missingLabels.length ? ' — need ' + missingLabels.join(', ') : ' — complete!'),
+          targetLabel: '',
+          remainingLabel: ev.streakWeeks > 0 ? ('🔥 ' + ev.streakWeeks + '-week streak') : null
+        };
+      }
       var current4 = (ev && ev.sessionsLast7Days != null) ? ev.sessionsLast7Days : goal.manualCurrent;
       var isLive4 = !!(ev && ev.sessionsLast7Days != null);
       var target4 = goal.manualTarget;
@@ -390,7 +482,7 @@
     if (goal.type === 'daily') {
       var currentMl = (ev && ev.todayMl != null) ? ev.todayMl : goal.manualCurrent;
       var isLive5 = !!(ev && ev.todayMl != null);
-      var targetMl = goal.manualTarget;
+      var targetMl = (ev && ev.targetMl != null) ? ev.targetMl : goal.manualTarget;
       var pct5 = targetMl ? Math.min(100, Math.max(0, Math.round((currentMl || 0) / targetMl * 100))) : 0;
       return {
         pct: pct5, isLive: isLive5, sourceLabel: isLive5 ? SOURCE_LABELS[goal.source] : 'Manual',

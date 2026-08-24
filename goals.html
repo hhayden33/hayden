@@ -574,8 +574,8 @@ body::after {
       manualCurrent: 0, manualTarget: 4, unit: 'sessions/wk', statusOverride: 'auto'
     });
     var gWater = GD.addGoal({
-      category: 'health', title: 'Drink 2.5L/day', type: 'daily', source: 'water',
-      manualCurrent: 0, manualTarget: 2500, statusOverride: 'auto'
+      category: 'health', title: 'Drink 3L/day', type: 'daily', source: 'water',
+      manualCurrent: 0, manualTarget: 3000, statusOverride: 'auto'
     });
     var gWealth = GD.addGoal({
       category: 'wealth', title: 'Build $55,000 invested', type: 'currency', source: 'finance',
@@ -607,6 +607,21 @@ body::after {
       { title: 'First sale', date: null, goalId: gBusiness.id },
       { title: 'Reach $1,000 revenue', date: null, goalId: gBusiness.id }
     ].forEach(function (m) { GD.addMilestone(m); });
+  }
+
+  // One-time migration for goals already saved before the water target
+  // moved from a hardcoded 2.5L to live-syncing with po-water.html's own
+  // target (which defaults to 3L) — see Evidence.water() in goals-data.js.
+  // Only touches a goal that still has the old auto-seeded title/target
+  // untouched; anyone who's since edited it manually is left alone.
+  function migrateWaterGoalTarget() {
+    var goals = GD.getGoals();
+    if (!goals) return;
+    goals.forEach(function (g) {
+      if (g.source === 'water' && g.type === 'daily' && g.title === 'Drink 2.5L/day' && g.manualTarget === 2500) {
+        GD.patchGoal(g.id, { title: 'Drink 3L/day', manualTarget: 3000 });
+      }
+    });
   }
 
   // Progress math (GD.computeProgress) and status math (GD.computeStatus)
@@ -795,6 +810,7 @@ body::after {
 
   function renderAll() {
     seedIfEmpty();
+    migrateWaterGoalTarget();
     reconcileLinkedMilestones();
     renderNorthStar();
     renderGoals();
