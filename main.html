@@ -27,6 +27,7 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
+<script src="ticker.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 <style>
 :root {
@@ -99,45 +100,6 @@ body::after {
   margin: 0 auto;
 }
 
-/* ===== Status ticker ===== */
-.ticker-banner {
-  overflow: hidden;
-  white-space: nowrap;
-  margin: 0 0 16px;
-  padding: 7px 0;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-}
-.ticker-banner-track {
-  display: inline-flex;
-  width: max-content;
-  animation: ticker-scroll 34s linear infinite;
-  will-change: transform;
-}
-.ticker-banner-item {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-@keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ticker-banner-track { animation: none; }
-  .ticker-banner { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
-}
-@media (max-width: 480px) {
-  .ticker-banner { padding: 6px 0; }
-  .ticker-banner-item { font-size: 9px; letter-spacing: 0.08em; }
-}
 
 /* ===== Hero greeting — cursive attempts (Dancing Script, then Snell
    Roundhand/Petit Formal Script, then Mrs Saint Delafield) all read as
@@ -1064,31 +1026,19 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
 }
 
-/* ---------- Water Tracker + Night Routine + Sleep row ----------
-   flex-wrap + a 480px basis (not a fixed column count) rather than three
-   equal thirds — three-across on this page's 1100px max-width squeezed
-   each card down to ~350px, visibly narrower than every full-width card
-   elsewhere on the page. Two cards' basis fits an 1100px row and grows
-   to fill it (~540px each — comparable to the rest of the page again);
-   the third wraps to its own row and grows to the full row width alone.
-   The same math collapses to one-per-row on mobile with no separate
-   breakpoint needed: two 480px bases plus the gap already don't fit
-   under ~980px, so it wraps that early on its own.
-   Levelled to equal height within a row (align-items:stretch's per-line
-   behavior) rather than each sitting at its own natural height, which
-   used to leave Sleep's shorter card trailing above the taller ones'
-   bottom edge. Every nesting level between .dual-row and the actual
-   visible card has to pass flex-grow down for that to reach the real
-   box (water nests deeper than the others: section > .water-embed >
-   .shell > .card). ---------- */
+/* ---------- Water Tracker + Night Routine + Sleep row — all three
+   side by side, levelled to equal height (align-items:stretch) rather
+   than each sitting at its own natural height. Every nesting level
+   between .dual-row and the actual visible card has to pass flex-grow
+   down for that to reach the real box (water nests deeper than the
+   others: section > .water-embed > .shell > .card). ---------- */
 .dual-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: stretch;
   gap: 20px;
 }
 .dual-row > .section {
-  flex: 1 1 480px; min-width: 0;
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column;
 }
 .dual-row > .section > .water-embed {
@@ -1101,6 +1051,9 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 }
 .dual-row > .section > .water-embed > .shell > .card:not(#historyCard) { flex: 1; }
 .dual-row > .section > .gm-card { flex: 1; }
+@media (max-width: 900px) {
+  .dual-row { flex-direction: column; gap: 0; }
+}
 
 /* ---------- Sleep ---------- */
 /* Score ring + hours/timeline pair — Garmin-watch-face inspired: a
@@ -1681,18 +1634,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
 </head>
 <body>
 <div class="page">
-
-  <!-- STATUS TICKER — date + today's numbers pulled from the same data
-       every other section on this page reads (sleep:<date>, run:runs,
-       goals-data.js's fitness evidence). Two identical copies of the
-       same string back to back, animated -50% — a continuous loop with
-       no seam, not a JS width-measuring trick. -->
-  <div class="ticker-banner" id="tickerBanner" aria-hidden="true">
-    <div class="ticker-banner-track" id="tickerBannerTrack">
-      <span class="ticker-banner-item" id="tickerBannerItem1">—</span>
-      <span class="ticker-banner-item" id="tickerBannerItem2">—</span>
-    </div>
-  </div>
 
   <div class="dash-header">
     <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-orb"></span><span class="dash-title-kicker">AIO</span></h1>
@@ -3228,71 +3169,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
     renderNorthStarMini();
   }
 
-  // ---------- Status ticker ----------
-  // Same-week Monday–Sunday distance run:runs already uses (Running
-  // Overview computes this itself too, in its own separate IIFE below —
-  // duplicated here rather than shared since that module doesn't expose
-  // it, same read-only localStorage key either way).
-  function tickerWeekRunningKm() {
-    try {
-      const runs = JSON.parse(localStorage.getItem('run:runs'));
-      if (!Array.isArray(runs) || !runs.length) return null;
-      const now = new Date();
-      const monday = new Date(now);
-      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-      monday.setHours(0, 0, 0, 0);
-      const days = [];
-      for (let i = 0; i < 7; i++) { const d = new Date(monday); d.setDate(d.getDate() + i); days.push(dateToKey(d)); }
-      const startKey = days[0], endKey = days[6];
-      return runs.filter(r => r.date >= startKey && r.date <= endKey).reduce((sum, r) => sum + (r.distanceKm || 0), 0);
-    } catch (e) { return null; }
-  }
-  function tickerFmtKm(km) {
-    const r = Math.round(km * 10) / 10;
-    return r % 1 === 0 ? r.toFixed(0) : r.toFixed(1);
-  }
-  // Split-type coverage for the week (push/pull/legs/full), same figure
-  // goals.html's "Train consistently" habit shows — the one existing
-  // definition of what a completed "session" means here.
-  function tickerWeekSessions() {
-    const GD = window.GoalsData;
-    if (!GD) return null;
-    const ev = GD.Evidence.fitness();
-    if (!ev) return null;
-    return { done: ev.weekTypesDone.length, total: ev.weekTypesRequired.length };
-  }
-  function buildTickerText() {
-    const now = new Date();
-    const dow = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-    const day = now.getDate();
-    const month = now.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
-    const parts = [dow, day + ' ' + month];
-
-    const sleep = getSleep();
-    if (sleep.hours != null) parts.push('SLEEP ' + formatSleepHours(sleep.hours).toUpperCase());
-    const score = computeSleepScore(sleep);
-    if (score != null) parts.push('SCORE ' + score);
-
-    const weekKm = tickerWeekRunningKm();
-    if (weekKm != null) parts.push(tickerFmtKm(weekKm) + ' KM THIS WEEK');
-
-    const sessions = tickerWeekSessions();
-    if (sessions) parts.push(sessions.done + ' / ' + sessions.total + ' SESSIONS');
-
-    // Trailing separator baked into the string itself (not padding) so
-    // the two identical copies read as one continuous stream with no
-    // double-gap or missing-gap seam where they meet mid-loop.
-    return parts.join(' · ') + '   ·   ';
-  }
-  function renderTicker() {
-    const item1 = document.getElementById('tickerBannerItem1');
-    const item2 = document.getElementById('tickerBannerItem2');
-    if (!item1 || !item2) return;
-    const text = buildTickerText();
-    item1.textContent = text;
-    item2.textContent = text;
-  }
-
   // Detects the active day flipping (the 6 AM boundary, or just plain
   // midnight rollovers) while the tab is left open and never touched —
   // without this, Today/Tomorrow/Night Routine/Sleep would all keep
@@ -3314,7 +3190,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
     renderStreak();
     renderNightRoutine();
     renderSleep();
-    renderTicker();
   }
 
   // ---------- Boot ----------
@@ -3325,15 +3200,13 @@ html.is-embedded .shell { padding-bottom: 20px; }
   renderStreak();
   renderNightRoutine();
   renderSleep();
-  renderTicker();
   updateDayRing();
   setInterval(() => { updateDayRing(); checkDayBoundary(); }, 60 * 1000);
-  setInterval(renderTicker, 5 * 60 * 1000);
   renderGoalsSummary();
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderSleep(); renderTicker(); renderGoalsSummary();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderSleep(); renderGoalsSummary();
   });
   // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
   // todo.html when embedded/bridged) write through storeSet/setGoals, which
