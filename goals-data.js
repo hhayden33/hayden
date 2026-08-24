@@ -436,15 +436,26 @@
     }
 
     if (goal.type === 'time') {
+      // Lower is better here, so the shared "<current> of <target>" template
+      // phrasing (built for currency/water, where current climbs toward
+      // target) would read backwards — a 3:46 PB "of" a 3:29 goal looks like
+      // a typo. Spell out PB vs goal explicitly instead, and turn the gap
+      // into a plain "time to shave off" instead of a raw target label.
       var currentSec = null, isLive3 = false;
       if (ev && ev.pbs && ev.pbs.marathon) { currentSec = ev.pbs.marathon; isLive3 = true; }
       else currentSec = goal.manualCurrentSec;
       var targetSec = goal.manualTargetSec;
       var pct3 = (currentSec && targetSec) ? Math.min(100, Math.max(0, Math.round(targetSec / currentSec * 100))) : 0;
+      var remainingLabel3 = null;
+      if (currentSec && targetSec) {
+        var diffSec = currentSec - targetSec;
+        remainingLabel3 = diffSec > 0 ? (fmtClock(diffSec) + ' to shave off') : 'Goal achieved! 🎉';
+      }
       return {
         pct: pct3, isLive: isLive3, sourceLabel: isLive3 ? SOURCE_LABELS[goal.source] : 'Manual',
-        currentLabel: currentSec ? fmtClock(currentSec) : 'No time recorded yet', targetLabel: fmtClock(targetSec),
-        remainingLabel: null
+        currentLabel: (currentSec ? ('PB ' + fmtClock(currentSec)) : 'No time recorded yet') + ' · Goal ' + fmtClock(targetSec),
+        targetLabel: '',
+        remainingLabel: remainingLabel3
       };
     }
 
