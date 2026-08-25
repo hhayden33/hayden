@@ -2274,9 +2274,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
 (function () {
   'use strict';
 
-  // Paste your Anthropic key here to enable ✨ Polish. Empty = falls back to plain add.
-  const ANTHROPIC_API_KEY = '';
-
   const WAKE_HOUR  = 7;
   const SLEEP_HOUR = 23.5;
 
@@ -3086,30 +3083,15 @@ html.is-embedded .shell { padding-bottom: 20px; }
   }
 
   async function polishOne(text) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/claude', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content:
-            'Rewrite this single goal so it is concrete, action-oriented, and under 60 characters. ' +
-            'Return ONLY a JSON array with exactly one string, no preamble, no code fences.\n\nGoal: ' + text
-        }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'polish', input: text })
     });
+    if (!res.ok) throw new Error('polish request failed');
     const data = await res.json();
-    const content = (data && data.content && data.content[0] && data.content[0].text) || '';
-    const arr = JSON.parse(content);
-    if (!Array.isArray(arr) || arr.length < 1 || typeof arr[0] !== 'string') throw new Error('bad response');
-    return arr[0].trim();
+    if (!data || typeof data.text !== 'string' || !data.text.trim()) throw new Error('bad response');
+    return data.text.trim();
   }
 
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
@@ -3139,11 +3121,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
     polishBtn.addEventListener('click', async () => {
       const text = input.value.trim();
       if (!text) return;
-      if (!ANTHROPIC_API_KEY) {
-        plainAdd(text);
-        showStatus(statusEl, 'Polish needs an Anthropic API key — added as-typed.', false);
-        return;
-      }
       polishBtn.disabled = true;
       try {
         const polished = await polishOne(text);
