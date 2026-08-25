@@ -2392,7 +2392,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     const [bh, bm] = bedTime.split(':').map(Number);
     const [wh, wm] = wakeTime.split(':').map(Number);
     let bedMin = bh * 60 + bm, wakeMin = wh * 60 + wm;
-    if (wakeMin <= bedMin) wakeMin += 24 * 60;
+    if (wakeMin < bedMin) wakeMin += 24 * 60;
     return Math.round((wakeMin - bedMin) / 60 * 100) / 100;
   }
   function formatSleepHours(hours) {
@@ -3670,6 +3670,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (cur.length) plan[activeDate] = cur; else delete plan[activeDate];
       savePlan(plan);
+      // A completion mark only makes sense for a planned workout — if the
+      // split changes to rest or gets cleared entirely, any earlier "Mark
+      // complete" for this date is now stale and would keep inflating the
+      // "Train consistently" count for a day that no longer has a workout.
+      if (!cur.length || cur.indexOf('rest') !== -1) {
+        const doneDays = loadDoneDays();
+        if (doneDays[activeDate]) {
+          delete doneDays[activeDate];
+          saveDoneDays(doneDays);
+        }
+      }
       renderStrip();
       renderSeg();
       renderChart();

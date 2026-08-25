@@ -936,7 +936,9 @@ body::after {
   // =============================================================
   function renderUpcoming() {
     var all = GD.getGoals() || [];
-    var visible = all.filter(function (g) { return !g.archived && !GD.isHabit(g) && g.upcoming; });
+    var visible = all.filter(function (g) {
+      return !g.archived && !GD.isHabit(g) && g.upcoming && (!activeCategoryFilter || g.category === activeCategoryFilter);
+    });
     var grid = document.getElementById('upcomingGrid');
     var empty = document.getElementById('upcomingEmpty');
     if (!visible.length) {
@@ -1003,7 +1005,7 @@ body::after {
     grid.innerHTML = CATEGORY_ORDER.map(function (key) {
       var meta = CATEGORY_META[key];
       var inCat = all.filter(function (g) { return g.category === key; });
-      var active = inCat.filter(function (g) { return !g.archived; });
+      var active = inCat.filter(function (g) { return !g.archived && !g.upcoming; });
       var completed = inCat.filter(function (g) { return g.archived; });
       var pct = active.length ? Math.round(active.reduce(function (s, g) { return s + GD.computeProgress(g).pct; }, 0) / active.length) : 0;
       return (
@@ -1196,6 +1198,7 @@ body::after {
     var cat = card.dataset.cat;
     activeCategoryFilter = (activeCategoryFilter === cat) ? null : cat;
     renderGoals();
+    renderUpcoming();
     renderCategories();
   });
 

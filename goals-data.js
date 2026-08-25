@@ -558,7 +558,7 @@
     if (ns.progressOverride != null && ns.progressOverride !== '') {
       return Math.max(0, Math.min(100, Math.round(ns.progressOverride)));
     }
-    var goals = (getGoals() || []).filter(function (g) { return !g.archived && !isHabit(g); });
+    var goals = (getGoals() || []).filter(function (g) { return !g.archived && !isHabit(g) && !g.upcoming; });
     if (!goals.length) return 0;
     var weightSum = 0, weightedPct = 0;
     goals.forEach(function (g) {
