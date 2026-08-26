@@ -3033,6 +3033,15 @@ img, video, canvas, svg { max-width: 100%; }
   // JSON of the last state we sent or received — used to ignore
   // realtime echoes of our own pushes so we don't infinite-loop.
   let pcLastSyncedJson = null;
+  // The __sync metadata block the standard sync.js path (main.html's
+  // week-planner.js and goals.html both register this same appKey
+  // through window.initCloudSync) writes for per-key reconciliation.
+  // This page's sync predates that and doesn't produce or consume it
+  // directly, but a Postgres JSONB upsert replaces the whole `data`
+  // column — pushing without it would silently erase the other
+  // writer's metadata on every save here. Captured on every pull and
+  // re-included (with our own keys' timestamps bumped) on every push.
+  let pcRemoteSyncMeta = null;
 
   const _pcOrigSet = localStorage.setItem.bind(localStorage);
   const _pcOrigRemove = localStorage.removeItem.bind(localStorage);
@@ -3059,6 +3068,18 @@ img, video, canvas, svg { max-width: 100%; }
       if (v == null) continue;
       try { out[k] = JSON.parse(v); } catch {}
     }
+    // Merge into whatever __sync metadata we last saw from the server
+    // (rather than the standard sync.js reconciliation logic, which this
+    // page's bespoke sync doesn't run) — this only needs to not destroy
+    // it, not fully replicate it.
+    const meta = (pcRemoteSyncMeta && typeof pcRemoteSyncMeta === 'object')
+      ? JSON.parse(JSON.stringify(pcRemoteSyncMeta))
+      : {};
+    if (!meta.updatedAt || typeof meta.updatedAt !== 'object') meta.updatedAt = {};
+    if (!meta.deleted || typeof meta.deleted !== 'object') meta.deleted = {};
+    const now = Date.now();
+    for (const k of PC_SYNCED_KEYS) meta.updatedAt[k] = now;
+    out.__sync = meta;
     return out;
   }
 
@@ -3176,9 +3197,13 @@ img, video, canvas, svg { max-width: 100%; }
       const { data, error } = await pcSupa
         .from('app_state').select('data').eq('key', APP_KEY).maybeSingle();
       if (!error && data && data.data && Object.keys(data.data).length > 0) {
+        pcRemoteSyncMeta = data.data.__sync || null;
         pcLastSyncedJson = JSON.stringify(data.data);
         pcMaybeApplyRemote(data.data);
-      } else if (Object.keys(pcCollectState()).length > 0) {
+      } else if (PC_SYNCED_KEYS.some((k) => localStorage.getItem(k) != null)) {
+        // pcCollectState() always includes a (now-empty) __sync block, so
+        // checking its own key count would always be true — check the
+        // real synced keys directly instead.
         pcSchedulePush();
       }
     } catch (_) {}
@@ -3191,6 +3216,7 @@ img, video, canvas, svg { max-width: 100%; }
       }, (payload) => {
         if (!payload.new || !payload.new.data) return;
         const incoming = JSON.stringify(payload.new.data);
+        pcRemoteSyncMeta = payload.new.data.__sync || pcRemoteSyncMeta;
         if (incoming === pcLastSyncedJson) return; // echo of our own push
         pcLastSyncedJson = incoming;
         pcMaybeApplyRemote(payload.new.data);
