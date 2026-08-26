@@ -1,8 +1,9 @@
 // =============================================================
-// Consistency heatmap — Goals / Water / Night / Run, last 63 days.
+// Consistency heatmap — Goals / Water / Night / Run / Gym, last 63 days.
 // Read-only against every other module's keys: this only reads what
-// goals.js/night-sleep.js/water.js/running.js already write, on the
-// same calendar-date axis each of them already keys its data by.
+// goals.js/night-sleep.js/water.js/running.js/week-planner.js already
+// write, on the same calendar-date axis each of them already keys its
+// data by.
 // =============================================================
 (function () {
   'use strict';
@@ -12,7 +13,8 @@
     { id: 'goals', label: 'Goals', hue: 'var(--success)' },
     { id: 'water', label: 'Water', hue: '#4FA8E0' },
     { id: 'night', label: 'Night', hue: 'var(--warning)' },
-    { id: 'run',   label: 'Run',   hue: 'var(--run)' }
+    { id: 'run',   label: 'Run',   hue: 'var(--run)' },
+    { id: 'gym',   label: 'Gym',   hue: '#B98AE0' }
   ];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -113,7 +115,54 @@
     return { level: level, detail: km.toFixed(1) + ' km' };
   }
 
-  const LEVEL_FN = { goals: goalsLevel, water: waterLevel, night: nightLevel, run: runLevel };
+  // Same isoWeekKey math as js/week-planner.js — duplicated rather than
+  // shared, matching this file's existing pattern of small self-contained
+  // date helpers (see pad2/dateToKey above) over a cross-module utility
+  // for something this size.
+  function isoWeekKey(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return d.getUTCFullYear() + '-W' + pad2(weekNo);
+  }
+  function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+
+  let doneDays = null;
+  function loadDoneDays() {
+    if (!doneDays) doneDays = storeGet('po_coach_workout_done') || {};
+    return doneDays;
+  }
+  // weekplan:<isoWeek> holds one plan object per week, keyed by date —
+  // cached per isoWeek within a render so 63 days only ever touch each
+  // week's plan once, not 63 separate localStorage reads.
+  let weekPlanCache = null;
+  function plannedSplitFor(dateKey) {
+    const wk = isoWeekKey(parseYMD(dateKey));
+    if (!(wk in weekPlanCache)) weekPlanCache[wk] = storeGet('weekplan:' + wk) || {};
+    const v = weekPlanCache[wk][dateKey];
+    const splits = Array.isArray(v) ? v : (v ? [v] : []);
+    const real = splits.filter(function (s) { return s && s !== 'rest'; });
+    return real.length ? real : null;
+  }
+  // Binary, not a ratio — Mark Complete is one tap, no partial credit to
+  // measure. Level 1 (planned, not done) vs level 0 (nothing planned,
+  // i.e. a rest day) draws the same distinction the Run row's "no run
+  // is level 0" comment does: a rest day isn't a missed day.
+  function gymLevel(dateKey) {
+    const done = loadDoneDays();
+    const planned = plannedSplitFor(dateKey);
+    if (done[dateKey]) {
+      return { level: 5, detail: (planned ? planned.join('+') + ' day — ' : '') + 'completed' };
+    }
+    if (planned) {
+      return { level: 1, detail: planned.join('+') + ' day — planned, not logged' };
+    }
+    return { level: 0, detail: null };
+  }
+
+  const LEVEL_FN = { goals: goalsLevel, water: waterLevel, night: nightLevel, run: runLevel, gym: gymLevel };
 
   function monthLabel(dateKey) {
     const p = dateKey.split('-').map(Number);
@@ -142,7 +191,7 @@
   function render() {
     const host = document.getElementById('hmGrid');
     if (!host) return;
-    waterState = null; runsByDate = null; // fresh read on every render
+    waterState = null; runsByDate = null; doneDays = null; weekPlanCache = {}; // fresh read on every render
     const dates = buildDates();
 
     // One label per date where the month changes from the previous
