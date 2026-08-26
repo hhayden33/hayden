@@ -19,6 +19,50 @@ const MODEL = 'claude-sonnet-4-6';
 const ANTHROPIC_VERSION = '2023-06-01';
 const MAX_INPUT_LENGTH = 4000;
 
+// ---------- rate limiting ----------
+// In-memory, not a KV store — this is a personal app with no existing
+// paid infrastructure, and a dozen lines here stops the common case
+// (one source hammering the endpoint or a script left running) even
+// though it isn't bulletproof: a serverless cold start gets fresh
+// memory, and a determined attacker spreading requests across many
+// concurrent instances could partially get around the per-IP limit.
+// The global daily ceiling is the real backstop against bill shock —
+// it's a hard cap on total spend across every caller, cold starts
+// included, since Vercel keeps an instance warm for a while under any
+// real traffic pattern, and legitimate personal usage never gets
+// remotely close to it.
+const IP_WINDOW_MS = 10 * 60 * 1000;
+const IP_MAX_PER_WINDOW = 20;
+const GLOBAL_DAY_MAX = 200;
+
+const ipHits = new Map(); // ip -> [timestamps within the current window]
+let globalDayKey = null;
+let globalDayCount = 0;
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10); // UTC calendar day
+}
+function clientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.trim()) return fwd.split(',')[0].trim();
+  return req.socket && req.socket.remoteAddress || 'unknown';
+}
+function rateLimited(req) {
+  const now = Date.now();
+  const day = todayKey();
+  if (day !== globalDayKey) { globalDayKey = day; globalDayCount = 0; }
+  if (globalDayCount >= GLOBAL_DAY_MAX) return true;
+
+  const ip = clientIp(req);
+  const hits = (ipHits.get(ip) || []).filter((t) => now - t < IP_WINDOW_MS);
+  if (hits.length >= IP_MAX_PER_WINDOW) { ipHits.set(ip, hits); return true; }
+
+  hits.push(now);
+  ipHits.set(ip, hits);
+  globalDayCount++;
+  return false;
+}
+
 // One system prompt per task. `input` is the only thing the client
 // supplies — everything else about the request is fixed here.
 const TASKS = {
@@ -61,6 +105,9 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  if (rateLimited(req)) {
+    return res.status(429).json({ error: 'Too many requests' });
   }
 
   let body = req.body;
