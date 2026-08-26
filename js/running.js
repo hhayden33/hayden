@@ -169,12 +169,20 @@
     const longest = recent.length ? recent.reduce((m, r) => Math.max(m, r.distanceKm || 0), 0) : null;
     document.getElementById('roLongestRecent').textContent = longest ? fmtKm(longest) : '—';
 
-    // Marathon training progress (same plan running.html's Overview card shows)
+    // Marathon training progress (same plan running.html's Overview card shows).
+    // Days-to-race used to live here too, but the new status-row countdown
+    // tile (js/countdown.js) shows that now — two countdowns on one page is
+    // clutter, so this pill answers a different question instead: how this
+    // week's mileage compares to what's actually been run.
+    //
+    // There's no stored "planned weekly mileage" anywhere in this codebase
+    // (run:goal only has planStartDate/planTotalWeeks, no per-week target),
+    // so this shows the honest actual figure rather than inventing a target
+    // to compare it against.
     const pill = document.getElementById('roMarathonPill');
     const weekEl = document.getElementById('roMarathonWeek');
     if (goal && goal.raceDate && goal.planStartDate) {
-      const daysLeft = daysBetween(dateKeyOf(new Date()), goal.raceDate);
-      pill.textContent = (daysLeft >= 0 ? daysLeft : 0) + ' days to ' + (goal.raceName || 'race');
+      pill.textContent = (weekKm > 0 ? fmtKm(weekKm) : '0 km') + ' this week';
       const total = goal.planTotalWeeks || 1;
       const wk = Math.max(1, Math.min(total, Math.floor(daysBetween(goal.planStartDate, dateKeyOf(new Date())) / 7) + 1));
       weekEl.textContent = 'Week ' + wk + ' / ' + total;
