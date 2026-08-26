@@ -4,6 +4,14 @@
 .idea/
 *.swp
 
+# Secrets — MCP server configs and env files can carry credentials in
+# their -e/env blocks; never let them get committed by accident.
+.mcp.json
+.env
+.env.*
+.envrc
+secrets/
+
 # Garmin sync automation — logs, lock file, and fetched-data scratch
 # files are machine-local; node_modules is reinstallable via npm install.
 automation/node_modules/
