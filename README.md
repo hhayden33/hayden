@@ -20,7 +20,7 @@ Open any `.html` file directly in your browser — no build step, no install.
 | [todo.html](todo.html) | Tasks — Focus Today, This Week, weekly review. Same `goals:<date>` localStorage/Supabase store main.html's To Do cards use |
 | [po-water.html](po-water.html) | Water intake tracker — embedded in main.html, also usable standalone |
 | [finance.html](finance.html) | Finances |
-| [gym.html](gym.html) | Progressive overload gym tracker |
+| [gym.html](gym.html) | Read-only Hevy workout summary — consistency and progress, synced via `automation/hevy-sync.mjs` |
 | [running.html](running.html) | Running command centre — training plan, PBs, race goal, analytics (manual data entry for now; built for a future Garmin import) |
 | [topbar.js](topbar.js) | Shared top bar — auto-injected into pages that `<script src="topbar.js">` |
 | [lock.js](lock.js) | Passcode gate for the hub — light deterrent, not real security |

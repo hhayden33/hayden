@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hayden.hevysync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/hh.ayden/Desktop/claude /hayden/automation/run-hevy-sync.sh</string>
+    </array>
+    <!-- Workouts happen at unpredictable times of day (unlike Garmin's
+         overnight-synced sleep/activity data), so this runs on a plain
+         interval rather than fixed morning/night times — every 30
+         minutes, so a workout shows up on the dashboard soon after
+         it's logged in Hevy without polling constantly. -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-hevy.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-hevy.err.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
