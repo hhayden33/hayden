@@ -22,6 +22,7 @@ Contact: rowan.wisere@gmail.com
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
+<script src="escape.js"></script>
 <script src="ticker.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
@@ -928,7 +929,7 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     if (calc.caffeine > 0)
       html += '<div class="why-row"><span class="why-label">+ Caffeine (' + state.caffeineMgPerDay + ' mg/day)</span><span class="why-val">+ ' + fmtMl(calc.caffeine) + '</span></div>';
     (state.substances || []).forEach(s => {
-      html += '<div class="why-row"><span class="why-label">+ ' + escape(s.name) + ' (' + escape(subDoseLabel(s)) + ')</span><span class="why-val">+ ' + fmtMl(subExtraMl(s)) + '</span></div>';
+      html += '<div class="why-row"><span class="why-label">+ ' + escapeHtml(s.name) + ' (' + escapeHtml(subDoseLabel(s)) + ')</span><span class="why-val">+ ' + fmtMl(subExtraMl(s)) + '</span></div>';
     });
     if (calc.adjust > 0)
       html += '<div class="why-row"><span class="why-label">+ Sex / age adjustment</span><span class="why-val">+ ' + fmtMl(calc.adjust) + '</span></div>';
@@ -1085,12 +1086,12 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     list.innerHTML = state.substances.map((s, i) =>
       '<div class="sub-row" data-i="' + i + '">'
       + '<div class="sub-row-info">'
-      +   '<div class="sub-row-name">' + escape(s.name) + '</div>'
-      +   '<div class="sub-row-meta">+ ' + fmtMl(subExtraMl(s)) + ' / day · ' + escape(s.cat || '') + '</div>'
+      +   '<div class="sub-row-name">' + escapeHtml(s.name) + '</div>'
+      +   '<div class="sub-row-meta">+ ' + fmtMl(subExtraMl(s)) + ' / day · ' + escapeHtml(s.cat || '') + '</div>'
       + '</div>'
       + '<div class="sub-row-dose">'
       +   '<input type="number" class="sub-dose-input" data-i="' + i + '" min="0" step="0.5" value="' + (s.dose != null ? s.dose : s.defaultDose) + '">'
-      +   '<span class="sub-dose-unit">' + escape(s.unit || '') + '</span>'
+      +   '<span class="sub-dose-unit">' + escapeHtml(s.unit || '') + '</span>'
       + '</div>'
       + '<button class="sub-row-del" data-i="' + i + '" aria-label="Remove">×</button>'
       + '</div>'
@@ -1131,8 +1132,8 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     results.innerHTML = matches.map(s => {
       const defaultExtra = (s.defaultDose || 0) * (s.mlPerUnit || 0);
       return '<div class="search-result" data-id="' + s.id + '">'
-        + '<span class="search-result-name">' + escape(s.name) + ' <span class="search-result-add">+</span></span>'
-        + '<span class="search-result-meta">' + escape(s.cat) + ' · ' + s.defaultDose + ' ' + escape(s.unit) + ' default → adds ~' + fmtMl(defaultExtra) + '/day · ' + escape(s.note) + '</span>'
+        + '<span class="search-result-name">' + escapeHtml(s.name) + ' <span class="search-result-add">+</span></span>'
+        + '<span class="search-result-meta">' + escapeHtml(s.cat) + ' · ' + s.defaultDose + ' ' + escapeHtml(s.unit) + ' default → adds ~' + fmtMl(defaultExtra) + '/day · ' + escapeHtml(s.note) + '</span>'
         + '</div>';
     }).join('');
     results.classList.add('show');
@@ -1196,9 +1197,8 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     renderAll();
   });
 
-  function escape(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  // escapeHtml is now the shared global from escape.js — was named
+  // `escape` locally here, renamed at every call site.
 
   // Cloud sync writes straight to localStorage and dispatches 'storage'
   // (see the initCloudSync call below) — pick that up so a change made

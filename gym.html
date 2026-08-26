@@ -7,6 +7,7 @@
 <title>Progressive Overload Coach</title>
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
+<script src="escape.js"></script>
 <script src="ticker.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
@@ -1682,7 +1683,7 @@ img, video, canvas, svg { max-width: 100%; }
   // ============================================================
   function renderFilters() {
     $('daySeg').innerHTML = state.days.map(d =>
-      '<button class="po-seg-btn ' + (d.id === state.filterDay ? 'active' : '') + '" data-day="' + d.id + '">' + escape(d.name) + '</button>'
+      '<button class="po-seg-btn ' + (d.id === state.filterDay ? 'active' : '') + '" data-day="' + d.id + '">' + escapeHtml(d.name) + '</button>'
     ).join('');
     $('daySeg').querySelectorAll('.po-seg-btn').forEach(b => {
       b.addEventListener('click', () => {
@@ -1711,7 +1712,7 @@ img, video, canvas, svg { max-width: 100%; }
     if (!f.find(e => e.id === state.currentEx)) state.currentEx = f[0].id;
     sel.innerHTML = f.map(e => {
       const wLbl = e.bw ? ' · BW' : (e.startWeight ? ' · ' + e.startWeight + unit() : '');
-      return '<option value="' + e.id + '"' + (e.id === state.currentEx ? ' selected' : '') + '>' + escape(e.name) + wLbl + '</option>';
+      return '<option value="' + e.id + '"' + (e.id === state.currentEx ? ' selected' : '') + '>' + escapeHtml(e.name) + wLbl + '</option>';
     }).join('');
   }
   function renderForm() {
@@ -1763,13 +1764,13 @@ img, video, canvas, svg { max-width: 100%; }
       const reason = ex.bw
         ? 'Aim for ' + ex.repMin + '-' + ex.repMax + ' clean reps. Once you hit ' + ex.repMax + '+, push for more.'
         : 'Hit ' + ex.repMin + '-' + ex.repMax + ' reps. Once logged, the coach will start prescribing.';
-      wrap.innerHTML = '<div class="po-rx-card"><div class="po-rx-label">' + escape(ex.name) + ' · starting point</div><div class="po-rx-headline">' + head + '</div><span class="po-rx-tag hold">Start here</span><p class="po-rx-reason">' + reason + '</p></div>';
+      wrap.innerHTML = '<div class="po-rx-card"><div class="po-rx-label">' + escapeHtml(ex.name) + ' · starting point</div><div class="po-rx-headline">' + head + '</div><span class="po-rx-tag hold">Start here</span><p class="po-rx-reason">' + reason + '</p></div>';
       return;
     }
     const head = rx.bw
       ? '<span class="po-accent">' + rx.reps + '</span> reps'
       : '<span class="po-accent">' + rx.weight + unit() + '</span> × ' + rx.reps + ' reps';
-    wrap.innerHTML = '<div class="po-rx-card po-rx-' + rx.type + '"><div class="po-rx-label">' + escape(ex.name) + '</div><div class="po-rx-headline">' + head + '</div><span class="po-rx-tag ' + rx.type + '">' + rx.tag + '</span><p class="po-rx-reason">' + rx.reason + '</p></div>';
+    wrap.innerHTML = '<div class="po-rx-card po-rx-' + rx.type + '"><div class="po-rx-label">' + escapeHtml(ex.name) + '</div><div class="po-rx-headline">' + head + '</div><span class="po-rx-tag ' + rx.type + '">' + rx.tag + '</span><p class="po-rx-reason">' + rx.reason + '</p></div>';
   }
   function renderStats() {
     const ex = getCurrentEx();
@@ -2045,7 +2046,7 @@ img, video, canvas, svg { max-width: 100%; }
           ? (e.sets.length + ' set' + (e.sets.length === 1 ? '' : 's') + ' · ' + top)
           : (e.sets.length + ' set' + (e.sets.length === 1 ? '' : 's') + ' · ' + top + ' · ' + Math.round(e.vol) + u + ' total');
         return '<li class="po-tw-row">'
-          + '<span class="po-tw-row-name">' + escape(e.ex.name) + '</span>'
+          + '<span class="po-tw-row-name">' + escapeHtml(e.ex.name) + '</span>'
           + '<span class="po-tw-row-meta">' + meta + '</span>'
           + '</li>';
       }).join('');
@@ -2087,7 +2088,7 @@ img, video, canvas, svg { max-width: 100%; }
         +   '</span>'
         + '</div>'
         + '<div class="po-tw-past-day-summary" style="margin-top:6px; font-size:11px; color:var(--text-3);">'
-        +   escape(exNames)
+        +   escapeHtml(exNames)
         + '</div>'
         + '</div>';
     }).join('');
@@ -2180,7 +2181,7 @@ img, video, canvas, svg { max-width: 100%; }
   let modalDay = null;
   function renderModalSegs() {
     $('exDaySeg').innerHTML = state.days.map(d =>
-      '<button data-day="' + d.id + '" class="' + (modalDay === d.id ? 'active' : '') + '">' + escape(d.name) + '</button>'
+      '<button data-day="' + d.id + '" class="' + (modalDay === d.id ? 'active' : '') + '">' + escapeHtml(d.name) + '</button>'
     ).join('');
     $('exDaySeg').querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
@@ -2276,7 +2277,7 @@ img, video, canvas, svg { max-width: 100%; }
     });
     $('setDays').innerHTML = state.days.map((d, i) =>
       '<div class="po-set-row" data-i="' + i + '">'
-      + '<input type="text" value="' + escape(d.name) + '" data-field="name" placeholder="Day name">'
+      + '<input type="text" value="' + escapeHtml(d.name) + '" data-field="name" placeholder="Day name">'
       + '<button class="po-mini-btn" data-action="del" aria-label="Delete">×</button>'
       + '</div>'
     ).join('');
@@ -2349,9 +2350,9 @@ img, video, canvas, svg { max-width: 100%; }
     renderAll();
   });
 
-  function escape(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  // escapeHtml is now the shared global from escape.js — was named
+  // `escape` locally here, renamed at every call site to avoid silently
+  // shadowing the deprecated browser global of the same name.
 
   // ============================================================
   // WEIGHT TRACKER + COMPOSITION ESTIMATE + PROGRESS PHOTOS

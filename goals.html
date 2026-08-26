@@ -10,6 +10,7 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
+<script src="escape.js"></script>
 <script src="ticker.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
@@ -625,11 +626,8 @@ body::after {
   // same code instead of a second copy that could drift.
   var CATEGORY_META = GD.CATEGORY_META, CATEGORY_ORDER = GD.CATEGORY_ORDER, STATUS_META = GD.STATUS_META;
 
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  // escapeHtml is now the shared global from escape.js — see its file
+  // header for why this used to be a local copy.
   function fmtDate(dateStr) {
     if (!dateStr) return null;
     var d = new Date(dateStr + 'T00:00:00');

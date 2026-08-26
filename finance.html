@@ -10,6 +10,7 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <script src="goals-data.js"></script>
+<script src="escape.js"></script>
 <script src="ticker.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 <style>
@@ -2460,9 +2461,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if (item.period === 'weekly') return a * 4.345;
     return a;
   }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  // escapeHtml is now the shared global from escape.js — its null/undefined
+  // handling (-> '') is slightly more careful than this file's old copy
+  // (which would have rendered the literal string "undefined").
   function formatRenewal(iso) {
     if (!iso) return '';
     const isoSafe = (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso + 'T00:00' : iso;
