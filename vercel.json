@@ -1,0 +1,28 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), camera=(), microphone=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    },
+    {
+      "source": "/main.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://itidzioouqjbwnyvekkw.supabase.co wss://itidzioouqjbwnyvekkw.supabase.co https://api.open-meteo.com; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; frame-ancestors 'none'" }
+      ]
+    }
+  ]
+}
