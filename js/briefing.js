@@ -49,8 +49,13 @@
 
     return {
       weekday: weekdayName(),
+      // Security audit finding #7: task titles used to ride along here.
+      // Dropped to just the count — the briefing loses a little
+      // specificity ("something on your list" instead of naming the
+      // task) but task text no longer leaves the device for a feature
+      // this minor. Easy to restore (see git history) if that trade
+      // turns out to not be worth it.
       tasksPlanned: goals.length,
-      taskTitles: goals.slice(0, 5).map(function (g) { return g && g.text; }).filter(Boolean),
       sleepHours: sleep.hours || null,
       sleepQuality: sleep.quality || null,
       lastRun: lastRun,
