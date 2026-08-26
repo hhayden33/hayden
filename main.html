@@ -44,6 +44,7 @@
   <nav class="quickjump" aria-label="Quick jump">
     <a href="#todoSection" class="quickjump-chip">Today</a>
     <a href="#runningOverview" class="quickjump-chip">Running</a>
+    <a href="#consistency" class="quickjump-chip">Consistency</a>
     <a href="#water" class="quickjump-chip">Water</a>
     <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
     <a href="#sleep" class="quickjump-chip">Sleep</a>
@@ -268,6 +269,13 @@
         <div class="empty-state" id="roChartEmpty" style="display:none">Log runs to see your mileage trend.</div>
       </div>
     </div>
+  </div>
+
+  <!-- CONSISTENCY HEATMAP — the summary of everything above it, before
+       the daily trackers (Water/Night Routine) start. -->
+  <div class="section" id="consistency">
+    <div class="section-title">Consistency</div>
+    <div class="gm-card"><div id="hmGrid"></div></div>
   </div>
 
   <div class="dual-row">
@@ -576,6 +584,7 @@
 <script src="js/week-planner.js" defer></script>
 <script src="js/running.js" defer></script>
 <script src="js/water.js" defer></script>
+<script src="js/heatmap.js" defer></script>
 <script src="js/sync-register.js" defer></script>
 </body>
 </html>
