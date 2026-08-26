@@ -157,10 +157,18 @@ body::after {
    bolder and tighter than plain body text (matches main.html's
    treatment) so it still reads as its own moment without breaking from
    the interface's own type system. ===== */
+@font-face {
+  font-family: 'Bethany Elingston';
+  src: url('vendor/fonts/BethanyElingston.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 .hero-greeting {
   margin: 0 0 4px;
-  font-family: var(--font);
-  font-size: 17px;
+  font-family: 'Bethany Elingston', var(--font);
+  font-style: italic;
+  font-size: 23px;
   font-weight: 700;
   letter-spacing: -0.015em;
   color: var(--text-secondary);

@@ -78,15 +78,26 @@ body::after {
 }
 
 
-/* ===== Hero greeting — cursive attempts (Dancing Script, then Snell
-   Roundhand/Petit Formal Script, then Mrs Saint Delafield) all read as
-   too decorative next to the rest of this UI. Back on --font, just
-   bolder and tighter than plain body text so it still reads as its own
-   moment without breaking from the interface's own type system. ===== */
+/* ===== Hero greeting — earlier cursive attempts (Dancing Script, Snell
+   Roundhand/Petit Formal Script, Mrs Saint Delafield) all read as too
+   decorative and got reverted. Bethany Elingston, italic, requested by
+   name — vendored locally (vendor/fonts/, personal-use license) rather
+   than linked from a third-party CDN. Only one static file ships (no
+   dedicated italic cut), so the slant here is the browser's synthetic
+   italic, not hand-drawn oblique glyphs — flag if that reads as
+   distorted rather than just slanted. ===== */
+@font-face {
+  font-family: 'Bethany Elingston';
+  src: url('vendor/fonts/BethanyElingston.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 .hero-greeting {
   margin: -4px 0 4px;
-  font-family: var(--font);
-  font-size: 16px;
+  font-family: 'Bethany Elingston', var(--font);
+  font-style: italic;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.015em;
   color: var(--text-secondary);
@@ -1708,7 +1719,13 @@ html.is-embedded .shell { padding-bottom: 20px; }
 .run-chart-tooltip-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
 
 /* ---------- Consistency heatmap ---------- */
-.hm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* overflow-x: auto alone computes overflow-y to auto too (per spec, when
+   one axis isn't visible the other stops being visible as well) — that
+   silently made this a scroll container on BOTH axes, so a vertical swipe
+   starting over the heatmap got captured as an internal scroll instead of
+   scrolling the page. overflow-y: hidden + touch-action: pan-x fixes it:
+   horizontal panning stays local, vertical swipes pass straight through. */
+.hm-scroll { overflow-x: auto; overflow-y: hidden; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
 .hm-inner {
   display: grid;
   grid-template-columns: 54px 1fr 46px;
