@@ -317,6 +317,35 @@ body::after {
 @media (max-width: 700px) {
   .cd-num { font-size: 34px; }
 }
+
+/* ---------- Streak-at-risk nudge ----------
+   An aside, not an alert — no red, no icon, reused .gm-card surface at
+   reduced weight. Collapses to nothing when the slot is empty. */
+.nudge-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border-left: 2px solid var(--warning);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  animation: nudge-in 0.2s ease-out both;
+}
+.nudge-text { flex: 1; min-width: 0; }
+.nudge-dismiss {
+  background: none; border: 0; cursor: pointer;
+  font-family: var(--font);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  padding: 4px 6px; border-radius: 4px;
+  flex: 0 0 auto;
+}
+.nudge-dismiss:hover { color: var(--text-secondary); }
+.nudge-dismiss:focus-visible { outline: 2px solid var(--warning); outline-offset: 2px; }
+@keyframes nudge-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .nudge-card { animation: none; } }
 .day-ring-wrap {
   display: flex; flex-wrap: wrap;
   align-items: center; justify-content: center;
