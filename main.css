@@ -1714,3 +1714,56 @@ html.is-embedded .shell { padding-bottom: 20px; }
   .hm-inner { grid-template-columns: 42px 1fr 40px; gap: 5px 7px; }
 }
 
+/* ---------- Morning briefing ----------
+   Deliberately the quietest card on the page: no border colour beyond a
+   muted accent hairline, no icons, generous leading. It reads like a
+   note left on the page, not a widget. */
+.brief-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid color-mix(in srgb, var(--success) 55%, transparent);
+  border-radius: 14px;
+  padding: 18px 22px 20px;
+  margin: 0 0 18px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+}
+.brief-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.brief-eyebrow {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.brief-toggle {
+  background: none; border: 0; padding: 2px 4px; cursor: pointer;
+  font-family: var(--font);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+  border-radius: 4px;
+}
+.brief-toggle:hover { color: var(--text-secondary); }
+.brief-toggle:focus-visible { outline: 2px solid var(--success); outline-offset: 2px; }
+.brief-body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  max-width: 68ch;
+  animation: brief-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.brief-card.is-collapsed { padding-bottom: 14px; }
+.brief-card.is-collapsed .brief-body {
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+  overflow: hidden; color: var(--text-tertiary);
+}
+@keyframes brief-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .brief-body { animation: none; } }
+@media (max-width: 480px) {
+  .brief-card { padding: 16px 16px 18px; }
+  .brief-body { font-size: 14px; line-height: 1.6; }
+}
+
