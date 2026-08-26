@@ -1174,6 +1174,71 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     a.href = url; a.download = 'water-coach-data-' + new Date().toISOString().slice(0,10) + '.json';
     a.click(); URL.revokeObjectURL(url);
   });
+  // A safe plain object to read from: rejects any object whose own or
+  // prototype-chain-adjacent key is __proto__/constructor/prototype, so
+  // a hostile import can't use those to influence the object literals
+  // this file builds elsewhere. Non-objects (arrays, primitives, null)
+  // become {} — the caller supplies its own type-appropriate fallback.
+  const DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+  function safeObj(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    const out = {};
+    for (const k of Object.keys(v)) {
+      if (DANGEROUS_KEYS.includes(k)) continue;
+      out[k] = v[k];
+    }
+    return out;
+  }
+  function numOr(v, fallback) { return (typeof v === 'number' && isFinite(v)) ? v : fallback; }
+  function strOr(v, fallback) { return (typeof v === 'string') ? v : fallback; }
+
+  // Whitelists imported JSON down to exactly the fields this app knows
+  // about — an imported file's extra/unexpected keys never reach `state`,
+  // regardless of what they're named. Never trust a hand-edited or
+  // otherwise arbitrary file with the same access as this app's own writes.
+  function sanitizeImport(parsed) {
+    const p = safeObj(parsed);
+    const out = {};
+
+    if (typeof p.unit === 'string') out.unit = p.unit;
+    if (typeof p.bottleMl === 'number') out.bottleMl = p.bottleMl;
+    if (typeof p.glassMl === 'number') out.glassMl = p.glassMl;
+    if (typeof p.weightUnit === 'string') out.weightUnit = p.weightUnit;
+    if (typeof p.caffeineMgPerDay === 'number') out.caffeineMgPerDay = p.caffeineMgPerDay;
+    if (typeof p.useManualTarget === 'boolean') out.useManualTarget = p.useManualTarget;
+    if (typeof p.manualTargetMl === 'number') out.manualTargetMl = p.manualTargetMl;
+    if (typeof p.targetConfigV2 === 'boolean') out.targetConfigV2 = p.targetConfigV2;
+
+    // Omit invalid/missing fields entirely rather than setting them to
+    // undefined — normalize()'s Object.assign(CONFIG.profile, out.profile)
+    // only falls back to CONFIG's default for a key that's actually
+    // absent, not one present with value undefined.
+    const prof = safeObj(p.profile);
+    out.profile = {};
+    if (typeof prof.weightKg === 'number' && isFinite(prof.weightKg)) out.profile.weightKg = prof.weightKg;
+    if (typeof prof.age === 'number' && isFinite(prof.age)) out.profile.age = prof.age;
+    if (typeof prof.sex === 'string') out.profile.sex = prof.sex;
+    if (typeof prof.activityHrsPerWeek === 'number' && isFinite(prof.activityHrsPerWeek)) out.profile.activityHrsPerWeek = prof.activityHrsPerWeek;
+
+    out.substances = Array.isArray(p.substances) ? p.substances.map(safeObj).map(s => ({
+      id: strOr(s.id, ''), name: strOr(s.name, ''), cat: strOr(s.cat, ''),
+      unit: strOr(s.unit, ''), mlPerUnit: numOr(s.mlPerUnit, 0),
+      defaultDose: numOr(s.defaultDose, 0), dose: numOr(s.dose, 0)
+    })).filter(s => s.id) : [];
+
+    // logs: {YYYY-MM-DD: number} — reject any key that isn't that exact
+    // date shape (also rules out __proto__ etc. as a log-date key) and
+    // any value that isn't a finite number.
+    const rawLogs = safeObj(p.logs);
+    out.logs = {};
+    for (const k of Object.keys(rawLogs)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      if (typeof rawLogs[k] === 'number' && isFinite(rawLogs[k])) out.logs[k] = rawLogs[k];
+    }
+
+    return out;
+  }
+
   $('setImport').addEventListener('click', () => $('setImportFile').click());
   $('setImportFile').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
@@ -1182,7 +1247,7 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
       try {
         const parsed = JSON.parse(r.result);
         if (!confirm('Replace ALL current data with the imported file?')) return;
-        state = normalize(parsed);
+        state = normalize(sanitizeImport(parsed));
         saveState(); renderSettings(); renderAll();
       } catch (err) { alert('Import failed: ' + err.message); }
     };
