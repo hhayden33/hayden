@@ -547,6 +547,10 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
 
     <div class="set-section">
       <h4>Profile</h4>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:10px;line-height:1.4">
+        Stays on this device only — never synced to other devices or backed
+        up anywhere except an explicit JSON export you trigger yourself.
+      </div>
       <div class="field-row">
         <div class="field">
           <label>Weight</label>
@@ -632,6 +636,10 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
 
     <div class="set-section">
       <h4>Stimulants & meds</h4>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:10px;line-height:1.4">
+        Stays on this device only — never synced to other devices or backed
+        up anywhere except an explicit JSON export you trigger yourself.
+      </div>
       <div class="field">
         <label>Search to add</label>
         <div class="search-wrap">
@@ -721,11 +729,29 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
   // STATE
   // ============================================================
   const LS_KEY = 'po_water_v1';
+  // Substances and profile (body weight/age/sex) never leave this device —
+  // kept in a separate key that initCloudSync never touches, rather than
+  // inside the synced po_water_v1 blob. See js/README.md's guard rails:
+  // this is the "keep local-only, note it in the UI" option, not a fix to
+  // the Supabase RLS gap itself.
+  const LOCAL_KEY = 'po_water_local_v1';
   let didMigrateTarget = false;
+  function loadLocalOnly() {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      if (raw) return JSON.parse(raw) || {};
+    } catch (e) {}
+    return {};
+  }
   function loadState() {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) return normalize(JSON.parse(raw));
+      const synced = raw ? JSON.parse(raw) : {};
+      const local = loadLocalOnly();
+      // Legacy exports/older saves may still carry substances/profile
+      // inside the synced blob — local, freshly-loaded values win so a
+      // device isn't overwritten by a stale synced copy of its own data.
+      return normalize(Object.assign({}, synced, local));
     } catch (e) {}
     return normalize({});
   }
@@ -758,7 +784,14 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
     return s;
   }
   function saveState() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+    try {
+      const local = { profile: state.profile, substances: state.substances };
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
+      const synced = Object.assign({}, state);
+      delete synced.profile;
+      delete synced.substances;
+      localStorage.setItem(LS_KEY, JSON.stringify(synced));
+    } catch (e) {}
   }
   let state = loadState();
   if (didMigrateTarget) saveState();
@@ -1157,6 +1190,7 @@ catch (e) { document.documentElement.classList.add('is-embedded'); }
   $('setReset').addEventListener('click', () => {
     if (!confirm('Wipe ALL water logs and settings? This cannot be undone.')) return;
     localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LOCAL_KEY);
     state = loadState();
     $('setModalBg').classList.remove('show');
     renderAll();
