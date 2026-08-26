@@ -18,7 +18,7 @@
   const css = `
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  display: flex; justify-content: flex-end; align-items: center;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
   margin-bottom: 18px;
@@ -26,6 +26,19 @@
   border-bottom: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
+/* Own row inside the bar (flex-basis 100%) rather than a sibling element,
+   so it inherits the sticky background and can't drift out of alignment
+   with the pills above it. Empty until sync.js reports something. */
+.topbar-sync {
+  flex: 0 0 100%;
+  text-align: right;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #687580;
+}
+.topbar-sync:empty { display: none; }
+.topbar-sync.is-failed { color: #F2C063; }
 .topbar-split-badge {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px; margin-right: auto;
@@ -188,6 +201,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
     <span class="topbar-finance-icon">📊</span>
   </a>
+  <div class="topbar-sync" id="topbarSync" role="status" aria-live="polite"></div>
 </header>`;
 
   const bottombarHtml = `
@@ -367,8 +381,27 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     pillEl.classList.remove('good', 'warn', 'miss');
     if (status === 'warn' || status === 'miss') pillEl.classList.add(status);
   }
+  // A sync that quietly stopped working looks exactly like a sync that is
+  // working until the day two devices disagree, so say which one it is.
+  function renderSyncLine() {
+    const el = document.getElementById('topbarSync');
+    if (!el) return;
+    const s = window.SyncStatus;
+    if (!s) { el.textContent = ''; el.classList.remove('is-failed'); return; }
+    if (s.failed) {
+      el.textContent = 'Sync failed — working offline';
+      el.classList.add('is-failed');
+      return;
+    }
+    el.classList.remove('is-failed');
+    if (!s.lastSyncedAt) { el.textContent = ''; return; }
+    const d = new Date(s.lastSyncedAt);
+    el.textContent = 'Synced ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
   function render() {
     renderSplitBadge();
+    renderSyncLine();
     const waterEl = document.getElementById('topbarWater');
     if (!waterEl) return;
     const w = getWaterProgress();
@@ -453,6 +486,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     lockGestures();
     startModalLock();
     window.addEventListener('storage', render);
+    window.addEventListener('sync-status', renderSyncLine);
     window.addEventListener('focus', render);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
     setInterval(render, 30 * 1000);
