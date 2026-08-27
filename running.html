@@ -412,7 +412,27 @@ body::after {
 .run-share-btn svg { width: 15px; height: 15px; }
 
 .run-share-modal { max-width: 400px; }
-.run-share-layout-toggle {
+/* topbar.js forces every modal full-screen edge-to-edge below 480px
+   (width/height:100vh !important — shared across every modal on every
+   page, so it can't just be edited there). Right call for a form-heavy
+   modal like Settings; this one is a compact preview + two buttons, so
+   full-screen reads oversized. :has() scopes the override to just this
+   modal's backdrop without touching the shared rule or any other
+   modal. Higher specificity than topbar.js's `.modal-bg, .po-modal-bg`
+   wins regardless of which stylesheet loads later. */
+@media (max-width: 480px) {
+  .modal-bg:has(.run-share-modal) {
+    padding: 16px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .modal.run-share-modal {
+    width: 100% !important; max-width: 400px !important;
+    height: auto !important; max-height: 90vh !important;
+    border-radius: 18px !important;
+  }
+}
+.run-share-layout-toggle, .run-share-theme-toggle {
   display: flex; gap: 8px; margin-bottom: 16px;
 }
 .run-share-layout-btn {
@@ -803,6 +823,10 @@ body::after {
       <div class="run-share-layout-toggle" role="tablist" aria-label="Share layout">
         <button class="run-share-layout-btn active" type="button" data-layout="minimal" role="tab" aria-selected="true">Minimal</button>
         <button class="run-share-layout-btn" type="button" data-layout="full" role="tab" aria-selected="false">Full Stats</button>
+      </div>
+      <div class="run-share-theme-toggle" role="tablist" aria-label="Overlay theme">
+        <button class="run-share-layout-btn run-share-theme-btn active" type="button" data-theme="dark" role="tab" aria-selected="true">Dark</button>
+        <button class="run-share-layout-btn run-share-theme-btn" type="button" data-theme="light" role="tab" aria-selected="false">Light</button>
       </div>
       <div class="run-share-canvas-wrap">
         <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
@@ -1656,12 +1680,42 @@ body::after {
     minimal: { label: 'Minimal', stats: ['distance', 'pace', 'time'] },
     full:    { label: 'Full Stats', stats: ['distance', 'pace', 'time', 'elevation', 'calories', 'avgHr'] }
   };
+  // The overlay is a transparent PNG meant to sit on top of whatever
+  // photo you post — "dark" (white text, dark scrim) reads on any photo
+  // but can wash out on a bright/light one; "light" (dark text, white
+  // scrim) is the inverse. Wordmark gradient flips too — the default's
+  // near-white stops have too little contrast against a light photo, so
+  // light mode reuses the dashboard's actual darker brand tones instead
+  // of just dimming the same gradient.
+  const SHARE_THEMES = {
+    dark: {
+      panelFill: 'rgba(16,21,26,0.20)', panelStroke: 'rgba(255,255,255,0.14)',
+      eyebrow: 'rgba(255,255,255,0.55)',
+      dividerMain: 'rgba(255,255,255,0.12)', dividerSecondary: 'rgba(255,255,255,0.10)',
+      statColor: '#FFFFFF', statUnitColor: 'rgba(255,255,255,0.62)',
+      labelColor: 'rgba(255,255,255,0.5)',
+      textShadow: 'rgba(0,0,0,0.35)',
+      wordmarkStops: ['#FFFFFF', '#EAF1F5', '#9FD9DA', '#C9A6EE'],
+      aioColor: 'rgba(174,183,192,0.8)'
+    },
+    light: {
+      panelFill: 'rgba(255,255,255,0.55)', panelStroke: 'rgba(16,21,26,0.12)',
+      eyebrow: 'rgba(16,21,26,0.55)',
+      dividerMain: 'rgba(16,21,26,0.14)', dividerSecondary: 'rgba(16,21,26,0.10)',
+      statColor: '#10151A', statUnitColor: 'rgba(16,21,26,0.62)',
+      labelColor: 'rgba(16,21,26,0.55)',
+      textShadow: 'rgba(255,255,255,0.55)',
+      wordmarkStops: ['#0E5C78', '#124F6B', '#2C6B72', '#552080'],
+      aioColor: 'rgba(16,21,26,0.55)'
+    }
+  };
 
   const runShareModalBg = document.getElementById('runShareModalBg');
   const runShareCanvas = document.getElementById('runShareCanvas');
   const shareCtx = runShareCanvas.getContext('2d');
   let shareActiveRun = null;
   let shareLayout = 'minimal';
+  let shareTheme = 'dark';
 
   function shareStatParts(key, r) {
     const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
@@ -1739,13 +1793,14 @@ body::after {
   // line it up exactly with other text on the same header row — that
   // baseline match is what keeps the logo and the tempo/date eyebrow on
   // one visually cohesive line instead of one floating above the other.
-  function drawWordmark(ctx, x, baselineY) {
+  function drawWordmark(ctx, x, baselineY, theme) {
     const markSize = 40;
     ctx.font = '800 ' + markSize + 'px ' + SHARE_FONT;
     const markW = ctx.measureText('88YYDS').width;
+    const stops = theme.wordmarkStops;
     const grad = ctx.createLinearGradient(x, 0, x + markW, 0);
-    grad.addColorStop(0, '#FFFFFF'); grad.addColorStop(0.38, '#EAF1F5');
-    grad.addColorStop(0.68, '#9FD9DA'); grad.addColorStop(1, '#C9A6EE');
+    grad.addColorStop(0, stops[0]); grad.addColorStop(0.38, stops[1]);
+    grad.addColorStop(0.68, stops[2]); grad.addColorStop(1, stops[3]);
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     // Subtler glow than before — the logo is a signature, not the
     // headline, so it shouldn't visually outweigh the run's own stats.
@@ -1762,7 +1817,7 @@ body::after {
     ctx.beginPath(); ctx.arc(orbX, orbY, orbR, 0, Math.PI * 2); ctx.fillStyle = orbGrad; ctx.fill();
     ctx.restore();
 
-    drawTrackedText(ctx, 'AIO', x + 2, baselineY + 22, { size: 12, weight: 700, color: 'rgba(174,183,192,0.8)', spacing: 5, align: 'left' });
+    drawTrackedText(ctx, 'AIO', x + 2, baselineY + 22, { size: 12, weight: 700, color: theme.aioColor, spacing: 5, align: 'left' });
   }
 
   // Measures one stat's rendered width (number + unit, same grouping
@@ -1801,6 +1856,7 @@ body::after {
     if (!shareActiveRun) return;
     const r = shareActiveRun;
     const ctx = shareCtx;
+    const theme = SHARE_THEMES[shareTheme] || SHARE_THEMES.dark;
     ctx.clearRect(0, 0, SHARE_W, SHARE_H);
 
     const isFull = shareLayout === 'full';
@@ -1846,25 +1902,26 @@ body::after {
     // overlay reads as a light scrim over a photo, not a solid card —
     // only the stat text itself needs full contrast to stay legible.
     drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
-    ctx.fillStyle = 'rgba(16,21,26,0.20)';
+    ctx.fillStyle = theme.panelFill;
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.strokeStyle = theme.panelStroke;
     ctx.stroke();
 
     // Text shadow keeps every stat legible over bright or busy photos —
-    // applies to all text drawn below, panel above is unaffected.
-    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+    // applies to all text drawn below, panel above is unaffected. Light
+    // theme flips this to a light halo behind dark text, same purpose.
+    ctx.shadowColor = theme.textShadow; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
 
     // ---- header: logo and eyebrow share one baseline so they read as
     // a single row instead of one floating above the other.
     const headerBaselineY = panelY + topMargin;
-    drawWordmark(ctx, contentX, headerBaselineY);
+    drawWordmark(ctx, contentX, headerBaselineY, theme);
     const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
-    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 20 : 22, weight: 700, color: 'rgba(255,255,255,0.55)', spacing: 3, align: 'right' });
+    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 20 : 22, weight: 700, color: theme.eyebrow, spacing: 3, align: 'right' });
 
     const dividerY = headerBaselineY + headerToDivider;
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = theme.dividerMain;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
 
@@ -1875,12 +1932,12 @@ body::after {
     rowParts.forEach((parts, rowIdx) => {
       parts.forEach((p, i) => {
         const cx = contentX + colW * i + colW / 2;
-        drawStatValue(ctx, cx, cursorY, p.value, p.unit, { numSize, unitSize, color: '#FFFFFF', unitColor: 'rgba(255,255,255,0.62)' });
-        drawTrackedText(ctx, p.label.toUpperCase(), cx, cursorY + rowToLabel, { size: labelSize, weight: 700, color: 'rgba(255,255,255,0.5)', spacing: 2.5, align: 'center' });
+        drawStatValue(ctx, cx, cursorY, p.value, p.unit, { numSize, unitSize, color: theme.statColor, unitColor: theme.statUnitColor });
+        drawTrackedText(ctx, p.label.toUpperCase(), cx, cursorY + rowToLabel, { size: labelSize, weight: 700, color: theme.labelColor, spacing: 2.5, align: 'center' });
       });
       if (rowIdx < rowParts.length - 1) {
         const secDividerY = cursorY + rowToLabel + rowGap / 2;
-        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.strokeStyle = theme.dividerSecondary;
         ctx.beginPath(); ctx.moveTo(contentX, secDividerY); ctx.lineTo(contentRight, secDividerY); ctx.stroke();
         cursorY += rowGap + dividerToRow;
       }
@@ -1891,8 +1948,21 @@ body::after {
 
   function setShareLayout(layout) {
     shareLayout = layout;
-    document.querySelectorAll('.run-share-layout-btn').forEach(b => {
+    // Scoped to the layout toggle's own container — .run-share-theme-btn
+    // shares this same button class for styling, but must not be
+    // touched here (it has no data-layout, so without this scope every
+    // layout click would silently strip the theme toggle's active state).
+    document.querySelectorAll('.run-share-layout-toggle .run-share-layout-btn').forEach(b => {
       const active = b.dataset.layout === layout;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderShareCanvas();
+  }
+  function setShareTheme(theme) {
+    shareTheme = theme;
+    document.querySelectorAll('.run-share-theme-btn').forEach(b => {
+      const active = b.dataset.theme === theme;
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', active ? 'true' : 'false');
     });
@@ -1964,11 +2034,15 @@ body::after {
       ? 'Transparent 1080×1920 PNG. Copy, then paste into Instagram Stories — if paste isn’t offered there, tap Save Image and add it as a sticker from Photos instead.'
       : 'Transparent 1080×1920 PNG. Tap Save Image, then in Instagram Stories add it as a sticker from Photos.';
     setShareLayout('minimal');
+    setShareTheme('dark');
     openModal(runShareModalBg);
   }
 
-  document.querySelectorAll('.run-share-layout-btn').forEach(btn => {
+  document.querySelectorAll('.run-share-layout-toggle .run-share-layout-btn').forEach(btn => {
     btn.addEventListener('click', () => setShareLayout(btn.dataset.layout));
+  });
+  document.querySelectorAll('.run-share-theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => setShareTheme(btn.dataset.theme));
   });
   document.getElementById('runShareCloseX').addEventListener('click', () => closeModal(runShareModalBg));
   document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
