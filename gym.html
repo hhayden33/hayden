@@ -302,19 +302,52 @@ body::after {
 @media (max-width: 560px) { .balance-cols { grid-template-columns: 1fr; gap: 18px; } }
 
 /* ===== Recent workouts ===== */
+.workout-item { border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15)); }
+.workout-item:last-child { border-bottom: none; }
 .workout-row {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 12px; padding: 12px 0;
-  border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  border-radius: 8px;
 }
-.workout-row:last-child { border-bottom: none; padding-bottom: 0; }
-.workout-row:first-child { padding-top: 0; }
+.workout-row:focus-visible { outline: 2px solid var(--lavender); outline-offset: 2px; }
+.workout-item:first-child .workout-row { padding-top: 0; }
+.workout-item:last-child .workout-row { padding-bottom: 12px; }
+.workout-item:last-child:not(.is-open) .workout-row { padding-bottom: 0; }
 .workout-row-name { color: var(--text-primary); font-weight: 600; font-size: 14px; }
+.workout-row-chevron {
+  display: inline-block; margin-left: 5px; font-size: 9px;
+  color: var(--text-tertiary); transition: transform 0.15s ease;
+}
+.workout-item.is-open .workout-row-chevron { transform: rotate(90deg); }
 .workout-row-date { color: var(--text-tertiary); font-size: 11.5px; margin-top: 2px; }
 .workout-row-meta {
   text-align: right; color: var(--text-secondary);
   font-size: 12.5px; white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Recent workouts — expanded exercise/set detail ---------- */
+.workout-detail { max-height: 0; overflow: hidden; transition: max-height 0.2s ease; }
+.workout-item.is-open .workout-detail { max-height: 2000px; }
+.workout-detail-inner { padding: 0 0 14px; }
+.workout-ex { margin-bottom: 10px; }
+.workout-ex:last-child { margin-bottom: 0; }
+.workout-ex-name {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.02em; color: var(--text-secondary); margin-bottom: 4px;
+}
+.workout-set-row {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 3px 0 3px 12px;
+  font-size: 12px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.workout-set-idx { color: var(--text-tertiary); opacity: 0.6; width: 16px; flex-shrink: 0; }
+.workout-set-value { color: var(--text-secondary); }
+.workout-set-warmup {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--warning);
 }
 
 /* ===== Monthly summary ===== */
@@ -792,6 +825,58 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ---------- 7. Recent workouts ----------
+  // One set's value, formatted for whatever it actually logged — a set
+  // can be weight+reps, bodyweight reps only, distance, or a timed hold,
+  // and only ever has the fields relevant to that type.
+  function fmtSetValue(s) {
+    if (s.weightKg != null && s.reps != null) return numFmt(s.weightKg) + ' kg × ' + s.reps;
+    if (s.reps != null) return s.reps + (s.reps === 1 ? ' rep' : ' reps');
+    if (s.distanceMeters != null) return numFmt(s.distanceMeters) + ' m';
+    if (s.durationSeconds != null) {
+      const m = Math.floor(s.durationSeconds / 60), sec = Math.round(s.durationSeconds % 60);
+      return (m > 0 ? m + 'm ' : '') + sec + 's';
+    }
+    return '—';
+  }
+
+  function buildWorkoutDetail(w) {
+    const wrap = document.createElement('div');
+    wrap.className = 'workout-detail-inner';
+    if (!w.exercises || !w.exercises.length) {
+      wrap.innerHTML = '<p class="empty-note">No exercise detail for this workout.</p>';
+      return wrap;
+    }
+    w.exercises.forEach(function (ex) {
+      const exEl = document.createElement('div');
+      exEl.className = 'workout-ex';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'workout-ex-name';
+      nameEl.textContent = ex.title || 'Exercise';
+      exEl.appendChild(nameEl);
+      (ex.sets || []).forEach(function (s, i) {
+        const setRow = document.createElement('div');
+        setRow.className = 'workout-set-row';
+        const idx = document.createElement('span');
+        idx.className = 'workout-set-idx';
+        idx.textContent = (i + 1) + '.';
+        const val = document.createElement('span');
+        val.className = 'workout-set-value';
+        val.textContent = fmtSetValue(s);
+        setRow.appendChild(idx);
+        setRow.appendChild(val);
+        if (s.type === 'warmup') {
+          const tag = document.createElement('span');
+          tag.className = 'workout-set-warmup';
+          tag.textContent = 'Warmup';
+          setRow.appendChild(tag);
+        }
+        exEl.appendChild(setRow);
+      });
+      wrap.appendChild(exEl);
+    });
+    return wrap;
+  }
+
   function renderRecent(recent) {
     const list = document.getElementById('recentList');
     list.innerHTML = '';
@@ -800,6 +885,9 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     recent.forEach(function (w) {
+      const item = document.createElement('div');
+      item.className = 'workout-item';
+
       const row = document.createElement('div');
       row.className = 'workout-row';
       const meta = [
@@ -808,12 +896,28 @@ document.addEventListener('DOMContentLoaded', function () {
         w.volumeKg ? fmtVolume(w.volumeKg) : null
       ].filter(Boolean).join(' · ');
       row.innerHTML =
-        '<div><div class="workout-row-name"></div><div class="workout-row-date"></div></div>' +
+        '<div><div class="workout-row-name"><span class="workout-row-title"></span><span class="workout-row-chevron">&#9656;</span></div><div class="workout-row-date"></div></div>' +
         '<div class="workout-row-meta"></div>';
-      row.querySelector('.workout-row-name').textContent = w.title || 'Workout';
+      row.querySelector('.workout-row-title').textContent = w.title || 'Workout';
       row.querySelector('.workout-row-date').textContent = fmtDate(w.date);
       row.querySelector('.workout-row-meta').textContent = meta;
-      list.appendChild(row);
+
+      const detail = document.createElement('div');
+      detail.className = 'workout-detail';
+      let built = false;
+      row.addEventListener('click', function () {
+        if (!built) { detail.appendChild(buildWorkoutDetail(w)); built = true; }
+        item.classList.toggle('is-open');
+      });
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+      });
+
+      item.appendChild(row);
+      item.appendChild(detail);
+      list.appendChild(item);
     });
   }
 

@@ -520,6 +520,11 @@ function buildSummary(byId, templatesById) {
   const thisMonthPrefix = monthBounds(0);
   const workoutsThisMonth = workoutsAsc.filter((w) => dateKey(w.start_time).slice(0, 7) === thisMonthPrefix).length;
 
+  // Exercise/set detail is only worth sending for the handful of
+  // workouts actually shown in Recent Workouts — full per-set data for
+  // the whole history would bloat the payload for a detail view that's
+  // only ever open one workout at a time. Trimmed to what the expand
+  // view actually renders (no exercise_template_id/supersets_id/notes).
   const recent = workoutsDesc.slice(0, 8).map((w) => ({
     id: w.id,
     title: w.title,
@@ -528,6 +533,16 @@ function buildSummary(byId, templatesById) {
     exerciseCount: (w.exercises || []).length,
     setCount: workoutSetCount(w),
     volumeKg: workoutVolumeKg(w),
+    exercises: (w.exercises || []).map((ex) => ({
+      title: ex.title,
+      sets: (ex.sets || []).map((s) => ({
+        type: s.type || 'normal',
+        weightKg: s.weight_kg != null ? s.weight_kg : null,
+        reps: s.reps != null ? s.reps : null,
+        distanceMeters: s.distance_meters != null ? s.distance_meters : null,
+        durationSeconds: s.duration_seconds != null ? s.duration_seconds : null,
+      })),
+    })),
   }));
 
   const insights = computeInsights(consistency, exercises, balance);
