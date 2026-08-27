@@ -15,17 +15,23 @@
 <link rel="stylesheet" href="theme.css">
 
 <!-- =============================================================
-     gym.html — a read-only summary of Hevy workout data.
+     gym.html — a read-only strength-training analytics dashboard over
+     synced Hevy data. Hevy is where workouts get logged; this page
+     never logs, edits, or deletes anything — it only reads and
+     presents what automation/hevy-sync.mjs has already computed.
+
      Data flow: Hevy API -> automation/hevy-sync.mjs (local, holds the
      API key, never the browser) -> Supabase app_state('hevy') ->
-     initCloudSync below. This page never writes anything back to Hevy
-     or to the synced key — logging happens in the Hevy app, this is
-     just "am I training consistently, and am I progressing."
+     initCloudSync below -> render(). Every number below (weekly volume,
+     PR dates, muscle-group set counts, exercise sparklines) is computed
+     server-side in hevy-sync.mjs's buildSummary() — this page only
+     formats and lays it out, it does not re-derive analytics from raw
+     workouts client-side.
 
-     Same CSS language as running.html (copied verbatim: .gm-card,
-     .stat-grid, .section-title etc.) — this page is standalone like
-     running.html/po-water.html, so it carries its own copy of those
-     rules rather than linking main.css.
+     Same CSS language as running.html (gm-card, stat-grid, section-title,
+     the run-chart-* smooth SVG line chart, gm-progress-num hero numbers)
+     — this page is standalone like running.html/po-water.html, so it
+     carries its own copy of those rules rather than linking main.css.
      ============================================================= -->
 <style>
 :root {
@@ -39,6 +45,7 @@
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --lavender: #B98AE0;
+  --gym-accent: #B98AE0;
 }
 
 * { box-sizing: border-box; }
@@ -79,12 +86,18 @@ body::after {
 .page { max-width: 1100px; margin: 0 auto; }
 
 .dash-title {
-  margin: 0 0 14px;
+  margin: 0;
   font-size: 28px; font-weight: 700;
   letter-spacing: -0.025em;
   background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
+}
+.dash-subtitle {
+  margin: 4px 0 18px;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
@@ -116,9 +129,25 @@ body::after {
   border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
 }
 
+.gm-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+}
+.gm-eyebrow {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 6px;
+}
+.gm-progress-row { display: flex; align-items: baseline; gap: 8px; }
+.gm-progress-num {
+  font-size: 34px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em; color: var(--text-primary); line-height: 1;
+}
+
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 12px;
 }
 .stat {
@@ -127,17 +156,152 @@ body::after {
   border-radius: 12px; padding: 14px;
 }
 .stat-num {
-  font-size: 26px; font-weight: 700;
+  font-size: 22px; font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.15;
 }
 .stat-label {
+  margin-top: 6px;
   font-size: 10.5px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--text-tertiary); margin-top: 4px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.stat-sub {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); margin-top: 3px;
 }
 
-/* ---------- Recent workouts — plain rows, not a table ---------- */
+.empty-state {
+  text-align: center; font-size: 12px; font-style: italic;
+  color: var(--text-tertiary); padding: 14px 0;
+}
+.empty-note {
+  color: var(--text-tertiary); font-size: 13px; line-height: 1.6;
+}
+
+.trend-up { color: var(--success); }
+.trend-down { color: var(--danger); }
+.trend-flat { color: var(--text-tertiary); }
+
+/* ===== Hero (header summary) — three plain numbers, not stat cards ===== */
+.gym-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.gym-hero-cell {
+  text-align: center; padding: 4px 8px;
+  border-left: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+}
+.gym-hero-cell:first-child { border-left: none; }
+.gym-hero-num {
+  font-size: 36px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em; color: var(--text-primary); line-height: 1;
+}
+.gym-hero-label {
+  margin-top: 7px;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+@media (max-width: 480px) { .gym-hero-num { font-size: 26px; } }
+
+/* ===== Consistency — 12-week intensity strip ===== */
+.consistency-strip { display: flex; gap: 5px; margin-bottom: 8px; }
+.consistency-cell {
+  flex: 1; height: 42px; border-radius: 9px;
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  transition: transform 0.12s;
+}
+.consistency-cell.is-current { border-color: var(--gym-accent); box-shadow: 0 0 0 1px var(--gym-accent) inset; }
+.consistency-cell:hover { transform: translateY(-2px); }
+.consistency-labels {
+  display: flex; justify-content: space-between;
+  font-size: 9.5px; color: var(--text-tertiary); margin-bottom: 18px;
+}
+.consistency-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; font-size: 13px; color: var(--text-secondary);
+  padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
+}
+.consistency-summary b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ===== Smooth SVG line chart (Training Load) — ported from running.html ===== */
+.chart-wrap { position: relative; }
+.chart-yaxis { position: absolute; left: 0; top: 1px; bottom: 1px; width: 46px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.chart-yaxis span { font-size: 9.5px; font-weight: 600; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; }
+.chart-svg { height: 128px; display: block; margin-left: 46px; width: calc(100% - 46px); overflow: visible; }
+.chart-grid-line { stroke: rgba(255,255,255,0.045); stroke-width: 1; }
+.chart-hoverline { stroke: rgba(255,255,255,0.16); stroke-width: 1; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.chart-hoverdot { fill: #fff; opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.chart-hitarea { fill: transparent; cursor: crosshair; }
+.chart-tooltip {
+  position: absolute; z-index: 5; top: 0; left: 0;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--surface-elevated, #26343E);
+  border: 1px solid var(--border-strong, rgba(120, 160, 180, 0.28));
+  border-radius: 8px; padding: 6px 10px;
+  white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  opacity: 0; transition: opacity 0.12s;
+}
+.chart-tooltip.show { opacity: 1; }
+.chart-tooltip-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.chart-tooltip-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
+
+.load-summary { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.load-summary-sub { font-size: 12.5px; margin-top: 4px; }
+.load-total { text-align: right; }
+.load-total .stat-num { font-size: 18px; }
+
+/* ===== Strength progression ===== */
+.prog-row { padding: 14px 0; border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15)); }
+.prog-row:first-child { padding-top: 0; }
+.prog-row:last-child { border-bottom: none; padding-bottom: 0; }
+.prog-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.prog-name { color: var(--text-primary); font-weight: 600; font-size: 14px; }
+.prog-trend { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prog-mid { display: flex; align-items: center; gap: 14px; }
+.prog-spark { flex-shrink: 0; width: 84px; height: 30px; overflow: visible; }
+.prog-meta { flex: 1; min-width: 0; }
+.prog-best { font-size: 16px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.prog-best-tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--gym-accent); border: 1px solid rgba(185,138,224,0.4);
+  border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
+}
+.prog-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* ===== Personal records ===== */
+.pr-summary { font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 6px; }
+.pr-summary b { color: var(--text-primary); }
+.pr-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; padding: 11px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+}
+.pr-row:last-child { border-bottom: none; padding-bottom: 0; }
+.pr-row:first-child { padding-top: 0; }
+.pr-name { color: var(--text-primary); font-weight: 600; font-size: 13.5px; }
+.pr-weight { color: var(--gym-accent); font-weight: 700; }
+.pr-date { color: var(--text-tertiary); font-size: 11.5px; white-space: nowrap; }
+
+/* ===== Training balance ===== */
+.balance-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.balance-col-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 10px;
+}
+.balance-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.balance-row:last-child { margin-bottom: 0; }
+.balance-label { width: 66px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
+.balance-track { flex: 1; height: 7px; border-radius: 999px; background: var(--surface-hover, #202B35); overflow: hidden; }
+.balance-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gym-accent), #7C5AB0); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+.balance-count { width: 22px; flex-shrink: 0; text-align: right; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-tertiary); }
+@media (max-width: 560px) { .balance-cols { grid-template-columns: 1fr; gap: 18px; } }
+
+/* ===== Recent workouts ===== */
 .workout-row {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 12px; padding: 12px 0;
@@ -153,46 +317,22 @@ body::after {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Progress ---------- */
-.progress-line {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-bottom: 14px; font-size: 13px; color: var(--text-secondary);
-}
-.progress-line b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+/* ===== Monthly summary ===== */
+.monthly-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.monthly-delta { font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* Quiet weekly bars — same restrained cell language as the heatmap on
-   main.html, not an axis-and-tooltip chart. */
-.week-bars { display: flex; align-items: flex-end; gap: 4px; height: 32px; margin-bottom: 4px; }
-.week-bar { flex: 1; background: var(--lavender); border-radius: 2px; opacity: 0.85; min-height: 2px; }
-.week-bars-label {
-  display: flex; justify-content: space-between;
-  font-size: 9.5px; color: var(--text-tertiary); margin-bottom: 18px;
+/* ===== Training insight ===== */
+.insight-line {
+  font-size: 13px; line-height: 1.6; color: var(--text-secondary);
+  padding-left: 14px; border-left: 2px solid var(--gym-accent);
+  margin-bottom: 12px;
 }
-
-.exercise-row {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: 12px; padding: 10px 0;
-  border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
-}
-.exercise-row:last-child { border-bottom: none; padding-bottom: 0; }
-.exercise-row:first-child { padding-top: 0; }
-.exercise-name { color: var(--text-primary); font-weight: 600; font-size: 13.5px; }
-.exercise-pr { color: var(--text-tertiary); font-size: 11px; margin-top: 2px; }
-.exercise-current {
-  text-align: right; font-size: 15px; font-weight: 700; color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.trend-up { color: var(--success); }
-.trend-down { color: var(--danger); }
-.trend-flat { color: var(--text-tertiary); }
-
-.empty-note {
-  color: var(--text-tertiary); font-size: 13px; line-height: 1.6;
-}
+.insight-line:last-child { margin-bottom: 0; }
 
 @media (max-width: 480px) {
-  .stat-num { font-size: 22px; }
+  .stat-num { font-size: 20px; }
   .workout-row-meta { font-size: 11.5px; }
+  .prog-spark { width: 64px; }
 }
 </style>
 </head>
@@ -200,33 +340,113 @@ body::after {
 <div class="page">
 
   <h1 class="dash-title">Gym</h1>
+  <div class="dash-subtitle">Strength training</div>
 
-  <div class="section" id="overviewSection">
-    <div class="section-title">Overview</div>
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-num" id="statWeek">—</div><div class="stat-label">This Week</div></div>
-      <div class="stat"><div class="stat-num" id="statStreak">—</div><div class="stat-label">Streak</div></div>
-      <div class="stat"><div class="stat-num" id="statLast">—</div><div class="stat-label">Last Workout</div></div>
-      <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total</div></div>
-    </div>
-  </div>
+  <div id="gymSections">
 
-  <div class="section" id="recentSection">
-    <div class="section-title">Recent Workouts</div>
-    <div class="gm-card"><div id="recentList"></div></div>
-  </div>
-
-  <div class="section" id="progressSection">
-    <div class="section-title">Progress</div>
-    <div class="gm-card">
-      <div class="progress-line">
-        <span>Consistency (last 8 weeks)</span>
-        <b id="progressConsistency">—</b>
+    <div class="section" id="heroSection">
+      <div class="section-title">Current Status</div>
+      <div class="gm-card">
+        <div class="gym-hero">
+          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroWeek">—</div><div class="gym-hero-label">This Week</div></div>
+          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroMonth">—</div><div class="gym-hero-label" id="heroMonthLabel">This Month</div></div>
+          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroAvg">—</div><div class="gym-hero-label">Avg / Week</div></div>
+        </div>
       </div>
-      <div class="week-bars" id="weekBars"></div>
-      <div class="week-bars-label"><span>8 weeks ago</span><span>This week</span></div>
-      <div id="exerciseList"></div>
     </div>
+
+    <div class="section" id="consistencySection">
+      <div class="section-title">Consistency</div>
+      <div class="gm-card">
+        <div class="consistency-strip" id="consistencyStrip"></div>
+        <div class="consistency-labels"><span>12 weeks ago</span><span>This week</span></div>
+        <div class="consistency-summary">
+          <span><b id="consistencyWeeksActive">—</b> weeks active</span>
+          <span><b id="consistencyAvg">—</b> sessions / week</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="loadSection">
+      <div class="section-title">Training Load</div>
+      <div class="gm-card">
+        <div class="load-summary">
+          <div>
+            <div class="stat-num" id="loadCurrent" style="font-size:30px">—</div>
+            <div class="load-summary-sub" id="loadTrend">—</div>
+          </div>
+          <div class="load-total">
+            <div class="stat-num" id="loadTotal">—</div>
+            <div class="stat-label">Total (12wk)</div>
+          </div>
+        </div>
+        <div class="chart-wrap" id="loadChartWrap">
+          <div class="chart-yaxis"><span id="loadChartMax">—</span><span id="loadChartMin">—</span></div>
+          <svg class="chart-svg" viewBox="0 0 320 128" preserveAspectRatio="none">
+            <defs><linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#B98AE0" stop-opacity="0.24"/><stop offset="100%" stop-color="#B98AE0" stop-opacity="0"/>
+            </linearGradient></defs>
+            <line class="chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+            <line class="chart-grid-line" x1="0" y1="64" x2="320" y2="64"></line>
+            <line class="chart-grid-line" x1="0" y1="120" x2="320" y2="120"></line>
+            <g id="loadChartContent"></g>
+            <line class="chart-hoverline" id="loadChartHoverLine" x1="0" y1="8" x2="0" y2="120"></line>
+            <circle class="chart-hoverdot" id="loadChartHoverDot" r="3.5"></circle>
+            <rect class="chart-hitarea" x="0" y="0" width="320" height="128"></rect>
+          </svg>
+          <div class="chart-tooltip" id="loadChartTip"><div class="chart-tooltip-val"></div><div class="chart-tooltip-label"></div></div>
+          <div class="empty-state" id="loadChartEmpty" style="display:none">Log a few weeks in Hevy to see a volume trend.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="progressSection">
+      <div class="section-title">Strength Progression</div>
+      <div class="gm-card"><div id="progList"></div></div>
+    </div>
+
+    <div class="section" id="prSection">
+      <div class="section-title">Personal Records</div>
+      <div class="gm-card">
+        <div class="pr-summary" id="prSummary"></div>
+        <div id="prList"></div>
+      </div>
+    </div>
+
+    <div class="section" id="balanceSection">
+      <div class="section-title">Training Balance</div>
+      <div class="gm-card">
+        <div id="balanceContent"></div>
+      </div>
+    </div>
+
+    <div class="section" id="recentSection">
+      <div class="section-title">Recent Workouts</div>
+      <div class="gm-card"><div id="recentList"></div></div>
+    </div>
+
+    <div class="section" id="monthlySection">
+      <div class="section-title">Monthly Summary</div>
+      <div class="gm-card">
+        <div class="monthly-head">
+          <div class="gm-eyebrow" id="monthlyLabel" style="margin-bottom:0">—</div>
+          <div class="monthly-delta" id="monthlyDelta"></div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-num" id="monthlyWorkouts">—</div><div class="stat-label">Workouts</div></div>
+          <div class="stat"><div class="stat-num" id="monthlyTime">—</div><div class="stat-label">Training Time</div></div>
+          <div class="stat"><div class="stat-num" id="monthlySets">—</div><div class="stat-label">Sets</div></div>
+          <div class="stat"><div class="stat-num" id="monthlyVolume">—</div><div class="stat-label">Volume</div></div>
+          <div class="stat"><div class="stat-num" id="monthlyPrs">—</div><div class="stat-label">PRs</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="insightSection">
+      <div class="section-title">Training Insight</div>
+      <div class="gm-card"><div id="insightList"></div></div>
+    </div>
+
   </div>
 
   <div class="section" id="emptyState" style="display:none">
@@ -247,8 +467,8 @@ body::after {
 // inline script like this one runs immediately as the parser reaches
 // it, which is BEFORE that — so `initCloudSync` wouldn't exist yet if
 // called directly here. Wrapping in DOMContentLoaded (same pattern
-// js/week-planner.js uses) runs this after every deferred script has
-// had a chance to define its globals.
+// running.html uses) runs this after every deferred script has had a
+// chance to define its globals.
 document.addEventListener('DOMContentLoaded', function () {
 (function () {
   'use strict';
@@ -257,93 +477,379 @@ document.addEventListener('DOMContentLoaded', function () {
     try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
   }
 
+  // ---------- format helpers ----------
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
   function fmtDate(dateKey) {
     if (!dateKey) return '—';
-    const p = dateKey.split('-').map(Number);
-    const d = new Date(p[0], p[1] - 1, p[2]);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return months[d.getMonth()] + ' ' + d.getDate();
+    const d = parseYMD(dateKey);
+    return MONTHS[d.getMonth()] + ' ' + d.getDate();
   }
+  function fmtWeekRange(weekStartKey) {
+    const start = parseYMD(weekStartKey);
+    const end = new Date(start); end.setDate(end.getDate() + 6);
+    return MONTHS[start.getMonth()] + ' ' + start.getDate() + ' – ' + MONTHS[end.getMonth()] + ' ' + end.getDate();
+  }
+  function numFmt(n) {
+    if (n == null || !isFinite(n)) return '—';
+    return Math.round(n).toLocaleString('en-US');
+  }
+  // Always kilograms — never abbreviated to tonnes, however large.
   function fmtVolume(kg) {
-    if (!kg) return null;
-    return kg >= 1000 ? (Math.round(kg / 100) / 10) + 't' : kg + ' kg';
+    if (kg == null || !isFinite(kg)) return '—';
+    return numFmt(kg) + ' kg';
   }
-  function trendArrow(trend) {
-    if (trend === 'up') return '<span class="trend-up">&#8593;</span>';
-    if (trend === 'down') return '<span class="trend-down">&#8595;</span>';
-    return '<span class="trend-flat">&#8594;</span>';
+  function fmtDurationLong(totalMin) {
+    if (!totalMin) return '0m';
+    const h = Math.floor(totalMin / 60), m = Math.round(totalMin % 60);
+    return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  }
+  function fmtPct(p) {
+    if (p == null || !isFinite(p)) return null;
+    const r = Math.round(p * 10) / 10;
+    return (r > 0 ? '+' : '') + r + '%';
+  }
+  function trendClass(t) { return t === 'up' ? 'trend-up' : t === 'down' ? 'trend-down' : 'trend-flat'; }
+  function trendArrow(t) { return t === 'up' ? '↑' : t === 'down' ? '↓' : '→'; }
+
+  // ---------- smooth SVG path (same curve style as running.html) ----------
+  function smoothPath(points) {
+    if (!points.length) return '';
+    if (points.length === 1) return 'M ' + points[0].x + ' ' + points[0].y;
+    let d = 'M ' + points[0].x.toFixed(2) + ' ' + points[0].y.toFixed(2);
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1], curr = points[i];
+      const cx = (prev.x + curr.x) / 2;
+      d += ' Q ' + cx.toFixed(2) + ' ' + prev.y.toFixed(2) + ', ' + cx.toFixed(2) + ' ' + ((prev.y + curr.y) / 2).toFixed(2);
+      d += ' T ' + curr.x.toFixed(2) + ' ' + curr.y.toFixed(2);
+    }
+    return d;
   }
 
+  const CHART_X_LEFT = 6, CHART_X_RIGHT = 314, CHART_Y_TOP = 8, CHART_Y_BOT = 120;
+
+  function wireChartHover(prefix) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const svg = wrap.querySelector('svg');
+    const hit = wrap.querySelector('.chart-hitarea');
+    const hoverLine = document.getElementById(prefix + 'HoverLine');
+    const hoverDot = document.getElementById(prefix + 'HoverDot');
+    const tip = document.getElementById(prefix + 'Tip');
+    if (!hit || wrap.dataset.hoverWired) return;
+    wrap.dataset.hoverWired = '1';
+
+    function hide() { hoverLine.style.opacity = 0; hoverDot.style.opacity = 0; tip.classList.remove('show'); }
+    function move(clientX) {
+      const pts = wrap._chartPoints;
+      if (!pts || !pts.length) return;
+      const svgRect = svg.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const vbX = (clientX - svgRect.left) / svgRect.width * 320;
+      let nearest = 0, bestDist = Infinity;
+      pts.forEach(function (p, i) { const d = Math.abs(p.x - vbX); if (d < bestDist) { bestDist = d; nearest = i; } });
+      const p = pts[nearest];
+      hoverLine.setAttribute('x1', p.x); hoverLine.setAttribute('x2', p.x);
+      hoverLine.style.opacity = 1;
+      hoverDot.setAttribute('cx', p.x); hoverDot.setAttribute('cy', p.y);
+      hoverDot.style.opacity = 1;
+      const pxX = svgRect.left - wrapRect.left + (p.x / 320) * svgRect.width;
+      const pxY = svgRect.top - wrapRect.top + (p.y / 128) * svgRect.height;
+      tip.style.left = pxX + 'px';
+      tip.style.top = pxY + 'px';
+      tip.querySelector('.chart-tooltip-val').textContent = p.label;
+      tip.querySelector('.chart-tooltip-label').textContent = p.sub || '';
+      tip.classList.add('show');
+    }
+    hit.addEventListener('mousemove', function (e) { move(e.clientX); });
+    hit.addEventListener('mouseleave', hide);
+    hit.addEventListener('touchstart', function (e) { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchmove', function (e) { if (e.touches[0]) move(e.touches[0].clientX); }, { passive: true });
+    hit.addEventListener('touchend', hide);
+  }
+
+  function renderLineChart(prefix, series, color, gradId, fmtY) {
+    const wrap = document.getElementById(prefix + 'Wrap');
+    const empty = document.getElementById(prefix + 'Empty');
+    const content = document.getElementById(prefix + 'Content');
+    if (!content) return;
+    if (series.length < 2 || series.every(function (d) { return d.value === 0; })) {
+      empty.style.display = 'block';
+      content.innerHTML = '';
+      wrap.querySelector('svg').style.display = 'none';
+      wrap.querySelector('.chart-yaxis').style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    wrap.querySelector('svg').style.display = 'block';
+    wrap.querySelector('.chart-yaxis').style.display = 'flex';
+
+    const data = series.map(function (d) { return d.value; });
+    const min = Math.min.apply(null, data), max = Math.max.apply(null, data);
+    const pad = Math.max((max - min) * 0.15, max * 0.05, 1);
+    const yMin = Math.max(0, min - pad), yMax = max + pad;
+    const xFor = function (i) { return data.length === 1 ? CHART_X_RIGHT : CHART_X_LEFT + (i / (data.length - 1)) * (CHART_X_RIGHT - CHART_X_LEFT); };
+    const yFor = function (v) { return CHART_Y_BOT - ((v - yMin) / (yMax - yMin)) * (CHART_Y_BOT - CHART_Y_TOP); };
+    const points = series.map(function (d, i) { return { x: xFor(i), y: yFor(d.value), label: fmtY(d.value), sub: d.sub }; });
+    const linePath = smoothPath(points);
+    const last = points[points.length - 1];
+    const areaPath = linePath + ' L ' + last.x.toFixed(2) + ' ' + CHART_Y_BOT + ' L ' + points[0].x.toFixed(2) + ' ' + CHART_Y_BOT + ' Z';
+
+    content.innerHTML =
+      '<path fill="url(#' + gradId + ')" d="' + areaPath + '"></path>' +
+      '<path fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="' + linePath + '"></path>' +
+      '<circle cx="' + last.x.toFixed(2) + '" cy="' + last.y.toFixed(2) + '" r="4" fill="' + color + '" stroke="#19232D" stroke-width="1.5"></circle>';
+    wrap._chartPoints = points;
+    document.getElementById(prefix + 'Max').textContent = fmtY(yMax);
+    document.getElementById(prefix + 'Min').textContent = fmtY(yMin);
+    wireChartHover(prefix);
+  }
+
+  // ---------- tiny inline sparkline for exercise progressions ----------
+  function renderSparkline(history) {
+    if (!history || history.length < 2) return '';
+    const W = 84, H = 30, PAD = 3;
+    const vals = history.map(function (p) { return p.bestKg; });
+    const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    const span = Math.max(max - min, 1);
+    const n = vals.length;
+    const points = vals.map(function (v, i) {
+      const x = n === 1 ? W - PAD : PAD + (i / (n - 1)) * (W - PAD * 2);
+      const y = H - PAD - ((v - min) / span) * (H - PAD * 2);
+      return { x: x, y: y };
+    });
+    const path = smoothPath(points);
+    const last = points[points.length - 1];
+    return '<svg class="prog-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+      '<path fill="none" stroke="var(--gym-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="' + path + '"></path>' +
+      '<circle cx="' + last.x.toFixed(2) + '" cy="' + last.y.toFixed(2) + '" r="2.5" fill="var(--gym-accent)"></circle>' +
+      '</svg>';
+  }
+
+  function setSectionVisible(id, visible) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+  }
+
+  // ---------- render ----------
   function render() {
     const data = storeGet('hevy_v1');
-    const hasData = data && typeof data === 'object' && (data.totalWorkouts > 0 || (data.recent && data.recent.length));
+    const hasData = data && typeof data === 'object' && data.totalWorkouts > 0;
 
-    document.getElementById('overviewSection').style.display = hasData ? '' : 'none';
-    document.getElementById('recentSection').style.display = hasData ? '' : 'none';
-    document.getElementById('progressSection').style.display = hasData ? '' : 'none';
+    document.getElementById('gymSections').style.display = hasData ? '' : 'none';
     document.getElementById('emptyState').style.display = hasData ? 'none' : '';
     if (!hasData) return;
 
-    // ---------- Overview ----------
-    document.getElementById('statWeek').textContent = data.workoutsThisWeek != null ? data.workoutsThisWeek : '—';
-    document.getElementById('statStreak').textContent = data.streak ? data.streak + 'd' : '0d';
-    document.getElementById('statLast').textContent = data.lastWorkout ? fmtDate(data.lastWorkout.date) : '—';
-    document.getElementById('statTotal').textContent = data.totalWorkouts != null ? data.totalWorkouts : '—';
+    renderHero(data);
+    renderConsistency(data.consistency);
+    renderLoad(data.load);
+    renderProgression(data.exercises || []);
+    renderPRs(data.personalRecords || { recent: [], last30Days: 0 });
+    renderBalance(data.balance);
+    renderRecent(data.recent || []);
+    renderMonthly(data.monthly);
+    renderInsights(data.insights || []);
+  }
 
-    // ---------- Recent workouts ----------
+  // ---------- 1. Header / current status ----------
+  function renderHero(data) {
+    document.getElementById('heroWeek').textContent = data.workoutsThisWeek != null ? data.workoutsThisWeek : '—';
+    document.getElementById('heroMonth').textContent = data.workoutsThisMonth != null ? data.workoutsThisMonth : '—';
+    document.getElementById('heroMonthLabel').textContent = MONTHS[new Date().getMonth()];
+    document.getElementById('heroAvg').textContent = data.avgPerWeek != null ? data.avgPerWeek : '—';
+  }
+
+  // ---------- 2. Consistency ----------
+  function renderConsistency(consistency) {
+    const strip = document.getElementById('consistencyStrip');
+    strip.innerHTML = '';
+    const weeks = (consistency && consistency.weeks) || [];
+    weeks.forEach(function (w, i) {
+      const cell = document.createElement('div');
+      cell.className = 'consistency-cell' + (i === weeks.length - 1 ? ' is-current' : '');
+      const level = Math.min(4, w.count);
+      const alpha = level === 0 ? 0 : 0.22 + (level - 1) * 0.26;
+      if (level > 0) cell.style.background = 'rgba(185,138,224,' + alpha.toFixed(2) + ')';
+      cell.title = fmtWeekRange(w.weekStart) + ': ' + w.count + ' session' + (w.count === 1 ? '' : 's');
+      strip.appendChild(cell);
+    });
+    document.getElementById('consistencyWeeksActive').textContent =
+      consistency ? consistency.weeksActive + ' / ' + weeks.length : '—';
+    document.getElementById('consistencyAvg').textContent = consistency ? consistency.avgPerWeek : '—';
+  }
+
+  // ---------- 3. Training load ----------
+  function renderLoad(load) {
+    if (!load) { setSectionVisible('loadSection', false); return; }
+    setSectionVisible('loadSection', true);
+    document.getElementById('loadCurrent').textContent = fmtVolume(load.currentWeekVolumeKg);
+    const trendEl = document.getElementById('loadTrend');
+    const pct = fmtPct(load.trendPct);
+    if (pct) {
+      trendEl.className = 'load-summary-sub ' + trendClass(load.trendPct > 0 ? 'up' : load.trendPct < 0 ? 'down' : 'flat');
+      trendEl.textContent = pct + ' vs 4-week average';
+    } else {
+      trendEl.className = 'load-summary-sub';
+      trendEl.textContent = 'Not enough history yet for a trend';
+    }
+    document.getElementById('loadTotal').textContent = fmtVolume(load.totalVolumeKg);
+
+    const series = (load.weeks || []).map(function (w) { return { value: w.volumeKg, sub: fmtWeekRange(w.weekStart) }; });
+    renderLineChart('loadChart', series, '#B98AE0', 'loadGrad', fmtVolume);
+  }
+
+  // ---------- 4. Strength progression ----------
+  function renderProgression(exercises) {
+    const list = document.getElementById('progList');
+    list.innerHTML = '';
+    if (!exercises.length) {
+      list.innerHTML = '<p class="empty-note">Log a few more sessions in Hevy to see strength progression here.</p>';
+      return;
+    }
+    exercises.forEach(function (ex) {
+      const row = document.createElement('div');
+      row.className = 'prog-row';
+      const hasProgress = ex.progressPct != null;
+      const trendText = hasProgress
+        ? trendArrow(ex.trend) + ' ' + Math.abs(ex.progressPct) + '% over ' + ex.progressWeeks + ' week' + (ex.progressWeeks === 1 ? '' : 's')
+        : '';
+      const isPr = ex.currentBestKg === ex.prKg;
+      row.innerHTML =
+        '<div class="prog-top">' +
+          '<span class="prog-name"></span>' +
+          (trendText ? '<span class="prog-trend ' + trendClass(ex.trend) + '"></span>' : '') +
+        '</div>' +
+        '<div class="prog-mid">' +
+          renderSparkline(ex.history) +
+          '<div class="prog-meta">' +
+            '<div class="prog-best"></div>' +
+            '<div class="prog-sub">' + (ex.sessionCount) + ' session' + (ex.sessionCount === 1 ? '' : 's') + ' logged</div>' +
+          '</div>' +
+        '</div>';
+      row.querySelector('.prog-name').textContent = ex.title;
+      if (trendText) row.querySelector('.prog-trend').textContent = trendText;
+      row.querySelector('.prog-best').innerHTML =
+        escapeHtml(ex.currentBestKg + ' kg') + (isPr ? '<span class="prog-best-tag">PR</span>' : '');
+      list.appendChild(row);
+    });
+  }
+
+  // ---------- 5. Personal records ----------
+  function renderPRs(pr) {
+    const summary = document.getElementById('prSummary');
+    const list = document.getElementById('prList');
+    list.innerHTML = '';
+    if (!pr.recent.length) {
+      summary.textContent = '';
+      list.innerHTML = '<p class="empty-note">No personal records logged yet — a PR appears here the first time you beat a previous best on an exercise.</p>';
+      return;
+    }
+    summary.innerHTML = '<b>' + pr.last30Days + '</b> PR' + (pr.last30Days === 1 ? '' : 's') + ' · Last 30 days';
+    pr.recent.forEach(function (p) {
+      const row = document.createElement('div');
+      row.className = 'pr-row';
+      row.innerHTML =
+        '<div class="pr-name"></div>' +
+        '<div style="display:flex;align-items:baseline;gap:10px">' +
+          '<span class="pr-weight"></span><span class="pr-date"></span>' +
+        '</div>';
+      row.querySelector('.pr-name').textContent = p.exercise;
+      row.querySelector('.pr-weight').textContent = p.weightKg + ' kg';
+      row.querySelector('.pr-date').textContent = fmtDate(p.date);
+      list.appendChild(row);
+    });
+  }
+
+  // ---------- 6. Training balance ----------
+  function renderBalance(balance) {
+    const content = document.getElementById('balanceContent');
+    if (!balance || !balance.available || balance.totalSets === 0) {
+      content.innerHTML = '<p class="empty-note">' +
+        (balance && !balance.available
+          ? 'Exercise categories haven’t synced yet — this fills in on the next sync.'
+          : 'No sets logged in the last 8 weeks to categorize yet.') +
+        '</p>';
+      return;
+    }
+    const upper = balance.groups.filter(function (g) { return g.region === 'upper'; });
+    const lower = balance.groups.filter(function (g) { return g.region === 'lower'; });
+    const max = Math.max.apply(null, balance.groups.map(function (g) { return g.sets; })) || 1;
+    function col(title, groups) {
+      let html = '<div><div class="balance-col-title">' + title + '</div>';
+      groups.forEach(function (g) {
+        html += '<div class="balance-row">' +
+          '<div class="balance-label"></div>' +
+          '<div class="balance-track"><div class="balance-fill" style="width:' + ((g.sets / max) * 100).toFixed(0) + '%"></div></div>' +
+          '<div class="balance-count">' + g.sets + '</div>' +
+        '</div>';
+      });
+      return html + '</div>';
+    }
+    content.innerHTML = '<div class="balance-cols">' + col('Upper', upper) + col('Lower', lower) + '</div>';
+    // Labels set via textContent after innerHTML build (escapeHtml not needed for fixed vocabulary, but keeps one code path).
+    const labels = content.querySelectorAll('.balance-label');
+    upper.concat(lower).forEach(function (g, i) { labels[i].textContent = g.group; });
+  }
+
+  // ---------- 7. Recent workouts ----------
+  function renderRecent(recent) {
     const list = document.getElementById('recentList');
     list.innerHTML = '';
-    if (!data.recent || !data.recent.length) {
+    if (!recent.length) {
       list.innerHTML = '<p class="empty-note">No workouts synced yet.</p>';
-    } else {
-      data.recent.forEach(function (w) {
-        const row = document.createElement('div');
-        row.className = 'workout-row';
-        const meta = [
-          w.durationMin ? w.durationMin + ' min' : null,
-          w.exerciseCount ? w.exerciseCount + ' exercises' : null,
-          fmtVolume(w.volumeKg)
-        ].filter(Boolean).join(' · ');
-        row.innerHTML =
-          '<div><div class="workout-row-name"></div><div class="workout-row-date"></div></div>' +
-          '<div class="workout-row-meta"></div>';
-        row.querySelector('.workout-row-name').textContent = w.title || 'Workout';
-        row.querySelector('.workout-row-date').textContent = fmtDate(w.date);
-        row.querySelector('.workout-row-meta').textContent = meta;
-        list.appendChild(row);
-      });
+      return;
     }
-
-    // ---------- Progress: weekly consistency bars ----------
-    const perWeek = data.workoutsPerWeek || [];
-    const bars = document.getElementById('weekBars');
-    bars.innerHTML = '';
-    const max = Math.max(1, Math.max.apply(null, perWeek));
-    perWeek.forEach(function (n) {
-      const bar = document.createElement('div');
-      bar.className = 'week-bar';
-      bar.style.height = Math.max(6, Math.round((n / max) * 32)) + 'px';
-      bar.title = n + ' workout' + (n === 1 ? '' : 's');
-      bars.appendChild(bar);
-    });
-    const weeksWithWorkout = perWeek.filter(function (n) { return n > 0; }).length;
-    document.getElementById('progressConsistency').textContent =
-      perWeek.length ? weeksWithWorkout + ' / ' + perWeek.length + ' weeks' : '—';
-
-    // ---------- Progress: key exercises ----------
-    const exList = document.getElementById('exerciseList');
-    exList.innerHTML = '';
-    (data.exercises || []).forEach(function (ex) {
+    recent.forEach(function (w) {
       const row = document.createElement('div');
-      row.className = 'exercise-row';
+      row.className = 'workout-row';
+      const meta = [
+        w.durationMin ? w.durationMin + ' min' : null,
+        w.setCount ? w.setCount + ' sets' : null,
+        w.volumeKg ? fmtVolume(w.volumeKg) : null
+      ].filter(Boolean).join(' · ');
       row.innerHTML =
-        '<div><div class="exercise-name"></div><div class="exercise-pr"></div></div>' +
-        '<div class="exercise-current"></div>';
-      row.querySelector('.exercise-name').textContent = ex.title;
-      row.querySelector('.exercise-pr').textContent = 'PR ' + ex.prKg + ' kg';
-      row.querySelector('.exercise-current').innerHTML =
-        escapeHtml(ex.lastKg + ' kg') + ' ' + trendArrow(ex.trend);
-      exList.appendChild(row);
+        '<div><div class="workout-row-name"></div><div class="workout-row-date"></div></div>' +
+        '<div class="workout-row-meta"></div>';
+      row.querySelector('.workout-row-name').textContent = w.title || 'Workout';
+      row.querySelector('.workout-row-date').textContent = fmtDate(w.date);
+      row.querySelector('.workout-row-meta').textContent = meta;
+      list.appendChild(row);
+    });
+  }
+
+  // ---------- 8. Monthly summary ----------
+  function renderMonthly(monthly) {
+    if (!monthly) return;
+    const now = new Date();
+    document.getElementById('monthlyLabel').textContent = MONTHS_FULL[now.getMonth()].toUpperCase();
+    const c = monthly.current;
+    document.getElementById('monthlyWorkouts').textContent = c.workouts;
+    document.getElementById('monthlyTime').textContent = fmtDurationLong(c.trainingTimeMin);
+    document.getElementById('monthlySets').textContent = c.sets;
+    document.getElementById('monthlyVolume').textContent = fmtVolume(c.volumeKg);
+    document.getElementById('monthlyPrs').textContent = c.prs;
+
+    const deltaEl = document.getElementById('monthlyDelta');
+    const pct = fmtPct(monthly.volumeDeltaPct);
+    if (pct) {
+      deltaEl.className = 'monthly-delta ' + trendClass(monthly.volumeDeltaPct > 0 ? 'up' : monthly.volumeDeltaPct < 0 ? 'down' : 'flat');
+      deltaEl.textContent = pct + ' volume vs last month';
+    } else {
+      deltaEl.textContent = '';
+    }
+  }
+
+  // ---------- 9. Training insight ----------
+  function renderInsights(insights) {
+    setSectionVisible('insightSection', insights.length > 0);
+    if (!insights.length) return;
+    const list = document.getElementById('insightList');
+    list.innerHTML = '';
+    insights.forEach(function (text) {
+      const line = document.createElement('div');
+      line.className = 'insight-line';
+      line.textContent = text;
+      list.appendChild(line);
     });
   }
 
