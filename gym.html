@@ -243,6 +243,13 @@ body::after {
 </div>
 
 <script>
+// Deferred scripts (sync.js) execute after parsing finishes; a plain
+// inline script like this one runs immediately as the parser reaches
+// it, which is BEFORE that — so `initCloudSync` wouldn't exist yet if
+// called directly here. Wrapping in DOMContentLoaded (same pattern
+// js/week-planner.js uses) runs this after every deferred script has
+// had a chance to define its globals.
+document.addEventListener('DOMContentLoaded', function () {
 (function () {
   'use strict';
 
@@ -346,6 +353,7 @@ body::after {
     initCloudSync({ appKey: 'hevy', syncedKeys: ['hevy_v1'], onApplied: render });
   }
 })();
+});
 </script>
 
 </body>
