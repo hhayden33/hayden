@@ -1699,14 +1699,19 @@ body::after {
       aioColor: 'rgba(174,183,192,0.8)'
     },
     light: {
-      panelFill: 'rgba(255,255,255,0.55)', panelStroke: 'rgba(16,21,26,0.12)',
-      eyebrow: 'rgba(16,21,26,0.55)',
-      dividerMain: 'rgba(16,21,26,0.14)', dividerSecondary: 'rgba(16,21,26,0.10)',
-      statColor: '#10151A', statUnitColor: 'rgba(16,21,26,0.62)',
-      labelColor: 'rgba(16,21,26,0.55)',
-      textShadow: 'rgba(255,255,255,0.55)',
+      // Toned down from an earlier pass that used a near-opaque pure-white
+      // panel + a bright white text glow — read as a stark white card
+      // rather than a light scrim. Softer neutral (not pure #FFF), lower
+      // opacity, and the text shadow dialed way back so it's contrast for
+      // legibility, not a glow.
+      panelFill: 'rgba(237,236,233,0.34)', panelStroke: 'rgba(16,21,26,0.10)',
+      eyebrow: 'rgba(16,21,26,0.48)',
+      dividerMain: 'rgba(16,21,26,0.12)', dividerSecondary: 'rgba(16,21,26,0.08)',
+      statColor: '#1B2028', statUnitColor: 'rgba(16,21,26,0.55)',
+      labelColor: 'rgba(16,21,26,0.48)',
+      textShadow: 'rgba(255,255,255,0.28)',
       wordmarkStops: ['#0E5C78', '#124F6B', '#2C6B72', '#552080'],
-      aioColor: 'rgba(16,21,26,0.55)'
+      aioColor: 'rgba(16,21,26,0.48)'
     }
   };
 
