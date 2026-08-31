@@ -469,19 +469,18 @@
     renderNorthStarMini();
   }
 
-  function renderNightSleep() {
-    const NS = window.NightSleep;
-    if (!NS) return;
-    NS.renderNightRoutine();
-    NS.renderSleep();
+  function renderNightRoutine() {
+    const NR = window.NightRoutine;
+    if (!NR) return;
+    NR.renderNightRoutine();
   }
 
   // Detects the active day flipping (the 6 AM boundary, or just plain
   // midnight rollovers) while the tab is left open and never touched —
-  // without this, Today/Tomorrow/Night Routine/Sleep would all keep
-  // showing the day that was "today" when the page loaded until the
-  // user reloads or edits something. goals:<tomorrow-date> already
-  // *is* goals:<the-new-active-date> once this flips (see
+  // without this, Today/Tomorrow/Night Routine would all keep showing
+  // the day that was "today" when the page loaded until the user
+  // reloads or edits something. goals:<tomorrow-date> already *is*
+  // goals:<the-new-active-date> once this flips (see
   // getTomorrowDateString()/getActiveDateString()) — nothing else
   // has to move the data, this just makes the open tab notice and
   // re-render against it.
@@ -495,7 +494,7 @@
     loadToday();
     loadTomorrow();
     renderStreak();
-    renderNightSleep();
+    renderNightRoutine();
   }
 
   // ---------- Boot ----------
@@ -509,7 +508,7 @@
 
   // Re-render when storage changes from another tab (or our bridged parent).
   window.addEventListener('storage', () => {
-    loadToday(); loadTomorrow(); renderStreak(); renderNightSleep(); renderGoalsSummary();
+    loadToday(); loadTomorrow(); renderStreak(); renderNightRoutine(); renderGoalsSummary();
   });
   // Same-tab sibling views (the 7-Day Overview's own To Do List below, or
   // todo.html when embedded/bridged) write through storeSet/setGoals, which

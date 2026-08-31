@@ -115,21 +115,10 @@
     return 'Nothing ticked off today yet. Pick the smallest one.';
   }
 
-  // ---------- rule 4: sleep, after 09:00 ----------
-  function hasSleepData(v) { return !!(v && (v.hours != null || v.bedTime != null)); }
-  function ruleSleep(t) {
-    if (t < 9 * 60) return null;
-    if (!hasAnyDataInLast7('sleep:', hasSleepData)) return null;
-    const s = storeGet('sleep:' + getActiveDateString());
-    if (hasSleepData(s)) return null;
-    return "Last night's sleep isn't logged.";
-  }
-
   const RULES = [
     { id: 'night', fn: ruleNightRoutine },
     { id: 'water', fn: ruleWater },
-    { id: 'goals', fn: ruleGoals },
-    { id: 'sleep', fn: ruleSleep }
+    { id: 'goals', fn: ruleGoals }
   ];
 
   // ---------- render ----------

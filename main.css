@@ -245,7 +245,7 @@ body::after {
   background: rgba(255,255,255,0.10);
   color: var(--text-primary);
 }
-#todoSection, #runningOverview, #water, #nightRoutine, #sleep { scroll-margin-top: 56px; }
+#todoSection, #runningOverview, #water, #nightRoutine, #consistency { scroll-margin-top: 56px; }
 
 /* ===== Component 3: Day Ring ===== */
 .status-row {
@@ -1105,12 +1105,12 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .wk-chart-meta { flex-basis: 100%; min-width: 0; text-align: left; }
 }
 
-/* ---------- Water Tracker + Night Routine + Sleep row — all three
-   side by side, levelled to equal height (align-items:stretch) rather
-   than each sitting at its own natural height. Every nesting level
-   between .dual-row and the actual visible card has to pass flex-grow
-   down for that to reach the real box (water nests deeper than the
-   others: section > .water-embed > .shell > .card). ---------- */
+/* ---------- Night Routine + Water Tracker row — side by side,
+   levelled to equal height (align-items:stretch) rather than each
+   sitting at its own natural height. Every nesting level between
+   .dual-row and the actual visible card has to pass flex-grow down
+   for that to reach the real box (water nests deeper than the other:
+   section > .water-embed > .shell > .card). ---------- */
 .dual-row {
   display: flex;
   align-items: stretch;
@@ -1133,140 +1133,6 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 @media (max-width: 900px) {
   .dual-row { flex-direction: column; gap: 0; }
 }
-
-/* ---------- Sleep ---------- */
-/* Score ring + hours/timeline pair — Garmin-watch-face inspired: a
-   compact ticked-track ring with the score dead center, next to a
-   duration readout with a plain overnight bar underneath. */
-.sleep-visuals-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 14px;
-}
-.sleep-score-wrap {
-  position: relative;
-  width: 76px; height: 76px;
-  flex-shrink: 0;
-}
-.sleep-score-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
-/* Small dash + wide gap on the track circle reads as a ring of ticks
-   rather than a solid line — the "subtle surrounding tick marks" cue —
-   while the fill circle stays a normal smooth arc. */
-.sleep-score-track {
-  fill: none;
-  stroke: rgba(255,255,255,0.16);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 1 7.2;
-}
-.sleep-score-fill {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transform: rotate(-90deg);
-  transform-origin: 50px 50px;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.4s;
-}
-.sleep-score-overlay {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-}
-.sleep-score-num {
-  font-size: 22px; font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  line-height: 1;
-}
-.sleep-score-band {
-  margin-top: 3px;
-  font-family: var(--font-mono);
-  font-size: 7px; font-weight: 800;
-  letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-.sleep-hours-wrap { flex: 1; min-width: 0; }
-.sleep-hours-num {
-  font-size: 24px; font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  line-height: 1;
-}
-.sleep-hours-label { margin-left: 6px; font-size: 11.5px; color: var(--text-tertiary); }
-.sleep-timeline {
-  display: flex;
-  height: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255,255,255,0.06);
-  margin-top: 10px;
-  gap: 1.5px;
-}
-.sleep-timeline-seg { height: 100%; }
-.sleep-timeline-seg[data-stage="asleep"] { background: linear-gradient(90deg, #087CA3, #A98BCB); }
-.sleep-timeline-seg[data-stage="awake"] { background: rgba(255,107,107,0.55); }
-.sleep-timeline-seg[data-stage="light"] { background: #087CA3; }
-.sleep-timeline-seg[data-stage="deep"]  { background: #552080; }
-.sleep-timeline-seg[data-stage="rem"]   { background: #A98BCB; }
-.sleep-timeline-times {
-  display: flex; justify-content: space-between;
-  margin-top: 6px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--text-tertiary);
-}
-.sleep-time-row { display: flex; gap: 10px; margin: 14px 0 16px; }
-.sleep-time-field { flex: 1; min-width: 0; }
-.sleep-time-field label {
-  display: block;
-  font-size: 10.5px; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-bottom: 6px;
-}
-.sleep-time-field input[type="time"] { color-scheme: dark; width: 100%; }
-.gm-streak.sleep-source-live {
-  background: rgba(32,165,160,0.10);
-  color: var(--success);
-  border-color: rgba(32,165,160,0.32);
-}
-.sleep-chart {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.sleep-chart-label {
-  font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-bottom: 10px;
-}
-.sleep-chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 48px; }
-.sleep-chart-bar-wrap {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: flex-end;
-  gap: 5px;
-  height: 100%;
-}
-.sleep-chart-bar {
-  width: 100%; max-width: 20px;
-  border-radius: 4px 4px 2px 2px;
-  background: var(--success);
-  opacity: 0.75;
-  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.sleep-chart-bar.is-today { opacity: 1; box-shadow: 0 0 8px rgba(32,165,160,0.5); }
-.sleep-chart-bar.is-empty { background: rgba(255,255,255,0.08); }
-.sleep-chart-day {
-  font-family: var(--font-mono);
-  font-size: 9px; font-weight: 700;
-  color: var(--text-tertiary);
-}
-.sleep-chart-day.is-today { color: var(--text-primary); }
 
 /* ---------- Water Tracker (ported natively from po-water.html — was
    an <iframe src="po-water.html"> until it was inlined here; see the
@@ -1800,58 +1666,5 @@ html.is-embedded .shell { padding-bottom: 20px; }
 .hm-legend .hm-cell:hover { transform: none; }
 @media (max-width: 560px) {
   .hm-inner { grid-template-columns: 42px 1fr 40px; gap: 5px 7px; }
-}
-
-/* ---------- Morning briefing ----------
-   Deliberately the quietest card on the page: no border colour beyond a
-   muted accent hairline, no icons, generous leading. It reads like a
-   note left on the page, not a widget. */
-.brief-card {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border-subtle);
-  border-left: 2px solid color-mix(in srgb, var(--success) 55%, transparent);
-  border-radius: 14px;
-  padding: 18px 22px 20px;
-  margin: 0 0 18px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
-}
-.brief-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.brief-eyebrow {
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-.brief-toggle {
-  background: none; border: 0; padding: 2px 4px; cursor: pointer;
-  font-family: var(--font);
-  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-  transition: color 0.2s;
-  border-radius: 4px;
-}
-.brief-toggle:hover { color: var(--text-secondary); }
-.brief-toggle:focus-visible { outline: 2px solid var(--success); outline-offset: 2px; }
-.brief-body {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--text-secondary);
-  max-width: 68ch;
-  animation: brief-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.brief-card.is-collapsed { padding-bottom: 14px; }
-.brief-card.is-collapsed .brief-body {
-  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-  overflow: hidden; color: var(--text-tertiary);
-}
-@keyframes brief-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .brief-body { animation: none; } }
-@media (max-width: 480px) {
-  .brief-card { padding: 16px 16px 18px; }
-  .brief-body { font-size: 14px; line-height: 1.6; }
 }
 

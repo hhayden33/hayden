@@ -20,13 +20,14 @@ document.addEventListener('DOMContentLoaded', function () {
       window.dispatchEvent(new Event('storage'));
     }
   });
-  // Ready for a future Garmin sleep sync (mirroring garmin-sync.py's
-  // 'running' channel) to push sleep:<date> entries in directly — this
-  // registration is what makes that show up here without any other
-  // change once it exists.
+  // Hevy summary (automation/hevy-sync.mjs -> Supabase app_state('hevy')).
+  // gym.html reads the same hevy_v1 key directly, but the Gym row of
+  // this page's own consistency heatmap needs it pulled in here too —
+  // without this, that row only lit up once gym.html had been opened
+  // at least once in this browser to seed localStorage.
   initCloudSync({
-    appKey: 'sleep',
-    syncedPrefixes: ['sleep:'],
+    appKey: 'hevy',
+    syncedKeys: ['hevy_v1'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }

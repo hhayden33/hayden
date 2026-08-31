@@ -42,15 +42,12 @@
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
   <div class="hero-weather" id="heroWeather"></div>
 
-  <section id="briefCard" class="brief-card"></section>
-
   <nav class="quickjump" aria-label="Quick jump">
     <a href="#todoSection" class="quickjump-chip">Today</a>
+    <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
+    <a href="#water" class="quickjump-chip">Water</a>
     <a href="#runningOverview" class="quickjump-chip">Running</a>
     <a href="#consistency" class="quickjump-chip">Consistency</a>
-    <a href="#water" class="quickjump-chip">Water</a>
-    <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
-    <a href="#sleep" class="quickjump-chip">Sleep</a>
   </nav>
 
   <div class="status-row">
@@ -239,53 +236,25 @@
     </div>
   </div>
 
-  <!-- RUNNING OVERVIEW (from Garmin, via running.html's run: data) -->
-  <div class="section" id="runningOverview">
-    <div class="section-title">Running</div>
-    <div class="gm-card">
+  <div class="dual-row">
+  <!-- NIGHT ROUTINE -->
+  <div class="section" id="nightRoutine">
+    <div class="section-title">Night Routine</div>
+    <div class="gm-card nr-card" id="nrCard">
       <div class="gm-header">
         <div class="gm-header-left">
-          <div class="gm-eyebrow" id="roLatestEyebrow">Latest Run</div>
+          <div class="gm-eyebrow">🌙 Wind down for tonight</div>
           <div class="gm-progress-row">
-            <span class="gm-progress-num" id="roLatestDist">—</span>
-            <span class="gm-progress-label" id="roLatestPace">—</span>
+            <span class="gm-progress-num" id="nrProgressNum">0</span>
+            <span class="gm-progress-total" id="nrProgressTotal">/ 0</span>
+            <span class="gm-progress-label" id="nrProgressLabel"></span>
           </div>
         </div>
-        <a href="running.html" class="gm-streak" id="roMarathonPill" style="text-decoration:none;">—</a>
       </div>
-      <div class="stat-grid">
-        <div class="stat"><div class="stat-num" id="roWeekDist">—</div><div class="stat-label">This Week</div></div>
-        <div class="stat"><div class="stat-num" id="roVo2Max">—</div><div class="stat-label">VO2 Max</div></div>
-        <div class="stat"><div class="stat-num" id="roLongestRecent">—</div><div class="stat-label">Longest Recent Run</div></div>
-        <div class="stat"><div class="stat-num" id="roMarathonWeek">—</div><div class="stat-label">Training Week</div></div>
-      </div>
-    </div>
-
-    <div class="gm-card" style="margin-top:14px">
-      <div class="run-chart-title">Weekly Mileage — Last 12 Weeks</div>
-      <div class="run-chart-wrap" id="roChartWrap">
-        <div class="run-chart-yaxis"><span id="roChartMax">—</span><span id="roChartMin">—</span></div>
-        <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
-          <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
-          <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
-          <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
-          <g id="roChartContent"></g>
-          <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
-        </svg>
-        <div class="run-chart-tooltip" id="roChartTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
-        <div class="empty-state" id="roChartEmpty" style="display:none">Log runs to see your mileage trend.</div>
-      </div>
+      <ul id="nightRoutineList" class="goal-list gm-list nr-list"></ul>
     </div>
   </div>
 
-  <!-- CONSISTENCY HEATMAP — the summary of everything above it, before
-       the daily trackers (Water/Night Routine) start. -->
-  <div class="section" id="consistency">
-    <div class="section-title">Consistency</div>
-    <div class="gm-card"><div id="hmGrid"></div></div>
-  </div>
-
-  <div class="dual-row">
   <!-- WATER TRACKER (moved in from health.html; ported natively from
        po-water.html — see the water tracker's script and style blocks
        below for the full copyright/license header this code carries). -->
@@ -488,96 +457,52 @@
       </div>
     </section>
   </div>
+  </div>
 
-  <!-- NIGHT ROUTINE -->
-  <div class="section" id="nightRoutine">
-    <div class="section-title">Night Routine</div>
-    <div class="gm-card nr-card" id="nrCard">
+  <!-- RUNNING OVERVIEW (from Garmin, via running.html's run: data) -->
+  <div class="section" id="runningOverview">
+    <div class="section-title">Running</div>
+    <div class="gm-card">
       <div class="gm-header">
         <div class="gm-header-left">
-          <div class="gm-eyebrow">🌙 Wind down for tonight</div>
+          <div class="gm-eyebrow" id="roLatestEyebrow">Latest Run</div>
           <div class="gm-progress-row">
-            <span class="gm-progress-num" id="nrProgressNum">0</span>
-            <span class="gm-progress-total" id="nrProgressTotal">/ 0</span>
-            <span class="gm-progress-label" id="nrProgressLabel"></span>
+            <span class="gm-progress-num" id="roLatestDist">—</span>
+            <span class="gm-progress-label" id="roLatestPace">—</span>
           </div>
         </div>
+        <a href="running.html" class="gm-streak" id="roMarathonPill" style="text-decoration:none;">—</a>
       </div>
-      <ul id="nightRoutineList" class="goal-list gm-list nr-list"></ul>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="roWeekDist">—</div><div class="stat-label">This Week</div></div>
+        <div class="stat"><div class="stat-num" id="roVo2Max">—</div><div class="stat-label">VO2 Max</div></div>
+        <div class="stat"><div class="stat-num" id="roLongestRecent">—</div><div class="stat-label">Longest Recent Run</div></div>
+        <div class="stat"><div class="stat-num" id="roMarathonWeek">—</div><div class="stat-label">Training Week</div></div>
+      </div>
+    </div>
+
+    <div class="gm-card" style="margin-top:14px">
+      <div class="run-chart-title">Weekly Mileage — Last 12 Weeks</div>
+      <div class="run-chart-wrap" id="roChartWrap">
+        <div class="run-chart-yaxis"><span id="roChartMax">—</span><span id="roChartMin">—</span></div>
+        <svg class="run-chart-svg" viewBox="0 0 320 104" preserveAspectRatio="none">
+          <line class="run-chart-grid-line" x1="0" y1="8" x2="320" y2="8"></line>
+          <line class="run-chart-grid-line" x1="0" y1="52" x2="320" y2="52"></line>
+          <line class="run-chart-grid-line" x1="0" y1="96" x2="320" y2="96"></line>
+          <g id="roChartContent"></g>
+          <rect class="run-chart-hitarea" x="0" y="0" width="320" height="104"></rect>
+        </svg>
+        <div class="run-chart-tooltip" id="roChartTip"><div class="run-chart-tooltip-val"></div><div class="run-chart-tooltip-label"></div></div>
+        <div class="empty-state" id="roChartEmpty" style="display:none">Log runs to see your mileage trend.</div>
+      </div>
     </div>
   </div>
 
-  <!-- SLEEP — sits beside Night Routine and shares its active-day
-       boundary (getActiveDateString()); its sleep:<date> key is ready
-       for a future Garmin sleep sync to write into (source:'garmin'),
-       the same way run:garminSnapshot feeds Running today. -->
-  <div class="section" id="sleep">
-    <div class="section-title">Sleep</div>
-    <div class="gm-card" id="sleepCard">
-      <div class="gm-header">
-        <div class="gm-header-left">
-          <div class="gm-eyebrow">🌙 Last night</div>
-        </div>
-        <div class="gm-streak" id="sleepSourceTag">
-          <span id="sleepSourceLabel">Manual</span>
-        </div>
-      </div>
-
-      <!-- Garmin-inspired pair: a compact score ring (ticked track, score
-           dead center) beside a duration + overnight timeline. Ring color
-           and timeline segments both key off real data when it's there
-           (source:'garmin', s.score, s.stages[]); until then the ring
-           shows a plain hours/quality-derived estimate and the timeline
-           collapses to a single "asleep" span — see computeSleepScore()
-           and renderSleepTimeline() below for exactly where that split is. -->
-      <div class="sleep-visuals-row">
-        <div class="sleep-score-wrap">
-          <svg viewBox="0 0 100 100">
-            <circle class="sleep-score-track" cx="50" cy="50" r="42" />
-            <circle class="sleep-score-fill" id="sleepScoreFill" cx="50" cy="50" r="42" />
-          </svg>
-          <div class="sleep-score-overlay">
-            <div class="sleep-score-num" id="sleepScoreNum">—</div>
-            <div class="sleep-score-band" id="sleepScoreBand">SCORE</div>
-          </div>
-        </div>
-        <div class="sleep-hours-wrap">
-          <span class="sleep-hours-num" id="sleepHoursNum">—</span>
-          <span class="sleep-hours-label" id="sleepHoursLabel">no data yet</span>
-          <div class="sleep-timeline" id="sleepTimeline"></div>
-          <div class="sleep-timeline-times">
-            <span id="sleepTimelineStart">—</span>
-            <span id="sleepTimelineEnd">—</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="sleep-time-row">
-        <div class="sleep-time-field">
-          <label for="sleepBedTime">Bedtime</label>
-          <input type="time" id="sleepBedTime" class="gm-input">
-        </div>
-        <div class="sleep-time-field">
-          <label for="sleepWakeTime">Wake time</label>
-          <input type="time" id="sleepWakeTime" class="gm-input">
-        </div>
-      </div>
-      <div class="wk-seg-row">
-        <span class="wk-seg-label">Quality</span>
-        <div class="wk-seg-control" id="sleepQualityControl">
-          <button type="button" class="wk-seg-btn" data-q="1">Poor</button>
-          <button type="button" class="wk-seg-btn" data-q="2">Low</button>
-          <button type="button" class="wk-seg-btn" data-q="3">OK</button>
-          <button type="button" class="wk-seg-btn" data-q="4">Good</button>
-          <button type="button" class="wk-seg-btn" data-q="5">Great</button>
-        </div>
-      </div>
-      <div class="sleep-chart">
-        <div class="sleep-chart-label">Last 7 Nights</div>
-        <div class="sleep-chart-bars" id="sleepChartBars"></div>
-      </div>
-    </div>
-  </div>
+  <!-- CONSISTENCY HEATMAP — the summary of everything above it (Night
+       Routine and Water now included, since both moved above Running). -->
+  <div class="section" id="consistency">
+    <div class="section-title">Consistency</div>
+    <div class="gm-card"><div id="hmGrid"></div></div>
   </div>
 
 </div>
@@ -586,13 +511,12 @@
 <script src="js/greeting.js" defer></script>
 <script src="js/weather.js" defer></script>
 <script src="js/day-ring.js" defer></script>
-<script src="js/night-sleep.js" defer></script>
+<script src="js/night-routine.js" defer></script>
 <script src="js/goals.js" defer></script>
 <script src="js/week-planner.js" defer></script>
 <script src="js/running.js" defer></script>
 <script src="js/water.js" defer></script>
 <script src="js/heatmap.js" defer></script>
-<script src="js/briefing.js" defer></script>
 <script src="js/countdown.js" defer></script>
 <script src="js/nudge.js" defer></script>
 <script src="js/sync-register.js" defer></script>

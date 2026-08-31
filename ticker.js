@@ -9,11 +9,11 @@
 // it — swap the tag order and it swaps which one is "very top".
 //
 // Reads the same localStorage keys main.html's own copies of this math
-// read (sleep:<date>, run:runs, goals-data.js's fitness evidence) —
-// duplicated here rather than imported so this works standalone on any
-// page, same reasoning goals-data.js gives for its own date-math
-// duplication: no shared module to pull from, and it's pure math, not
-// business logic that could drift.
+// read (run:runs, goals-data.js's fitness evidence) — duplicated here
+// rather than imported so this works standalone on any page, same
+// reasoning goals-data.js gives for its own date-math duplication: no
+// shared module to pull from, and it's pure math, not business logic
+// that could drift.
 // =============================================================
 (function () {
   'use strict';
@@ -96,40 +96,8 @@
   // ---------- data ----------
   function pad2(n) { return String(n).padStart(2, '0'); }
   function dateToKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
-  // Same "day doesn't end until 6 AM" active-day boundary main.html's
-  // Today card / Night Routine / Sleep all use.
-  function getActiveDateString() {
-    const now = new Date();
-    if (now.getHours() < 6) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 1);
-      return dateToKey(d);
-    }
-    return dateToKey(now);
-  }
   function storeGet(key) {
     try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
-  }
-
-  function getSleep() {
-    const s = storeGet('sleep:' + getActiveDateString());
-    return (s && typeof s === 'object' && !Array.isArray(s)) ? s : null;
-  }
-  function formatSleepHours(hours) {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return h + 'h' + (m ? ' ' + m + 'm' : '');
-  }
-  // Same estimate main.html's Sleep card ring uses until a real Garmin
-  // score exists (s.score, set directly by a future sync) — hours up to
-  // 70 of 100 points scaled against an 8h night, quality up to 30.
-  function computeSleepScore(s) {
-    if (!s) return null;
-    if (s.score != null) return Math.max(0, Math.min(100, Math.round(s.score)));
-    if (s.hours == null) return null;
-    const hoursPts = Math.max(0, Math.min(70, s.hours / 8 * 70));
-    const qualityPts = s.quality != null ? (s.quality / 5 * 30) : 15;
-    return Math.round(hoursPts + qualityPts);
   }
 
   function weekRunningKm() {
@@ -167,11 +135,6 @@
     const day = now.getDate();
     const month = now.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
     const parts = [dow, day + ' ' + month];
-
-    const sleep = getSleep();
-    if (sleep && sleep.hours != null) parts.push('SLEEP ' + formatSleepHours(sleep.hours).toUpperCase());
-    const score = computeSleepScore(sleep);
-    if (score != null) parts.push('SCORE ' + score);
 
     const weekKm = weekRunningKm();
     if (weekKm != null) parts.push(fmtKm(weekKm) + ' KM THIS WEEK');

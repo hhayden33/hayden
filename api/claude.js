@@ -73,17 +73,6 @@ const TASKS = {
       'Return only the rewritten line — no preamble, no quotes, no explanation.',
     maxTokens: 200,
   },
-  briefing: {
-    system:
-      'You write a short morning briefing for one person. You will get a JSON block ' +
-      'of their overnight and planned data. Write 2 to 4 plain sentences, second ' +
-      'person, no headings, no bullet points, no emoji. Lead with what today asks of ' +
-      'them, then one honest observation from the numbers. Be specific and use the ' +
-      'actual figures. Never scold, never hype, never give medical advice, never ' +
-      'suggest restricting food or training through pain. If sleep was short, note it ' +
-      'plainly and suggest easing load rather than pushing. Return prose only.',
-    maxTokens: 320,
-  },
 };
 
 module.exports = async function handler(req, res) {

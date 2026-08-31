@@ -1,7 +1,7 @@
 // =============================================================
-// Consistency heatmap — Goals / Water / Night / Run / Gym, last 63 days.
-// Read-only against every other module's keys: this only reads what
-// goals.js/night-sleep.js/water.js/running.js/week-planner.js already
+// Consistency heatmap — Water / Run / Gym, last 63 days. Read-only
+// against every other module's keys: this only reads what
+// water.js/running.js/week-planner.js/gym.html's Hevy sync already
 // write, on the same calendar-date axis each of them already keys its
 // data by.
 // =============================================================
@@ -10,9 +10,7 @@
 
   const DAYS = 63;
   const TRACKS = [
-    { id: 'goals', label: 'Goals', hue: 'var(--success)' },
     { id: 'water', label: 'Water', hue: '#4FA8E0' },
-    { id: 'night', label: 'Night', hue: 'var(--warning)' },
     { id: 'run',   label: 'Run',   hue: 'var(--run)' },
     { id: 'gym',   label: 'Gym',   hue: '#B98AE0' }
   ];
@@ -35,33 +33,6 @@
       out.push(dateToKey(d));
     }
     return out;
-  }
-
-  // Shared by Goals and Night: both are a done/total ratio over that
-  // day's list. r<=0 still gets level 1, not 0 — logged-but-missed and
-  // never-opened are different information and must not collapse.
-  function ratioLevel(done, total) {
-    if (!total) return 0;
-    const r = done / total;
-    if (r <= 0) return 1;
-    if (r >= 1) return 5;
-    if (r < 1 / 3) return 2;
-    if (r < 2 / 3) return 3;
-    return 4;
-  }
-
-  function goalsLevel(dateKey) {
-    const list = storeGet('goals:' + dateKey);
-    if (!Array.isArray(list) || list.length === 0) return { level: 0, detail: null };
-    const done = list.filter(function (g) { return g && g.done; }).length;
-    return { level: ratioLevel(done, list.length), detail: done + '/' + list.length + ' goals' };
-  }
-
-  function nightLevel(dateKey) {
-    const list = storeGet('nightroutine:' + dateKey);
-    if (!Array.isArray(list) || list.length === 0) return { level: 0, detail: null };
-    const done = list.filter(function (g) { return g && g.done; }).length;
-    return { level: ratioLevel(done, list.length), detail: done + '/' + list.length + ' night routine' };
   }
 
   // po_water_v1 is one object, not a per-date key — load it once per
@@ -187,7 +158,7 @@
     return { level: 0, detail: null };
   }
 
-  const LEVEL_FN = { goals: goalsLevel, water: waterLevel, night: nightLevel, run: runLevel, gym: gymLevel };
+  const LEVEL_FN = { water: waterLevel, run: runLevel, gym: gymLevel };
 
   function monthLabel(dateKey) {
     const p = dateKey.split('-').map(Number);
