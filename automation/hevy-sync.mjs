@@ -579,6 +579,15 @@ async function pushSummary(summary) {
     }
   }
   meta.updatedAt[SYNCED_KEY] = Date.now();
+  // This script is the sole writer of hevy_v1 — it never deletes that key,
+  // only ever pushes a fresh value for it. A stale tombstone here (e.g. from
+  // a client that once ran localStorage.removeItem on it) would otherwise
+  // outrank this update forever: sync.js's client-side merge checks the
+  // tombstone before it even looks at whether the incoming payload has a
+  // value, so a tombstone newer than the last real updatedAt blackholes the
+  // key for every client, regardless of what pushSummary sends. Clearing it
+  // on every push is what makes that recoverable instead of permanent.
+  if (meta.deleted && meta.deleted[SYNCED_KEY]) delete meta.deleted[SYNCED_KEY];
 
   const payload = { [SYNCED_KEY]: summary, __sync: meta };
   const putRes = await fetch(SUPABASE_URL + '/rest/v1/app_state?on_conflict=key', {
