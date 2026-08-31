@@ -129,10 +129,32 @@
   }
   function parseYMD(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
 
+  // js/week-planner.js's Mark Complete button (main.html) still writes
+  // this — it's a separate, still-live feature from gym.html's old
+  // manual PO-coach tracker (removed; gym.html is now a read-only Hevy
+  // dashboard), so it's kept as one of two "did a workout happen"
+  // signals rather than dropped.
   let doneDays = null;
   function loadDoneDays() {
     if (!doneDays) doneDays = storeGet('po_coach_workout_done') || {};
     return doneDays;
+  }
+  // hevy_v1 (gym.html / automation/hevy-sync.mjs) is the other signal —
+  // its `recent` array only holds the last ~8 synced workouts, so this
+  // only lights up recent days accurately, not full history. That's an
+  // acceptable limit: this key isn't kept live on main.html itself (no
+  // initCloudSync call here, matching every other track's pattern —
+  // see the file header comment), it just reads whatever gym.html's own
+  // last visit already pulled into localStorage.
+  let hevyDoneDates = null;
+  function loadHevyDoneDates() {
+    if (hevyDoneDates) return hevyDoneDates;
+    const hevy = storeGet('hevy_v1');
+    hevyDoneDates = new Set();
+    (hevy && Array.isArray(hevy.recent) ? hevy.recent : []).forEach(function (w) {
+      if (w && w.date) hevyDoneDates.add(w.date);
+    });
+    return hevyDoneDates;
   }
   // weekplan:<isoWeek> holds one plan object per week, keyed by date —
   // cached per isoWeek within a render so 63 days only ever touch each
@@ -146,15 +168,18 @@
     const real = splits.filter(function (s) { return s && s !== 'rest'; });
     return real.length ? real : null;
   }
-  // Binary, not a ratio — Mark Complete is one tap, no partial credit to
-  // measure. Level 1 (planned, not done) vs level 0 (nothing planned,
-  // i.e. a rest day) draws the same distinction the Run row's "no run
-  // is level 0" comment does: a rest day isn't a missed day.
+  // Binary, not a ratio — both signals (Mark Complete, a synced Hevy
+  // workout) are one-tap/one-fact, no partial credit to measure. Level 1
+  // (planned, not done) vs level 0 (nothing planned, i.e. a rest day)
+  // draws the same distinction the Run row's "no run is level 0" comment
+  // does: a rest day isn't a missed day.
   function gymLevel(dateKey) {
-    const done = loadDoneDays();
+    const manuallyDone = !!loadDoneDays()[dateKey];
+    const hevyDone = loadHevyDoneDates().has(dateKey);
     const planned = plannedSplitFor(dateKey);
-    if (done[dateKey]) {
-      return { level: 5, detail: (planned ? planned.join('+') + ' day — ' : '') + 'completed' };
+    if (manuallyDone || hevyDone) {
+      const source = hevyDone ? 'Hevy workout logged' : 'completed';
+      return { level: 5, detail: (planned ? planned.join('+') + ' day — ' : '') + source };
     }
     if (planned) {
       return { level: 1, detail: planned.join('+') + ' day — planned, not logged' };
@@ -191,7 +216,7 @@
   function render() {
     const host = document.getElementById('hmGrid');
     if (!host) return;
-    waterState = null; runsByDate = null; doneDays = null; weekPlanCache = {}; // fresh read on every render
+    waterState = null; runsByDate = null; doneDays = null; hevyDoneDates = null; weekPlanCache = {}; // fresh read on every render
     const dates = buildDates();
 
     // One label per date where the month changes from the previous
