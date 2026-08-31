@@ -432,9 +432,17 @@ body::after {
     border-radius: 18px !important;
   }
 }
-.run-share-layout-toggle, .run-share-theme-toggle {
+.run-share-layout-toggle, .run-share-theme-toggle, .run-share-loc-toggle {
   display: flex; gap: 8px; margin-bottom: 16px;
 }
+.run-share-loc-field { margin-bottom: 16px; }
+.run-share-loc-field input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary);
+  font-family: inherit; font-size: 14px; outline: none;
+}
+.run-share-loc-field input::placeholder { color: var(--text-tertiary); }
 .run-share-layout-btn {
   flex: 1;
   padding: 9px 10px;
@@ -827,6 +835,13 @@ body::after {
       <div class="run-share-theme-toggle" role="tablist" aria-label="Overlay theme">
         <button class="run-share-layout-btn run-share-theme-btn active" type="button" data-theme="dark" role="tab" aria-selected="true">Dark</button>
         <button class="run-share-layout-btn run-share-theme-btn" type="button" data-theme="light" role="tab" aria-selected="false">Light</button>
+      </div>
+      <div class="run-share-loc-toggle" role="tablist" aria-label="Show location">
+        <button class="run-share-layout-btn run-share-loc-btn active" type="button" data-loc="off" role="tab" aria-selected="true">No Location</button>
+        <button class="run-share-layout-btn run-share-loc-btn" type="button" data-loc="on" role="tab" aria-selected="false">Location</button>
+      </div>
+      <div class="run-share-loc-field" id="runShareLocField" style="display:none">
+        <input type="text" id="runShareLocInput" placeholder="e.g. Merri Creek Trail" maxlength="32">
       </div>
       <div class="run-share-canvas-wrap">
         <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
@@ -1721,6 +1736,7 @@ body::after {
   let shareActiveRun = null;
   let shareLayout = 'minimal';
   let shareTheme = 'dark';
+  let shareShowLocation = false;
 
   function shareStatParts(key, r) {
     const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
@@ -1887,9 +1903,17 @@ body::after {
     const labelSize = isFull ? 17 : 20;
     const labelGap = Math.round(numSize * 0.42);
 
+    // Location is opt-in (no run in the data model has one by default —
+    // Garmin doesn't supply it) and only ever a second line under the
+    // type·date eyebrow, right-aligned to match it. Blank/whitespace-only
+    // text is treated as "not set" even with the toggle on, so this never
+    // draws an empty line.
+    const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
+    const locationLineGap = 34;
+
     // ---- vertical rhythm, computed bottom-up from the fitted size so
     // the panel is only ever as tall as the content actually needs.
-    const headerToDivider = 46;
+    const headerToDivider = 46 + (locationText ? locationLineGap : 0);
     const dividerToRow = Math.round(numSize * 0.86) + 40;
     const rowToLabel = labelGap;
     const rowGap = isFull ? Math.round(numSize * 0.66) + 44 : 0;
@@ -1924,6 +1948,9 @@ body::after {
     drawWordmark(ctx, contentX, headerBaselineY, theme);
     const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
     drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: isFull ? 20 : 22, weight: 700, color: theme.eyebrow, spacing: 3, align: 'right' });
+    if (locationText) {
+      drawTrackedText(ctx, locationText.toUpperCase(), contentRight, headerBaselineY + locationLineGap, { size: isFull ? 15 : 16, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' });
+    }
 
     const dividerY = headerBaselineY + headerToDivider;
     ctx.strokeStyle = theme.dividerMain;
@@ -1971,6 +1998,16 @@ body::after {
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', active ? 'true' : 'false');
     });
+    renderShareCanvas();
+  }
+  function setShareLocation(on) {
+    shareShowLocation = on;
+    document.querySelectorAll('.run-share-loc-btn').forEach(b => {
+      const active = (b.dataset.loc === 'on') === on;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.getElementById('runShareLocField').style.display = on ? '' : 'none';
     renderShareCanvas();
   }
 
@@ -2040,6 +2077,8 @@ body::after {
       : 'Transparent 1080×1920 PNG. Tap Save Image, then in Instagram Stories add it as a sticker from Photos.';
     setShareLayout('minimal');
     setShareTheme('dark');
+    document.getElementById('runShareLocInput').value = r.location || '';
+    setShareLocation(!!(r.location && r.location.trim()));
     openModal(runShareModalBg);
   }
 
@@ -2048,6 +2087,25 @@ body::after {
   });
   document.querySelectorAll('.run-share-theme-btn').forEach(btn => {
     btn.addEventListener('click', () => setShareTheme(btn.dataset.theme));
+  });
+  document.querySelectorAll('.run-share-loc-btn').forEach(btn => {
+    btn.addEventListener('click', () => setShareLocation(btn.dataset.loc === 'on'));
+  });
+  // Live-updates the overlay as you type; only persisted back to the run
+  // (and pushed by sync.js) once you stop, not on every keystroke.
+  const runShareLocInput = document.getElementById('runShareLocInput');
+  runShareLocInput.addEventListener('input', () => {
+    if (!shareActiveRun) return;
+    shareActiveRun.location = runShareLocInput.value;
+    renderShareCanvas();
+  });
+  runShareLocInput.addEventListener('change', () => {
+    if (!shareActiveRun) return;
+    const list = runs();
+    const idx = list.findIndex(x => x.id === shareActiveRun.id);
+    if (idx === -1) return;
+    list[idx] = Object.assign({}, list[idx], { location: runShareLocInput.value });
+    save('run:runs', list);
   });
   document.getElementById('runShareCloseX').addEventListener('click', () => closeModal(runShareModalBg));
   document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
