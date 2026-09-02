@@ -15,6 +15,16 @@
 // calling garmin-sync.py, so a bad run never touches the data
 // already in Supabase — existing dashboard data is only ever added
 // to or refreshed, never wiped by a failed sync.
+//
+// DEPLOYMENT NOTE: this actually RUNS from ~/.garmin-dashboard-automation
+// (outside ~/Desktop), not from this repo checkout. macOS blocks
+// launchd-spawned processes from reading ANY file under ~/Desktop
+// (~/Documents, ~/Downloads too) — confirmed by direct test — regardless
+// of where the reading process itself lives, and there's no command-line
+// way to grant that access (it's a GUI-only TCC permission). So `install.sh`
+// copies this file + garmin-sync.py out to that external directory, and
+// THAT copy is what launchd actually executes. This file (the one in git)
+// is the source of truth — re-run install.sh after editing it.
 // =============================================================
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -24,7 +34,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO_DIR = path.resolve(__dirname, '..');
+// garmin-sync.py is copied in alongside this file by install.sh, so it's
+// always right next to this script wherever this script actually runs from.
+const REPO_DIR = __dirname;
 const TMP_DIR = path.join(__dirname, 'tmp');
 const LOG_FILE = path.join(__dirname, 'logs', 'garmin-sync.log');
 

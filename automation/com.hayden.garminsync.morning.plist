@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/hh.ayden/Desktop/claude /hayden/automation/run-garmin-sync.sh</string>
+        <string>/Users/hh.ayden/.garmin-dashboard-automation/run-garmin-sync.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -17,9 +17,9 @@
         <integer>0</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-morning.out.log</string>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-morning.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-morning.err.log</string>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-morning.err.log</string>
     <key>RunAtLoad</key>
     <false/>
 </dict>

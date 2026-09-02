@@ -3,10 +3,18 @@
 # launchd entry point. Sets up a real PATH (launchd jobs run with a
 # near-empty environment, not your shell's), prevents two syncs from
 # overlapping if one ever runs long, and calls the actual sync script.
+#
+# DEPLOYMENT NOTE: this file's canonical/edited copy lives in the git
+# repo, but the copy launchd actually runs lives in
+# ~/.garmin-dashboard-automation (see install.sh) — launchd-spawned
+# processes can't read ANYTHING under ~/Desktop, confirmed by direct
+# test, so this script (and garmin-sync.py, and node_modules) has to
+# physically live outside it. AUTOMATION_DIR is computed from this
+# script's own location so both copies work unmodified.
 # =============================================================
 set -uo pipefail
 
-AUTOMATION_DIR="/Users/hh.ayden/Desktop/claude /hayden/automation"
+AUTOMATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCK_FILE="$AUTOMATION_DIR/tmp/sync.lock"
 LOG_FILE="$AUTOMATION_DIR/logs/garmin-sync.log"
 
