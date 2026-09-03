@@ -37,7 +37,14 @@ function refererOrigin(referer) {
 // ---------- rate limiting (same shape as api/claude.js's — see that
 // file's own comment for why in-memory is an accepted tradeoff here) ----------
 const IP_WINDOW_MS = 10 * 60 * 1000;
-const IP_MAX_PER_WINDOW = 30;
+// Was 30 — too tight in practice: a failed fetch is never cached
+// client-side (see js/calendar.js), so every page reload or tab-switch
+// during any rough patch (a misconfigured env var, a token that needs
+// reconnecting) re-hits this endpoint instead of serving stale data,
+// and normal troubleshooting burns through a low ceiling fast. 60 is
+// still a real cap — a personal single-user dashboard has no business
+// needing more than 1 request every 10s sustained.
+const IP_MAX_PER_WINDOW = 60;
 const ipHits = new Map();
 function rateLimited(req) {
   const now = Date.now();

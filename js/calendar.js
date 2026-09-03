@@ -23,6 +23,20 @@
   const CACHE_KEY = 'calendar:cache';
   const CACHE_FRESH_MS = 5 * 60 * 1000;
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+  // A failed attempt is never cached, so without this, every reload or
+  // tab-switch during a rough patch (a token that needs reconnecting, a
+  // misconfigured env var) re-hits the network — which is exactly what
+  // turned one such patch into a server-side rate-limit lockout during
+  // troubleshooting. Automatic/incidental triggers back off for a bit
+  // after any attempt; an explicit force (the OAuth-return fetch, or
+  // window.Calendar.refresh()) always goes through immediately.
+  const RETRY_COOLDOWN_MS = 30 * 1000;
+  const LAST_ATTEMPT_KEY = 'calendar:lastAttempt';
+  function tooSoonToRetry() {
+    const last = Number(storeGet(LAST_ATTEMPT_KEY)) || 0;
+    return Date.now() - last < RETRY_COOLDOWN_MS;
+  }
+  function markAttempt() { storeSet(LAST_ATTEMPT_KEY, Date.now()); }
 
   // ---------- small date helpers, duplicated rather than shared — same
   // reasoning goals-data.js/ticker.js give for their own copies: pure
@@ -83,8 +97,17 @@
       render(cached.body);
       return;
     }
+    if (!force && tooSoonToRetry()) {
+      // Leave whatever's already on screen alone rather than adding
+      // another network hit — only show a message if there's truly
+      // nothing to show yet (first load landing mid-cooldown).
+      if (!cached && !lastData) renderError('Calendar is temporarily unavailable — retrying shortly.');
+      return;
+    }
+
     if (cached) render(cached.body, { stale: true }); // show what we have while refreshing
     else renderLoading();
+    markAttempt();
 
     let res;
     try {
@@ -111,6 +134,10 @@
       const body = await res.json().catch(() => ({}));
       if (body.error === 'not_configured') {
         renderError('Calendar integration isn’t set up yet — see GOOGLE_CALENDAR_SETUP.md for the Google Cloud Console, Supabase, and Vercel steps.');
+        return;
+      }
+      if (body.error === 'rate_limited' && !cached && !lastData) {
+        renderError('Too many calendar requests right now — this clears itself within a few minutes, no action needed.');
         return;
       }
       if (cached) render(cached.body, { stale: true, refreshFailed: true });
