@@ -295,21 +295,25 @@
     <div class="gm-card" id="sleepCard">
       <div class="empty-state" id="sleepEmpty" style="display:none;">No sleep data yet.</div>
       <div id="sleepBody" style="display:none;">
-        <div class="sleep-duration-row">
-          <span class="sleep-duration" id="sleepDuration">—</span>
-          <span class="sleep-duration-badges">
-            <span class="sleep-score" id="sleepScore" style="display:none;"></span>
-            <span class="sleep-status" id="sleepStatus"></span>
-          </span>
+        <div class="sleep-group">
+          <div class="sleep-duration-row">
+            <span class="sleep-duration" id="sleepDuration">—</span>
+            <span class="sleep-duration-badges">
+              <span class="sleep-score" id="sleepScore" style="display:none;"></span>
+              <span class="sleep-status" id="sleepStatus"></span>
+            </span>
+          </div>
+          <div class="sleep-target-row">
+            <div class="sleep-target-track"><div class="sleep-target-fill" id="sleepTargetFill" style="width:0%"></div></div>
+            <span class="sleep-target-label" id="sleepTargetLabel"></span>
+          </div>
+          <div class="sleep-compare" id="sleepCompare" style="display:none;"></div>
         </div>
-        <div class="sleep-target-row">
-          <div class="sleep-target-track"><div class="sleep-target-fill" id="sleepTargetFill" style="width:0%"></div></div>
-          <span class="sleep-target-label" id="sleepTargetLabel"></span>
+        <div class="sleep-group">
+          <div class="sleep-stage-bar" id="sleepStageBar" style="display:none;"></div>
+          <div class="sleep-stage-list" id="sleepStageList" style="display:none;"></div>
+          <div class="sleep-times" id="sleepTimes" style="display:none;"></div>
         </div>
-        <div class="sleep-compare" id="sleepCompare" style="display:none;"></div>
-        <div class="sleep-stage-bar" id="sleepStageBar" style="display:none;"></div>
-        <div class="sleep-stage-list" id="sleepStageList" style="display:none;"></div>
-        <div class="sleep-times" id="sleepTimes" style="display:none;"></div>
         <div class="sleep-trend" id="sleepTrend" style="display:none;">
           <div class="sleep-trend-label">7-DAY TREND</div>
           <svg class="sleep-trend-svg" id="sleepTrendSvg" viewBox="0 0 280 40" preserveAspectRatio="none"></svg>
