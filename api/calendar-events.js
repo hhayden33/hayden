@@ -29,6 +29,10 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5500',
   'http://127.0.0.1:5500',
 ];
+function refererOrigin(referer) {
+  if (!referer) return null;
+  try { return new URL(referer).origin; } catch (e) { return null; }
+}
 
 // ---------- rate limiting (same shape as api/claude.js's — see that
 // file's own comment for why in-memory is an accepted tradeoff here) ----------
@@ -165,10 +169,16 @@ function computeFreeBlocksToday(todayEvents, nowUtcMs, dayStartUtcMs, dayEndUtcM
 }
 
 module.exports = async function handler(req, res) {
-  const origin = req.headers.origin;
-  const originAllowed = ALLOWED_ORIGINS.indexOf(origin) !== -1;
+  // Browsers reliably send Origin on state-changing requests (POST etc,
+  // see api/claude.js) but frequently omit it on a plain same-origin GET
+  // fetch — which is exactly what js/calendar.js makes. Falling back to
+  // Referer's origin (always present on a fetch triggered by a loaded
+  // page) avoids rejecting the dashboard's own requests; a request with
+  // neither header present is still denied.
+  const origin = req.headers.origin || refererOrigin(req.headers.referer);
+  const originAllowed = !!origin && ALLOWED_ORIGINS.indexOf(origin) !== -1;
   res.setHeader('Vary', 'Origin');
-  if (originAllowed) res.setHeader('Access-Control-Allow-Origin', origin);
+  if (req.headers.origin && originAllowed) res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(originAllowed ? 204 : 403).end();
