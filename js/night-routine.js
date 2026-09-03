@@ -32,9 +32,14 @@
     const key = nightRoutineKey();
     let list = storeGet(key);
     // Only seed the default 9 the first time this active day is seen —
-    // once a list exists, a shorter one (after a delete) is left alone
-    // instead of being topped back up to 9.
-    if (!Array.isArray(list)) {
+    // once a list exists, a shorter one is left alone rather than being
+    // topped back up to 9. There's no delete button anymore though, so
+    // the only way a list ever ends up empty is a bug (e.g. a stale
+    // cross-date sync tombstone matching every item by its text-derived
+    // id) rather than something the user actually did — treat that the
+    // same as "never seeded" instead of showing a permanently empty
+    // checklist.
+    if (!Array.isArray(list) || list.length === 0) {
       list = NIGHT_ROUTINE_ITEMS.map(text => ({ text, done: false }));
       storeSet(key, list);
     }

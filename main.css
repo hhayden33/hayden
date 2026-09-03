@@ -245,7 +245,7 @@ body::after {
   background: rgba(255,255,255,0.10);
   color: var(--text-primary);
 }
-#todoSection, #runningOverview, #water, #nightRoutine, #consistency { scroll-margin-top: 56px; }
+#todoSection, #water, #nightRoutine, #consistency { scroll-margin-top: 56px; }
 
 /* ===== Component 3: Day Ring ===== */
 .status-row {
@@ -1558,31 +1558,6 @@ html.is-embedded .shell { padding-bottom: 20px; }
 .water-embed .water-minus-btn {
   margin-bottom: max(0px, env(safe-area-inset-bottom));
 }
-
-/* ---------- Running Overview — 12-week mileage chart (same treatment
-     as running.html's Training Analytics bar chart, reused verbatim
-     for a consistent look) ---------- */
-.run-chart-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; }
-.run-chart-wrap { position: relative; }
-.run-chart-yaxis { position: absolute; left: 0; top: 1px; bottom: 1px; width: 42px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-.run-chart-yaxis span { font-size: 9.5px; font-weight: 600; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; }
-.run-chart-svg { height: 108px; display: block; margin-left: 42px; width: calc(100% - 42px); overflow: visible; }
-.run-chart-grid-line { stroke: rgba(255,255,255,0.045); stroke-width: 1; }
-.run-chart-hitarea { fill: transparent; cursor: crosshair; }
-.run-chart-meta { text-align: center; font-size: 10.5px; color: var(--text-tertiary); margin-top: 10px; }
-.run-chart-tooltip {
-  position: absolute; z-index: 5; top: 0; left: 0;
-  transform: translate(-50%, calc(-100% - 10px));
-  background: var(--surface-elevated, #26343E);
-  border: 1px solid var(--border-strong, rgba(120, 160, 180, 0.28));
-  border-radius: 8px; padding: 6px 10px;
-  white-space: nowrap; pointer-events: none;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
-  opacity: 0; transition: opacity 0.12s;
-}
-.run-chart-tooltip.show { opacity: 1; }
-.run-chart-tooltip-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.run-chart-tooltip-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 1px; }
 
 /* ---------- Consistency heatmap ---------- */
 /* overflow-x: auto alone computes overflow-y to auto too (per spec, when
