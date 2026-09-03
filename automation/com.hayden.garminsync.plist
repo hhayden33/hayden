@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hayden.garminsync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/hh.ayden/.garmin-dashboard-automation/run-garmin-sync.sh</string>
+    </array>
+    <!-- Replaces the old fixed 6am/10pm com.hayden.garminsync.morning/night
+         jobs with a plain interval, same pattern as com.hayden.hevysync —
+         runs let more often catch a run soon after it's recorded, and a
+         failed attempt (e.g. transient network reset) only costs 30
+         minutes instead of waiting up to ~16 hours for the next window. -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-garmin.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-garmin.err.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
