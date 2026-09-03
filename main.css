@@ -1160,9 +1160,26 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .hm-cell:hover { transform: scale(1.6); position: relative; z-index: 2; }
 .hm-l1 { background: color-mix(in srgb, var(--hm-hue, #20A5A0) 12%, transparent); }
 .hm-l2 { background: color-mix(in srgb, var(--hm-hue, #20A5A0) 28%, transparent); }
-.hm-l3 { background: color-mix(in srgb, var(--hm-hue, #20A5A0) 50%, transparent); }
-.hm-l4 { background: color-mix(in srgb, var(--hm-hue, #20A5A0) 74%, transparent); }
-.hm-l5 { background: var(--hm-hue, #20A5A0); }
+/* A small glow on the three "real activity" levels only — l1/l2 stay
+   flat since they're already faint enough that a glow would just read
+   as smudged rather than lit. Bigger on hover since the cell itself
+   scales up then too, same touch main.css's other glows (e.g. the
+   wordmark orb) already use for anything meant to feel "lit". */
+.hm-l3 {
+  background: color-mix(in srgb, var(--hm-hue, #20A5A0) 50%, transparent);
+  box-shadow: 0 0 3px 0 color-mix(in srgb, var(--hm-hue, #20A5A0) 45%, transparent);
+}
+.hm-l4 {
+  background: color-mix(in srgb, var(--hm-hue, #20A5A0) 74%, transparent);
+  box-shadow: 0 0 4px 0 color-mix(in srgb, var(--hm-hue, #20A5A0) 60%, transparent);
+}
+.hm-l5 {
+  background: var(--hm-hue, #20A5A0);
+  box-shadow: 0 0 5px 0.5px color-mix(in srgb, var(--hm-hue, #20A5A0) 75%, transparent);
+}
+.hm-cell.hm-l3:hover, .hm-cell.hm-l4:hover, .hm-cell.hm-l5:hover {
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--hm-hue, #20A5A0) 85%, transparent);
+}
 .hm-stat {
   display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;
 }
