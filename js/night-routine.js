@@ -17,7 +17,8 @@
     'Brush teeth / skincare',
     'Pack work/gym bag',
     'Charge devices',
-    'Complete remaining tasks'
+    'Complete remaining tasks',
+    'Put on mouth guard'
   ];
   function nightRoutineKey() { return 'nightroutine:' + getActiveDateString(); }
   // Same items every night, but a fresh (unchecked) list each active day —
@@ -61,6 +62,13 @@
     });
     next.forEach(item => {
       if (item.text === 'Charge Garmin/watch') { item.text = 'Charge devices'; changed = true; }
+    });
+    // Add any default item that's new since this list was seeded — same
+    // "already seeded lists never get topped up automatically" gap as
+    // remove/rename above, just in the other direction.
+    const present = new Set(next.map(item => item.text));
+    NIGHT_ROUTINE_ITEMS.forEach(text => {
+      if (!present.has(text)) { next.push({ text, done: false }); changed = true; }
     });
     // Reorder to match NIGHT_ROUTINE_ITEMS' current order — a list
     // seeded before an order change otherwise keeps its original order
