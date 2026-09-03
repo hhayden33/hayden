@@ -1,14 +1,20 @@
 // =============================================================
-// Consistency heatmap — Water / Sleep / Run / Gym, last 63 days.
-// Read-only against every other module's keys: this only reads what
-// water.js/js/sleep.js/running.js/week-planner.js/gym.html's Hevy sync
-// already write, on the same calendar-date axis each of them already
-// keys its data by.
+// Consistency heatmap — Water / Sleep / Run / Gym. 63 days on desktop;
+// a phone-width viewport can't fit 63 columns and stay readable (the
+// cells shrink to ~1px slivers), so mobile shows the last 28 days
+// instead — the whole grid fits with no horizontal scroll, rather than
+// scrolling to see all of an illegibly-shrunk 63. Read-only against
+// every other module's keys: this only reads what water.js/js/sleep.js/
+// running.js/week-planner.js/gym.html's Hevy sync already write, on the
+// same calendar-date axis each of them already keys its data by.
 // =============================================================
 (function () {
   'use strict';
 
-  const DAYS = 63;
+  const DESKTOP_DAYS = 63;
+  const MOBILE_DAYS = 28;
+  // Same breakpoint main.css's own .hm-inner mobile rule already uses.
+  const mobileQuery = window.matchMedia('(max-width: 560px)');
   const TRACKS = [
     { id: 'water', label: 'Water', hue: '#4FA8E0' },
     { id: 'sleep', label: 'Sleep', hue: 'var(--warning)' },
@@ -25,10 +31,10 @@
 
   // Oldest first, today last — every track reads off this same axis so
   // the grid is one shared calendar, not four independently-scrolled ones.
-  function buildDates() {
+  function buildDates(days) {
     const out = [];
     const now = new Date();
-    for (let i = DAYS - 1; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       out.push(dateToKey(d));
@@ -192,13 +198,11 @@
       const r = LEVEL_FN[track.id](dk);
       return { date: dk, level: r.level, detail: r.detail };
     });
-    const metOrBeat = cells.filter(function (c) { return c.level >= 4; }).length;
-    const pct = Math.round((metOrBeat / cells.length) * 100);
     let streak = 0;
     for (let i = cells.length - 1; i >= 0; i--) {
       if (cells[i].level >= 4) streak++; else break;
     }
-    return { cells: cells, pct: pct, streak: streak };
+    return { cells: cells, streak: streak };
   }
 
   function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
@@ -210,7 +214,7 @@
     const host = document.getElementById('hmGrid');
     if (!host) return;
     waterState = null; runsByDate = null; doneDays = null; hevyDoneDates = null; weekPlanCache = {}; // fresh read on every render
-    const dates = buildDates();
+    const dates = buildDates(mobileQuery.matches ? MOBILE_DAYS : DESKTOP_DAYS);
 
     // One label per date where the month changes from the previous
     // column, blank everywhere else, so it doesn't repeat 63 times.
@@ -234,7 +238,7 @@
         '<div class="hm-row" style="--hm-hue:' + track.hue + '">' +
           '<div class="hm-label">' + track.label + '</div>' +
           '<div class="hm-cells">' + cellsHtml + '</div>' +
-          '<div class="hm-stat"><b>' + row.pct + '%</b>' + streakHtml + '</div>' +
+          '<div class="hm-stat">' + streakHtml + '</div>' +
         '</div>';
     });
 
@@ -252,4 +256,9 @@
   render();
   window.addEventListener('storage', render);
   window.addEventListener('goals-changed', render);
+  // Crossing the mobile breakpoint (resizing a desktop window, rotating
+  // a tablet) changes how many days should be on screen — matchMedia's
+  // own change event, not a resize listener, so this doesn't fire on
+  // every pixel of an in-progress drag.
+  mobileQuery.addEventListener('change', render);
 })();

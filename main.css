@@ -1166,10 +1166,6 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .hm-stat {
   display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;
 }
-.hm-stat b {
-  font-family: var(--font-mono);
-  font-size: 13px; font-weight: 600; color: var(--text-primary);
-}
 .hm-stat em {
   font-style: normal; font-size: 9.5px; font-weight: 600;
   letter-spacing: 0.06em; color: var(--hm-hue, var(--text-tertiary));
@@ -1371,6 +1367,16 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .nr-sleep-row > .section > .gm-card { padding: 12px; }
   .nr-sleep-row .section-title { font-size: 9.5px; margin-bottom: 8px; }
   .nr-sleep-row .nr-text { font-size: 12.5px; }
+  /* Night Routine's progress row (e.g. "7 / 7 ALL SET FOR TOMORROW") was
+     sized for a full-width card — the 42px number alone eats most of a
+     ~150px mobile column, so the label had nowhere to go but wrap mid-
+     phrase wherever it ran out of room. Smaller numbers, and the row
+     allowed to wrap so the label drops cleanly onto its own full line
+     instead of colliding with them. */
+  .nr-sleep-row .gm-progress-row { flex-wrap: wrap; row-gap: 2px; }
+  .nr-sleep-row .gm-progress-num { font-size: 26px; }
+  .nr-sleep-row .gm-progress-total { font-size: 13px; }
+  .nr-sleep-row .gm-progress-label { font-size: 9.5px; }
   .nr-sleep-row .sleep-duration { font-size: 22px; }
   .nr-sleep-row .sleep-target-label { font-size: 10px; }
   /* The general mobile-compaction block below puts Night Routine's list
