@@ -411,6 +411,21 @@ body::after {
     </div>
   </div>
 
+  <!-- ===== Earlier — anything from before this week. Data never
+       expires (goals:<date> keys persist indefinitely), it just used
+       to have no view once its week rolled past; this keeps it visible
+       (done tasks crossed out, same as everywhere else) instead of it
+       silently vanishing. Capped to the most recent dates with tasks,
+       same "compact and scannable" reasoning as the rest of this page. ===== -->
+  <div class="section" id="tdEarlierSection" style="display:none;">
+    <div class="section-header-row">
+      <div class="section-title">Earlier</div>
+    </div>
+    <div class="gm-card">
+      <div class="td-week-grid" id="tdEarlierGrid"></div>
+    </div>
+  </div>
+
   <!-- ===== Weekly Review ===== -->
   <div class="section">
     <div class="section-title">Weekly Review</div>
@@ -967,6 +982,65 @@ body::after {
     });
   }
 
+  // ---------- Earlier (before this week) ----------
+  const EARLIER_CAP = 14; // most recent past dates that actually have tasks
+  function earlierDates() {
+    return listAllGoalDates()
+      .filter(function (d) { return d < weekDates[0] && getGoals(d).length > 0; })
+      .sort() // ascending YMD strings sort chronologically
+      .reverse()
+      .slice(0, EARLIER_CAP);
+  }
+  function renderEarlier() {
+    const section = document.getElementById('tdEarlierSection');
+    const grid = document.getElementById('tdEarlierGrid');
+    grid.innerHTML = '';
+    const dates = earlierDates();
+    section.style.display = dates.length ? '' : 'none';
+    if (!dates.length) return;
+
+    dates.forEach(function (dateStr) {
+      const card = document.createElement('div');
+      card.className = 'td-day-card';
+
+      const head = document.createElement('div');
+      head.className = 'td-day-head';
+      const left = document.createElement('div');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'td-day-name';
+      nameEl.textContent = DAY_NAMES[(parseYMD(dateStr).getDay() + 6) % 7];
+      const dateEl = document.createElement('div');
+      dateEl.className = 'td-day-date';
+      dateEl.textContent = formatDayHeader(dateStr);
+      left.appendChild(nameEl);
+      left.appendChild(dateEl);
+      head.appendChild(left);
+
+      const all = getGoals(dateStr);
+      const doneCount = all.filter(function (t) { return t.done; }).length;
+      const progEl = document.createElement('div');
+      progEl.className = 'td-day-progress';
+      progEl.textContent = doneCount + '/' + all.length;
+      head.appendChild(progEl);
+      card.appendChild(head);
+
+      const tasksWrap = document.createElement('div');
+      tasksWrap.className = 'td-day-tasks';
+      const visible = sortTasks(all).filter(function (t) { return passesFilters(t, dateStr); });
+      if (visible.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'td-day-empty';
+        empty.textContent = 'No tasks match this filter.';
+        tasksWrap.appendChild(empty);
+      } else {
+        visible.forEach(function (t) { tasksWrap.appendChild(buildTaskRow(t, dateStr, true)); });
+      }
+      card.appendChild(tasksWrap);
+
+      grid.appendChild(card);
+    });
+  }
+
   // ---------- Weekly Review ----------
   function computeWeekStats(dates) {
     let total = 0, completed = 0, carried = 0;
@@ -1008,6 +1082,7 @@ body::after {
     renderOverview();
     renderFocusToday();
     renderWeekGrid();
+    renderEarlier();
     renderReview();
   }
 
@@ -1036,10 +1111,12 @@ body::after {
     activeFilter = btn.dataset.filter;
     document.querySelectorAll('.td-filter-btn').forEach(function (b) { b.classList.toggle('active', b === btn); });
     renderWeekGrid();
+    renderEarlier();
   });
   document.getElementById('tdCategoryFilter').addEventListener('change', function (e) {
     activeCategory = e.target.value;
     renderWeekGrid();
+    renderEarlier();
   });
 
   // ---------- Add / Edit modal ----------
