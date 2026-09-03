@@ -1352,8 +1352,29 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 .nr-sleep-row > .section > .gm-card { flex: 1; }
 .nr-sleep-row > #nightRoutine { flex: 1.7; min-width: 0; }
 .nr-sleep-row > #sleep { flex: 1; min-width: 0; }
-@media (max-width: 700px) {
-  .nr-sleep-row { flex-direction: column; gap: 0; }
+/* Stays side by side on mobile too (used to stack under 700px) — both
+   columns get tightened up here rather than given the room to reflow
+   naturally, since neither card was designed for a ~150px-wide column:
+   smaller card padding/gap, a smaller duration number, and a slightly
+   less lopsided split so Sleep isn't squeezed as hard as the 1.7:1
+   desktop ratio would leave it. */
+@media (max-width: 480px) {
+  .nr-sleep-row { gap: 8px; }
+  .nr-sleep-row > #nightRoutine { flex: 1.35; }
+  .nr-sleep-row > .section > .gm-card { padding: 12px; }
+  .nr-sleep-row .section-title { font-size: 9.5px; margin-bottom: 8px; }
+  .nr-sleep-row .nr-text { font-size: 12.5px; }
+  .nr-sleep-row .sleep-duration { font-size: 22px; }
+  .nr-sleep-row .sleep-target-label { font-size: 10px; }
+  /* The general mobile-compaction block below puts Night Routine's list
+     two-across (#nightRoutineList), sized for a full-width card — inside
+     this narrower side-by-side column that's not wide enough to be two
+     columns without wrapping every word onto its own line. Back to one
+     column, and the duration/score/status row needs room to wrap onto a
+     second line rather than clip past the card's edge. */
+  #nightRoutineList { grid-template-columns: 1fr; }
+  .nr-sleep-row .sleep-status { font-size: 9px; padding: 2px 7px; }
+  .nr-sleep-row .sleep-score { font-size: 10px; }
 }
 
 /* ---------- Sleep card (js/sleep.js) — duration is the one dominant
@@ -1362,6 +1383,7 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
    stages, just what Garmin actually reported). ---------- */
 .sleep-duration-row {
   display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; row-gap: 6px;
   gap: 8px; margin-bottom: 10px;
 }
 .sleep-duration {

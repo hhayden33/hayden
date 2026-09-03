@@ -1,9 +1,9 @@
 // =============================================================
-// Consistency heatmap — Water / Run / Gym, last 63 days. Read-only
-// against every other module's keys: this only reads what
-// water.js/running.js/week-planner.js/gym.html's Hevy sync already
-// write, on the same calendar-date axis each of them already keys its
-// data by.
+// Consistency heatmap — Water / Sleep / Run / Gym, last 63 days.
+// Read-only against every other module's keys: this only reads what
+// water.js/js/sleep.js/running.js/week-planner.js/gym.html's Hevy sync
+// already write, on the same calendar-date axis each of them already
+// keys its data by.
 // =============================================================
 (function () {
   'use strict';
@@ -11,6 +11,7 @@
   const DAYS = 63;
   const TRACKS = [
     { id: 'water', label: 'Water', hue: '#4FA8E0' },
+    { id: 'sleep', label: 'Sleep', hue: 'var(--warning)' },
     { id: 'run',   label: 'Run',   hue: 'var(--run)' },
     { id: 'gym',   label: 'Gym',   hue: '#B98AE0' }
   ];
@@ -58,6 +59,27 @@
     const ratio = servings / Math.max(1, target);
     const level = ratio >= 1 ? 5 : Math.min(4, Math.max(1, Math.ceil(ratio * 4)));
     return { level: level, detail: servings + '/' + target + ' bottles' };
+  }
+
+  // sleep:<date> (js/sleep.js / automation/garmin-cron-sync.mjs) carries
+  // a 0-100 Garmin sleep score — banded evenly into the same 1-5 scale
+  // every other row uses, not the hours-vs-8h-target split the Sleep
+  // card's own "Excellent/Good/Below target" badge uses (that's a
+  // different, coarser signal; the heatmap goes off score specifically).
+  // A manual/legacy entry with hours but no score is level 0 here, same
+  // as "no data" — inventing a score from hours alone isn't something
+  // this row does.
+  function sleepLevel(dateKey) {
+    const entry = storeGet('sleep:' + dateKey);
+    const score = entry && typeof entry === 'object' ? entry.score : null;
+    if (score == null || !isFinite(score)) return { level: 0, detail: null };
+    let level;
+    if (score >= 85) level = 5;
+    else if (score >= 70) level = 4;
+    else if (score >= 55) level = 3;
+    else if (score >= 40) level = 2;
+    else level = 1;
+    return { level: level, detail: 'score ' + Math.round(score) };
   }
 
   // run:runs can hold more than one entry for the same date (a double
@@ -158,7 +180,7 @@
     return { level: 0, detail: null };
   }
 
-  const LEVEL_FN = { water: waterLevel, run: runLevel, gym: gymLevel };
+  const LEVEL_FN = { water: waterLevel, sleep: sleepLevel, run: runLevel, gym: gymLevel };
 
   function monthLabel(dateKey) {
     const p = dateKey.split('-').map(Number);
