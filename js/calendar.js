@@ -103,6 +103,16 @@
       return;
     }
     if (!res.ok) {
+      // 'not_configured' isn't transient — it means the Google/Supabase
+      // env vars from GOOGLE_CALENDAR_SETUP.md haven't been set on
+      // Vercel yet, and will say so on every request until they are.
+      // Worth a distinct message rather than the generic one below,
+      // which reads like a temporary blip that'll resolve on its own.
+      const body = await res.json().catch(() => ({}));
+      if (body.error === 'not_configured') {
+        renderError('Calendar integration isn’t set up yet — see GOOGLE_CALENDAR_SETUP.md for the Google Cloud Console, Supabase, and Vercel steps.');
+        return;
+      }
       if (cached) render(cached.body, { stale: true, refreshFailed: true });
       else renderError('Calendar is temporarily unavailable.');
       return;
