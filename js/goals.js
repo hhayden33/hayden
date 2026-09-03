@@ -271,13 +271,17 @@
     document.getElementById('todayLabel').textContent =
       'Today — ' + formatDate(getActiveDateString());
 
+    // Segments fill left-to-right by count, not by which specific tasks
+    // happen to be done — a bar reading "done" at position 4 because
+    // that's literally the 4th task in your list (regardless of whether
+    // tasks 1-3 are done) looks broken/scattered rather than like progress.
     const bar = document.getElementById('gmBar');
     bar.innerHTML = '';
-    goals.forEach(g => {
+    for (let i = 0; i < total; i++) {
       const seg = document.createElement('div');
-      seg.className = 'gm-bar-seg' + (g.done ? ' gm-bar-seg-done' : '');
+      seg.className = 'gm-bar-seg' + (i < done ? ' gm-bar-seg-done' : '');
       bar.appendChild(seg);
-    });
+    }
 
     const card = document.getElementById('gmCardToday');
     card.classList.toggle('gm-all-done', total > 0 && done === total);
