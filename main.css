@@ -1296,3 +1296,48 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .gcal-week-titles { white-space: normal; }
 }
 
+/* ---------- Mobile compaction — this page stacks a lot of sections,
+   and on a phone each one taking a full-width row (rather than any
+   layout using the screen's width) adds up fast. Spacing/layout only —
+   nothing here hides or collapses content (the 7-Day Overview's muscle
+   diagram and Night Routine's item list stay exactly as they are; nine
+   items and seven days are both still fully visible, just laid out to
+   use the width instead of only the height). ---------- */
+@media (max-width: 480px) {
+  .gm-card { padding: 16px; margin-bottom: 10px; }
+  .gm-row { padding: 9px 12px; margin-bottom: 5px; }
+  .gcal-week-row { padding: 6px 4px; }
+
+  /* Night Routine — 9 short items read fine two-across, roughly
+     halving the card's height versus one full-width row each. */
+  #nightRoutineList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  #nightRoutineList .gm-row { margin-bottom: 0; }
+
+  /* North Star + Marathon countdown side by side under the day ring,
+     instead of each taking a full-width row of its own. The pillar
+     list (Health · Wealth · Career · Business · Experiences) is the
+     one line that doesn't fit two-up without wrapping awkwardly —
+     dropped here only, the statement and % are what actually answer
+     "how am I doing", and the full breakdown is one tap away on
+     goals.html regardless. */
+  .status-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "ring ring" "ns cd";
+    gap: 10px;
+  }
+  .status-row .day-ring-wrap.is-compact { grid-area: ring; }
+  .status-row .northstar-mini-card { grid-area: ns; padding: 14px; margin-bottom: 0; }
+  .status-row .cd-tile { grid-area: cd; padding: 14px; margin-bottom: 0; flex-basis: auto; }
+  .status-row .ns-mini-pillars { display: none; }
+  /* The card itself is already the full link (card-link) — the "View
+     Goals →" text is a redundant affordance at this width, and losing
+     it lets the NORTH STAR label sit on one line instead of wrapping. */
+  .status-row .ns-mini-link { display: none; }
+  .status-row .cd-eyebrow { white-space: normal; }
+}
+
