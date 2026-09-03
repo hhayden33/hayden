@@ -1189,3 +1189,110 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   .hm-inner { grid-template-columns: 42px 1fr 40px; gap: 5px 7px; }
 }
 
+/* ---------- Calendar (Google Calendar summary — js/calendar.js).
+   Built entirely from existing card/row primitives (.gm-card, .gm-row,
+   .gm-eyebrow, .empty-state) rather than new ones, so this reads as
+   the same dashboard rather than a bolted-on widget. ---------- */
+.gcal-connect-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 9px 16px;
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary); text-decoration: none;
+  border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+}
+.gcal-stale-note {
+  font-size: 11px; color: var(--text-tertiary); font-style: italic;
+  margin-bottom: 10px;
+}
+.gcal-subhead {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 18px 0 8px;
+}
+.gcal-row { align-items: flex-start; gap: 14px; }
+.gcal-row-time {
+  flex-shrink: 0; width: 68px;
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  padding-top: 1px;
+}
+.gcal-row-main { flex: 1; min-width: 0; }
+.gcal-row-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gcal-row-title {
+  font-size: 13.5px; font-weight: 600; color: var(--text-primary);
+}
+.gcal-pill {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 999px;
+}
+.gcal-pill-now { background: rgba(32,165,160,0.16); color: var(--success); }
+.gcal-pill-next { background: rgba(184,138,224,0.16); color: var(--accent-lavender, #B98AE0); }
+.gcal-row.gcal-row-now {
+  border-color: rgba(32,165,160,0.40);
+  background: linear-gradient(180deg, rgba(32,165,160,0.14), var(--surface, #19232D) 70%);
+}
+.gcal-row-cal {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--text-tertiary);
+  margin-top: 3px;
+}
+.gcal-row-cal::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gcal-dot, var(--text-tertiary));
+  flex-shrink: 0;
+}
+.gcal-row-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 11.5px; color: var(--text-tertiary);
+}
+.gcal-row-link {
+  color: var(--accent-cyan, #087CA3); text-decoration: none; font-weight: 600;
+}
+.gcal-row-link:hover { text-decoration: underline; }
+
+.gcal-free-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.gcal-free-chip {
+  padding: 7px 12px;
+  background: var(--surface-hover, #202B35);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.gcal-week-list { display: flex; flex-direction: column; gap: 2px; }
+.gcal-week-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  font-size: 12.5px;
+}
+.gcal-week-row:last-child { border-bottom: none; }
+.gcal-week-row-today .gcal-week-day { color: var(--text-primary); }
+.gcal-week-day {
+  flex-shrink: 0; width: 40px;
+  font-weight: 700; color: var(--text-secondary);
+}
+.gcal-week-titles {
+  flex: 1; min-width: 0; color: var(--text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gcal-week-titles-empty { color: var(--text-tertiary); }
+.gcal-week-tag {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 999px;
+  color: var(--split-color, var(--text-tertiary));
+  background: color-mix(in srgb, var(--split-color, var(--text-tertiary)) 16%, transparent);
+}
+@media (max-width: 480px) {
+  .gcal-row-time { width: 56px; font-size: 11px; }
+  .gcal-week-titles { white-space: normal; }
+}
+

@@ -100,6 +100,36 @@ curl "https://itidzioouqjbwnyvekkw.supabase.co/rest/v1/app_state?select=key,upda
 Today that returns all 12 rows. After a correct fix, it should return an
 empty array or a permission error — anon key alone, no session, no data.
 
+## Google Calendar integration
+
+Added after the audit above — documenting its security model here rather
+than waiting for a future re-audit, since it's the first feature in this
+app that handles a real third-party credential.
+
+- `api/calendar-auth.js` / `api/calendar-callback.js` / `api/calendar-events.js`
+  never expose `GOOGLE_CLIENT_SECRET`, the Google refresh token, or the
+  Supabase `service_role` key to the browser — all three are Vercel env
+  vars read only inside these serverless functions.
+- The refresh token is stored in a **new** Supabase table
+  (`google_calendar_auth`), not `app_state`, specifically so it doesn't
+  inherit the RLS gap above: RLS is enabled with zero policies, and only
+  the `service_role` key (server-only) can read or write it. The existing
+  public `anon` key — the one that currently reads all of `app_state` —
+  has no access to this table regardless of that finding's status.
+- `/api/calendar-events` uses the exact same origin-allowlist +
+  per-IP-rate-limit pattern `/api/claude.js` already uses (see that
+  file's own comment for the accepted tradeoff — stops casual misuse,
+  not a determined attacker forging an Origin header). This app still has
+  no login system, so that's the same trust model as everything else
+  here, not a regression.
+- `calendar-auth.js`'s redirect target is never taken from user input —
+  it's a fixed `/main.html` path — so there's no open-redirect surface
+  in the OAuth dance despite the state-carrying cookie.
+- Scope requested is `calendar.readonly` only — no write/edit/delete
+  capability exists anywhere in this integration.
+
+Full setup walkthrough: [GOOGLE_CALENDAR_SETUP.md](GOOGLE_CALENDAR_SETUP.md).
+
 ## Re-audit checklist for future changes
 
 - Any new `initCloudSync` channel: does its payload contain anything

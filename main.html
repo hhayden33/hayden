@@ -44,6 +44,7 @@
 
   <nav class="quickjump" aria-label="Quick jump">
     <a href="#todoSection" class="quickjump-chip">Today</a>
+    <a href="#calendar" class="quickjump-chip">Calendar</a>
     <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
     <a href="#consistency" class="quickjump-chip">Consistency</a>
   </nav>
@@ -99,6 +100,39 @@
   </div>
 
   <div id="nudgeSlot"></div>
+
+  <!-- CALENDAR — a compact read-only summary over Google Calendar (see
+       js/calendar.js). Google stays the source of truth; this only
+       displays it. -->
+  <div class="section" id="calendar">
+    <div class="section-title">Calendar</div>
+    <div class="gm-card" id="gcalCard">
+
+      <div id="gcalLoading" class="empty-state">Loading calendar…</div>
+
+      <div id="gcalConnectPrompt" class="empty-state" style="display:none">
+        <span id="gcalConnectMessage">Connect your Google Calendar to see today's schedule here.</span>
+        <br>
+        <a href="/api/calendar-auth" class="gcal-connect-btn" id="gcalConnectBtn">Connect Google Calendar</a>
+      </div>
+
+      <div id="gcalErrorState" class="empty-state" style="display:none"></div>
+
+      <div id="gcalBody" style="display:none">
+        <div class="gcal-stale-note" id="gcalStaleNote" style="display:none">Showing last known schedule — couldn't refresh.</div>
+        <div class="gm-eyebrow" id="gcalTodayEyebrow">TODAY</div>
+        <ul class="goal-list gm-list" id="gcalTodayList"></ul>
+        <div class="empty-state" id="gcalTodayEmpty" style="display:none">Nothing on today.</div>
+
+        <div class="gcal-subhead" id="gcalFreeSubhead">AVAILABLE TODAY</div>
+        <div class="gcal-free-row" id="gcalFreeRow"></div>
+
+        <div class="gcal-subhead">NEXT 7 DAYS</div>
+        <div id="gcalWeekList" class="gcal-week-list"></div>
+      </div>
+
+    </div>
+  </div>
 
   <div class="section" id="todoSection">
     <div class="section-title">To Do List</div>
@@ -265,6 +299,7 @@
 <script src="js/greeting.js" defer></script>
 <script src="js/weather.js" defer></script>
 <script src="js/day-ring.js" defer></script>
+<script src="js/calendar.js" defer></script>
 <script src="js/night-routine.js" defer></script>
 <script src="js/goals.js" defer></script>
 <script src="js/week-planner.js" defer></script>
