@@ -65,6 +65,23 @@
           press(k);
         }
       });
+      // CSS :active alone is unreliable on iOS Safari without a touch
+      // listener present, and with pinch-zoom still allowed on this page
+      // (no maximum-scale in the viewport meta), a plain tap without
+      // touch-action:manipulation waits briefly to rule out a double-tap
+      // zoom before the click fires — on a fast passcode entry that reads
+      // as an occasional missed/laggy key. touch-action (in the CSS)
+      // removes that wait; this just makes the key visibly light up the
+      // instant a finger lands, like the real iOS passcode pad, rather
+      // than only on the (already-delayed) click.
+      btn.addEventListener('touchstart', function () {
+        btn.classList.add('is-pressed');
+      }, { passive: true });
+      ['touchend', 'touchcancel'].forEach(function (evt) {
+        btn.addEventListener(evt, function () {
+          btn.classList.remove('is-pressed');
+        });
+      });
     });
 
     document.addEventListener('keydown', function (e) {
@@ -159,10 +176,20 @@
   font-size: 18px; font-weight: 600;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, border-color 0.15s;
+  /* Without this, a tap here waits to see if it's the first half of a
+     double-tap-to-zoom (pinch-zoom is still allowed on this page)
+     before the click actually fires — the delay that reads as keys
+     occasionally not registering on a fast passcode entry. */
+  touch-action: manipulation;
+  user-select: none;
+  transition: background 0.1s, border-color 0.1s;
 }
 .lock-key:hover { background: #26343E; border-color: rgba(8,124,163,0.35); }
-.lock-key:active { background: rgba(8,124,163,0.18); }
+.lock-key:active, .lock-key.is-pressed {
+  background: rgba(8,124,163,0.28);
+  border-color: rgba(8,124,163,0.5);
+  transition: none;
+}
 .lock-key-back { font-size: 15px; color: #687580; }
 `;
     var style = document.createElement('style');
