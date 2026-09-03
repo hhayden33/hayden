@@ -21,10 +21,16 @@
     85: 'Snow showers', 86: 'Snow showers',
     95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'
   };
+  // Always "now" at render time, independent of whether the weather
+  // reading itself came from cache or a fresh fetch — the date shouldn't
+  // go stale just because the temperature did.
+  function fmtDayDate() {
+    return new Date().toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
   function render(data) {
     const label = WEATHER_LABELS[data.code];
     if (!label || typeof data.temp !== 'number') return;
-    el.textContent = 'Melbourne · ' + Math.round(data.temp) + '°C · ' + label;
+    el.textContent = fmtDayDate() + ' · Melbourne · ' + Math.round(data.temp) + '°C · ' + label;
   }
   function loadCache() {
     try {
