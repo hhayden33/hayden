@@ -31,6 +31,8 @@
 # =============================================================
 import json
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -89,13 +91,29 @@ def to_run_entry(a):
     }
 
 
+# Observed in practice (2026-09-02/03 automated runs): occasional
+# ConnectionResetError against Supabase, transient — a bare retry
+# succeeds. 3 attempts with a short backoff, nothing fancier needed for
+# a job that only runs twice a day.
+def _urlopen_with_retry(req, attempts=3, backoff_sec=2):
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return urllib.request.urlopen(req)
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            last_err = e
+            if attempt < attempts:
+                time.sleep(backoff_sec * attempt)
+    raise last_err
+
+
 def supa_get(key):
     url = f'{SUPABASE_URL}/rest/v1/app_state?key=eq.{key}&select=data'
     req = urllib.request.Request(url, headers={
         'apikey': SUPABASE_KEY,
         'Authorization': f'Bearer {SUPABASE_KEY}',
     })
-    with urllib.request.urlopen(req) as r:
+    with _urlopen_with_retry(req) as r:
         rows = json.loads(r.read())
     return rows[0]['data'] if rows else {}
 
@@ -113,7 +131,7 @@ def supa_upsert(key, data):
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates',
     })
-    with urllib.request.urlopen(req) as r:
+    with _urlopen_with_retry(req) as r:
         return r.status
 
 

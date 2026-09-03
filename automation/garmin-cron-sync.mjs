@@ -29,14 +29,19 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { execFileSync } from 'node:child_process';
-import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, appendFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// garmin-sync.py is copied in alongside this file by install.sh, so it's
-// always right next to this script wherever this script actually runs from.
-const REPO_DIR = __dirname;
+// garmin-sync.py lives right next to this script in the deployed copy
+// (install.sh puts them side by side in ~/.garmin-dashboard-automation),
+// but one directory up when run straight from the repo checkout
+// (automation/garmin-cron-sync.mjs, garmin-sync.py at the repo root) —
+// support both so this file works identically in either location.
+const REPO_DIR = existsSync(path.join(__dirname, 'garmin-sync.py'))
+  ? __dirname
+  : path.resolve(__dirname, '..');
 const TMP_DIR = path.join(__dirname, 'tmp');
 const LOG_FILE = path.join(__dirname, 'logs', 'garmin-sync.log');
 
