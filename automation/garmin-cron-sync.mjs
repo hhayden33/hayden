@@ -156,6 +156,31 @@ function toSleepEntries(rangeResult) {
   return out;
 }
 
+// get_sleep_data_range times out (MCP request timeout) on wide ranges —
+// Garmin's API apparently can't assemble e.g. 100 nights fast enough for
+// one request. Chunk into smaller windows and fetch sequentially instead
+// of raising the timeout, which just delays hitting the same wall on a
+// still-wider ask later. One chunk failing (e.g. a transient timeout on
+// just that slice) doesn't abort the rest — it's logged and skipped.
+async function fetchSleepRangeChunked(callTool, startDate, endDate, log, chunkDays = 14) {
+  const start = new Date(startDate + 'T00:00:00Z');
+  const end = new Date(endDate + 'T00:00:00Z');
+  const out = [];
+  for (let chunkStart = new Date(start); chunkStart <= end; ) {
+    const chunkEnd = new Date(Math.min(chunkStart.getTime() + (chunkDays - 1) * 86400000, end.getTime()));
+    const s = chunkStart.toISOString().slice(0, 10);
+    const e = chunkEnd.toISOString().slice(0, 10);
+    try {
+      const chunk = await callTool('get_sleep_data_range', { startDate: s, endDate: e });
+      if (Array.isArray(chunk)) out.push(...chunk);
+    } catch (err) {
+      log(`WARN: get_sleep_data_range chunk ${s}..${e} failed (non-fatal): ${err.message}`);
+    }
+    chunkStart = new Date(chunkEnd.getTime() + 86400000);
+  }
+  return out;
+}
+
 async function main() {
   log('=== Garmin sync starting ===');
 
@@ -214,16 +239,16 @@ async function main() {
       log(`WARN: get_personal_records failed (non-fatal): ${e.message}`);
       return null;
     });
-    // 3-day lookback (not just last night) so a sync that was down for a
+    // Lookback window (not just last night) so a sync that was down for a
     // day or two — or Garmin's own upload lag — still catches up rather
     // than permanently missing a night. Each night is keyed by date, so
-    // re-fetching ones already synced is harmless.
+    // re-fetching ones already synced is harmless. Default 3 days for the
+    // routine automated run; override with SLEEP_LOOKBACK_DAYS for a
+    // one-off wider backfill (e.g. `SLEEP_LOOKBACK_DAYS=7 node garmin-cron-sync.mjs`).
+    const sleepLookbackDays = parseInt(process.env.SLEEP_LOOKBACK_DAYS, 10) || 3;
     const today = new Date().toISOString().slice(0, 10);
-    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
-    sleepRange = await callTool('get_sleep_data_range', { startDate: threeDaysAgo, endDate: today }).catch((e) => {
-      log(`WARN: get_sleep_data_range failed (non-fatal): ${e.message}`);
-      return null;
-    });
+    const lookbackStart = new Date(Date.now() - sleepLookbackDays * 86400000).toISOString().slice(0, 10);
+    sleepRange = await fetchSleepRangeChunked(callTool, lookbackStart, today, log);
   } catch (e) {
     log(`FATAL: Garmin MCP/auth failure — ${e.message}`);
     log('Aborting before touching Supabase. Existing dashboard data left untouched.');
