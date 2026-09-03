@@ -222,7 +222,14 @@ async function main() {
     await client.connect(transport);
     log('Connected to Garmin MCP (session reused from ~/.garmin-mcp if valid, else fresh login).');
 
-    activities = await callTool('get_activities', { activityType: 'running', limit: 15 });
+    // Default 15 covers the routine automated run comfortably; override with
+    // ACTIVITIES_LIMIT for a one-off wider backfill (e.g.
+    // `ACTIVITIES_LIMIT=100 node garmin-cron-sync.mjs`) — get_activities
+    // takes a count, not a date range, so a limit has to stand in for "how
+    // far back," same tradeoff as get_activities has everywhere else this
+    // pipeline uses it.
+    const activitiesLimit = parseInt(process.env.ACTIVITIES_LIMIT, 10) || 15;
+    activities = await callTool('get_activities', { activityType: 'running', limit: activitiesLimit });
     vo2max = await callTool('get_vo2max', {}).catch((e) => {
       log(`WARN: get_vo2max failed (non-fatal): ${e.message}`);
       return null;
