@@ -83,17 +83,66 @@
     return { label: 'Below target', cls: 'sleep-below' };
   }
 
+  function dateKeyOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
   function priorNightsHours(beforeDate, count) {
     const out = [];
     const base = new Date(beforeDate + 'T00:00:00');
     for (let i = 1; i <= count; i++) {
       const d = new Date(base);
       d.setDate(d.getDate() - i);
-      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      const e = getSleepEntry(key);
+      const e = getSleepEntry(dateKeyOf(d));
       if (e && typeof e.hours === 'number' && isFinite(e.hours)) out.push(e.hours);
     }
     return out;
+  }
+
+  // Dot diameter scales with that night's hours (capped at the target,
+  // so an unusually long night doesn't blow the row's height out); a
+  // missing night gets a small hollow dashed ring at a fixed size
+  // rather than a 0-size (invisible) or fabricated dot.
+  const TREND_DOT_MIN = 6, TREND_DOT_MAX = 20, TREND_DOT_NONE = 10;
+  function renderTrend(todayDate) {
+    const wrap = document.getElementById('sleepTrend');
+    const row = document.getElementById('sleepTrendRow');
+    if (!wrap || !row) return;
+    row.innerHTML = '';
+    const base = new Date(todayDate + 'T00:00:00');
+    let anyData = false;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(base);
+      d.setDate(d.getDate() - i);
+      const e = getSleepEntry(dateKeyOf(d));
+      const hasHours = e && typeof e.hours === 'number' && isFinite(e.hours);
+      if (hasHours) anyData = true;
+
+      const item = document.createElement('div');
+      item.className = 'sleep-trend-item';
+
+      const dot = document.createElement('span');
+      if (hasHours) {
+        const status = computeStatus(e.hours);
+        const size = Math.round(TREND_DOT_MIN + Math.max(0, Math.min(1, e.hours / SLEEP_TARGET_HOURS)) * (TREND_DOT_MAX - TREND_DOT_MIN));
+        dot.className = 'sleep-trend-dot' + (status ? ' ' + status.cls : '');
+        dot.style.width = size + 'px';
+        dot.style.height = size + 'px';
+        dot.title = fmtHM(e.hours);
+      } else {
+        dot.className = 'sleep-trend-dot sleep-none';
+        dot.style.width = TREND_DOT_NONE + 'px';
+        dot.style.height = TREND_DOT_NONE + 'px';
+      }
+      if (i === 0) dot.classList.add('sleep-trend-today');
+
+      const label = document.createElement('span');
+      label.className = 'sleep-trend-day';
+      label.textContent = d.toLocaleDateString('en-US', { weekday: 'narrow' });
+
+      item.appendChild(dot);
+      item.appendChild(label);
+      row.appendChild(item);
+    }
+    wrap.style.display = anyData ? '' : 'none';
   }
 
   function render() {
@@ -197,6 +246,8 @@
     } else {
       timesEl.style.display = 'none';
     }
+
+    renderTrend(getActiveDateString());
   }
 
   window.Sleep = { render: render };
