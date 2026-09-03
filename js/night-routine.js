@@ -15,13 +15,9 @@
   const NIGHT_ROUTINE_ITEMS = [
     'Prepare clothes for tomorrow',
     'Pack work/gym bag',
-    "Review tomorrow's schedule",
     'Complete remaining tasks',
-    'Prepare water',
-    'Charge Garmin/watch',
-    'Brush teeth / skincare',
-    'No phone',
-    'Get into bed'
+    'Charge devices',
+    'Brush teeth / skincare'
   ];
   function nightRoutineKey() { return 'nightroutine:' + getActiveDateString(); }
   // Same items every night, but a fresh (unchecked) list each active day —
@@ -46,6 +42,28 @@
     return list;
   }
   function setNightRoutine(list) { storeSet(nightRoutineKey(), list); }
+
+  // Today's list, if one's already seeded, keeps whatever it was seeded
+  // with — getNightRoutine() only tops up an empty/missing list, so
+  // trimming/renaming NIGHT_ROUTINE_ITEMS above wouldn't otherwise show
+  // up until tomorrow's reseed. Fix today's copy directly instead.
+  // Matches by exact old text only — an item you'd already renamed via
+  // inline-edit is left alone rather than reverted.
+  (function migrateEditedDefaults() {
+    const key = nightRoutineKey();
+    const list = storeGet(key);
+    if (!Array.isArray(list) || !list.length) return;
+    const REMOVED = new Set(["Review tomorrow's schedule", 'Prepare water', 'No phone', 'Get into bed']);
+    let changed = false;
+    const next = list.filter(item => {
+      if (REMOVED.has(item.text)) { changed = true; return false; }
+      return true;
+    });
+    next.forEach(item => {
+      if (item.text === 'Charge Garmin/watch') { item.text = 'Charge devices'; changed = true; }
+    });
+    if (changed) storeSet(key, next);
+  })();
 
   function buildNightRoutineRow(item, idx) {
     const li = document.createElement('li');
