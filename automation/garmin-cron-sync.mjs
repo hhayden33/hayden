@@ -106,6 +106,56 @@ function extractPbs(records) {
   return { pbs, longestRunKm };
 }
 
+// Garmin's raw sleepLevels segments use numeric activityLevel codes rather
+// than named stages — verified empirically against this account's own
+// dailySleepDTO.{deep,light,rem,awake}SleepSeconds totals (they sum to an
+// exact match): 0=deep, 1=light, 2=rem, 3=awake. Coalesces consecutive
+// same-stage segments into { stage, durMin } for a compact timeline —
+// matches the shape main.html's (removed, to-be-rebuilt) sleep UI already
+// expects for its per-segment timeline render.
+const SLEEP_STAGE_BY_LEVEL = { 0: 'deep', 1: 'light', 2: 'rem', 3: 'awake' };
+function toStages(sleepLevels) {
+  const out = [];
+  for (const seg of sleepLevels || []) {
+    const stage = SLEEP_STAGE_BY_LEVEL[seg.activityLevel];
+    if (!stage) continue;
+    const durMin = (new Date(seg.endGMT + 'Z') - new Date(seg.startGMT + 'Z')) / 60000;
+    const last = out[out.length - 1];
+    if (last && last.stage === stage) last.durMin += durMin;
+    else out.push({ stage, durMin: Math.round(durMin * 10) / 10 });
+  }
+  return out;
+}
+function toHHMM(localTimestampMs) {
+  if (localTimestampMs == null) return null;
+  // *TimestampLocal fields are epoch millis representing local wall-clock
+  // time encoded as if UTC (same convention already relied on elsewhere in
+  // this pipeline) — format with getUTC* so no host-timezone conversion
+  // double-applies.
+  const d = new Date(localTimestampMs);
+  return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0');
+}
+// One entry per night, keyed by Garmin's own calendarDate (the wake-up
+// day) — matches getActiveDateString()'s 6am-boundary convention in the
+// normal case (waking after 6am), so no separate date math is needed here.
+function toSleepEntries(rangeResult) {
+  const out = {};
+  for (const { date, data } of rangeResult || []) {
+    const dto = data && data.dailySleepDTO;
+    if (!dto || !dto.sleepTimeSeconds) continue; // no real sleep recorded that night
+    out[date] = {
+      bedTime: toHHMM(dto.sleepStartTimestampLocal),
+      wakeTime: toHHMM(dto.sleepEndTimestampLocal),
+      hours: Math.round((dto.sleepTimeSeconds / 3600) * 100) / 100,
+      quality: null, // manual-only field; Garmin sync never sets it
+      score: dto.sleepScores?.overall?.value ?? null,
+      source: 'garmin',
+      stages: toStages(data.sleepLevels),
+    };
+  }
+  return out;
+}
+
 async function main() {
   log('=== Garmin sync starting ===');
 
@@ -142,7 +192,7 @@ async function main() {
     }
   }
 
-  let activities, vo2max, trainingStatus, restingHr, personalRecords;
+  let activities, vo2max, trainingStatus, restingHr, personalRecords, sleepRange;
   try {
     await client.connect(transport);
     log('Connected to Garmin MCP (session reused from ~/.garmin-mcp if valid, else fresh login).');
@@ -162,6 +212,16 @@ async function main() {
     });
     personalRecords = await callTool('get_personal_records', {}).catch((e) => {
       log(`WARN: get_personal_records failed (non-fatal): ${e.message}`);
+      return null;
+    });
+    // 3-day lookback (not just last night) so a sync that was down for a
+    // day or two — or Garmin's own upload lag — still catches up rather
+    // than permanently missing a night. Each night is keyed by date, so
+    // re-fetching ones already synced is harmless.
+    const today = new Date().toISOString().slice(0, 10);
+    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+    sleepRange = await callTool('get_sleep_data_range', { startDate: threeDaysAgo, endDate: today }).catch((e) => {
+      log(`WARN: get_sleep_data_range failed (non-fatal): ${e.message}`);
       return null;
     });
   } catch (e) {
@@ -219,19 +279,24 @@ async function main() {
     if (wellness[k] == null) delete wellness[k];
   }
 
+  const sleepEntries = toSleepEntries(sleepRange);
+
   const activitiesPath = path.join(TMP_DIR, 'activities.json');
   const wellnessPath = path.join(TMP_DIR, 'wellness.json');
   const pbsPath = path.join(TMP_DIR, 'pbs.json');
+  const sleepPath = path.join(TMP_DIR, 'sleep.json');
   writeFileSync(activitiesPath, JSON.stringify(slimActivities, null, 1));
   writeFileSync(wellnessPath, JSON.stringify(wellness, null, 1));
   writeFileSync(pbsPath, JSON.stringify(pbs, null, 1));
+  writeFileSync(sleepPath, JSON.stringify(sleepEntries, null, 1));
 
   log(`Wellness snapshot: ${JSON.stringify(wellness)}`);
+  log(`Sleep nights fetched: ${Object.keys(sleepEntries).join(', ') || 'none'}`);
 
   try {
     const out = execFileSync(
       'python3',
-      ['garmin-sync.py', activitiesPath, wellnessPath, pbsPath],
+      ['garmin-sync.py', activitiesPath, wellnessPath, pbsPath, sleepPath],
       { cwd: REPO_DIR, encoding: 'utf8' }
     );
     for (const line of out.trim().split('\n')) log(line);

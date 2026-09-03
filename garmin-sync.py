@@ -19,8 +19,13 @@
 #       -> sync.js (unchanged) -> running.html / main.html (unchanged
 #       render functions, reading run:runs / run:pbs / run:garminSnapshot)
 #
+# Sleep is a second, separate app_state row (key='sleep') rather than
+# folded into 'running' — matches the shape main.html's sleep UI already
+# expected before it was removed (see js/night-sleep.js history), so
+# re-adding that UI needs no data-layer changes, just the frontend.
+#
 # Usage:
-#   python3 garmin-sync.py <activities.json> <wellness.json> [pbs.json]
+#   python3 garmin-sync.py <activities.json> <wellness.json> [pbs.json] [sleep.json]
 #
 # activities.json: array of objects with at least:
 #   garminActivityId, date (YYYY-MM-DD), distanceKm, durationSec,
@@ -28,6 +33,10 @@
 # wellness.json: object merged as-is into run:garminSnapshot
 # pbs.json (optional): { fiveK, tenK, fifteenK, half, marathon, thirtyK,
 #   fiftyK } in seconds — only fills currently-empty run:pbs fields
+# sleep.json (optional): { 'YYYY-MM-DD': { bedTime, wakeTime, hours, score,
+#   source:'garmin', stages }, ... } — written to app_state('sleep') as
+#   'sleep:<date>' keys, one row per night, Garmin always wins for a date
+#   it has data for (see sync_sleep())
 # =============================================================
 import json
 import sys
@@ -135,6 +144,29 @@ def supa_upsert(key, data):
         return r.status
 
 
+SLEEP_APP_KEY = 'sleep'
+
+
+def sync_sleep(sleep_by_date):
+    """sleep_by_date: { 'YYYY-MM-DD': {bedTime, wakeTime, hours, score,
+    source:'garmin', stages}, ... }. Keyed the same way main.html's (removed,
+    to-be-rebuilt) sleep UI already expects: app_state('sleep').data['sleep:'
+    + date]. Garmin is authoritative for any date it has data for — unlike
+    PBs, a date's sleep entry is always overwritten with Garmin's version
+    rather than merged, since there's exactly one entry per date (no
+    per-activity id to dedupe against) and a manual entry for that same
+    date is presumed superseded once real data exists. Dates this sync
+    has no data for (older manual entries, gaps) are left untouched.
+    """
+    if not sleep_by_date:
+        return 0
+    current = supa_get(SLEEP_APP_KEY)
+    for date, entry in sleep_by_date.items():
+        current[f'sleep:{date}'] = entry
+    supa_upsert(SLEEP_APP_KEY, current)
+    return len(sleep_by_date)
+
+
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
@@ -148,6 +180,10 @@ def main():
     if len(sys.argv) > 3:
         with open(sys.argv[3]) as f:
             pbs_in = json.load(f)
+    sleep_in = {}
+    if len(sys.argv) > 4:
+        with open(sys.argv[4]) as f:
+            sleep_in = json.load(f)
 
     current = supa_get(APP_KEY)
     existing = current.get('run:runs') or []
@@ -188,6 +224,10 @@ def main():
     print(f'  Runs: +{added} new, {updated} refreshed, {len(runs)} total.')
     print(f'  PBs filled from Garmin: {pb_filled or "none (already set or none provided)"}.')
     print(f'  Snapshot: {json.dumps(snapshot)}')
+
+    if sleep_in:
+        n = sync_sleep(sleep_in)
+        print(f'Synced to Supabase app_state[{SLEEP_APP_KEY}]: {n} night(s) ({", ".join(sorted(sleep_in.keys()))}).')
 
 
 if __name__ == '__main__':
