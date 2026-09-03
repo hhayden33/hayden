@@ -12,6 +12,7 @@
 <script src="goals-data.js"></script>
 <script src="escape.js"></script>
 <script src="ticker.js" defer></script>
+<script src="js/water.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
 <!-- =============================================================
@@ -367,6 +368,432 @@ body::after {
   .workout-row-meta { font-size: 11.5px; }
   .prog-spark { width: 64px; }
 }
+
+/* ---------- Water Coach (moved in from main.html, which had it ported
+   natively from po-water.html — see the copyright header in the markup
+   below for this component's license. These rules are po-water.html's
+   own <style> block verbatim, minus the `*`/`html, body` resets (this
+   page already has its own equivalents) so nothing here fights this
+   page's page-level background/color. --font-mono already matches this
+   page's own definition above; every other custom property below is
+   new to this page (no collision with the --text-primary/--success/etc
+   names this page's own :root already uses). ---------- */
+.water-embed { margin-top: 8px; }
+/* Same tinted-card treatment main.html's .nr-card used — a subtle
+   180deg gradient from an accent color down into the normal card
+   background — cyan here so Water reads as its own signature color. */
+.water-embed .shell > .card:not(#historyCard) {
+  border-color: rgba(8, 124, 163, 0.40);
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.22), var(--bg-card, #19232D) 65%);
+}
+:root {
+  --bg: #10151A;
+  --bg-card: #19232D;
+  --text-1: #F2F2F2;
+  --text-2: #AEB7C0;
+  --text-3: #687580;
+  --text-4: rgba(104,117,128,0.6);
+  --border: rgba(120,160,180,0.15);
+  --border-strong: rgba(120,160,180,0.28);
+  --good: #20A5A0;
+  --warn: #fbbf24;
+  --bad: #ff8a8a;
+  --info: #087CA3;
+}
+.shell { max-width: 720px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 80px max(16px, env(safe-area-inset-left)); }
+
+/* ----- Top day pill + header ----- */
+.day-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.10em;
+  text-transform: uppercase; margin-bottom: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.day-pill .day-sep { color: var(--text-4); }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.title { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+.icon-btn {
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text-2); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, color 0.18s;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-1); }
+
+/* ----- Eyebrow divider ----- */
+.divider {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10);
+}
+.divider span {
+  font-size: 11px; letter-spacing: 0.22em; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ----- Card ----- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 20px 18px;
+  margin-bottom: 14px;
+}
+html.is-embedded #historyCard { display: none; }
+html.is-embedded .shell { padding-bottom: 20px; }
+
+/* ----- Water hero ----- */
+.water-label {
+  font-size: 10px; letter-spacing: 0.20em; font-weight: 700;
+  color: var(--text-3); margin-bottom: 8px; text-transform: uppercase;
+}
+.water-row {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
+}
+.water-num {
+  font-size: 56px; font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.water-target {
+  font-size: 18px; color: var(--text-3); font-weight: 500;
+}
+
+/* Progress bar */
+.water-bar-wrap { position: relative; margin: 14px 0 22px; }
+.water-bar-track {
+  position: relative; height: 28px; border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.water-bar-fill {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  border-radius: 14px;
+  background: linear-gradient(90deg, var(--info), var(--good));
+  transition: width 0.4s ease;
+  box-shadow: 0 0 18px rgba(32,165,160,0.18);
+}
+.water-bar-fill.over {
+  background: linear-gradient(90deg, var(--good), var(--warn));
+}
+.water-bar-zone {
+  position: absolute; top: 0; bottom: 0;
+  width: 1px; background: rgba(255,255,255,0.18);
+}
+.water-bar-labels {
+  display: flex; justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px; color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.water-bar-labels .water-zone-name {
+  color: var(--good); font-weight: 700; letter-spacing: 0.10em;
+  text-transform: lowercase;
+}
+
+/* Action row */
+.water-actions {
+  display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: stretch;
+}
+.water-minus-btn {
+  background: rgba(255,255,255,0.06);
+  border: none; border-radius: 16px;
+  color: var(--text-1);
+  font-size: 22px; font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.water-minus-btn:hover { background: rgba(255,255,255,0.10); }
+.water-minus-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.water-plus-btn {
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+  font-family: inherit; font-size: 16px; font-weight: 700;
+  cursor: pointer; padding: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.water-plus-btn:hover { transform: translateY(-1px); }
+.water-plus-btn:active { transform: scale(0.98); }
+
+.water-helper {
+  text-align: center; font-size: 12px;
+  color: var(--text-3); margin-top: 12px;
+  font-style: italic;
+}
+.water-helper.good { color: var(--good); font-style: normal; }
+
+/* ----- Why this target? collapsible ----- */
+.why-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-2); border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; margin-top: 14px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+}
+.why-toggle:hover { background: rgba(255,255,255,0.04); color: var(--text-1); }
+.why-arrow { transition: transform 0.2s; font-size: 14px; }
+.why-toggle[aria-expanded="true"] .why-arrow { transform: rotate(180deg); }
+.why-body {
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: none;
+}
+.why-body.show { display: block; }
+.why-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+.why-row .why-label { color: var(--text-2); }
+.why-row .why-val   { color: var(--text-1); font-weight: 600; font-family: var(--font-mono); }
+.why-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 8px; padding-top: 10px;
+}
+.why-row.total .why-label { color: var(--good); font-weight: 700; }
+.why-row.total .why-val   { color: var(--good); }
+
+/* ----- History ----- */
+.hist-row {
+  display: grid; grid-template-columns: 70px 1fr auto; gap: 10px;
+  padding: 10px 0; align-items: center;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.hist-row:last-child { border-bottom: none; }
+.hist-date { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.hist-bar-wrap {
+  height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden;
+}
+.hist-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--info), var(--good));
+  border-radius: 4px;
+}
+.hist-bar-fill.miss { background: rgba(255,138,138,0.4); }
+.hist-count {
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+
+/* ----- Mini chart for last 14 days ----- */
+.spark-wrap { padding: 6px 0; }
+.spark-svg { width: 100%; height: 70px; display: block; }
+.spark-bar { fill: var(--good); }
+.spark-bar.miss { fill: rgba(255,138,138,0.5); }
+.spark-target {
+  stroke: rgba(255,255,255,0.20);
+  stroke-width: 1; stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ----- Modal ----- */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+  z-index: 100; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  width: 100%; max-width: 480px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 22px; max-height: 88vh; overflow-y: auto;
+}
+.modal h3 {
+  margin: 0 0 14px; font-size: 17px; font-weight: 700;
+}
+.set-section { margin-bottom: 22px; }
+.set-section h4 {
+  margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-3);
+}
+
+/* ----- Form fields ----- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.field label {
+  font-size: 11px; color: var(--text-3); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.field input[type="number"], .field input[type="text"], .field select {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-family: inherit; font-size: 14px;
+  padding: 10px 12px; border-radius: 10px; outline: none;
+  -moz-appearance: textfield;
+}
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.field input:focus, .field select:focus {
+  border-color: rgba(32,165,160,0.40);
+  box-shadow: 0 0 0 2px rgba(32,165,160,0.10);
+}
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 3px;
+}
+.seg button {
+  flex: 1; padding: 9px; border: none; background: transparent;
+  color: var(--text-3); border-radius: 7px;
+  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.seg button.active {
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2);
+}
+
+/* ----- Stimulant search ----- */
+.search-wrap { position: relative; }
+.search-input {
+  width: 100%; background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border);
+  color: var(--text-1); font-family: inherit; font-size: 14px;
+  padding: 11px 14px; border-radius: 10px; outline: none;
+}
+.search-input:focus { border-color: rgba(32,165,160,0.40); }
+.search-results {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 4px;
+  max-height: 240px; overflow-y: auto;
+  z-index: 5;
+  display: none;
+}
+.search-results.show { display: block; }
+.search-result {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 12px; border-radius: 7px;
+  cursor: pointer; font-size: 13px;
+  -webkit-tap-highlight-color: transparent;
+}
+.search-result:hover { background: rgba(255,255,255,0.05); }
+.search-result-name { color: var(--text-1); font-weight: 600; }
+.search-result-meta {
+  font-size: 10.5px; color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.search-result-add { color: var(--good); }
+
+.subs-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.sub-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.sub-row-info { flex: 1; min-width: 140px; }
+.sub-row-name { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.sub-row-meta {
+  font-size: 11px; color: var(--text-3);
+  font-variant-numeric: tabular-nums; font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.sub-row-dose {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.sub-row-dose .sub-dose-input {
+  width: 56px; background: transparent; border: none; outline: none;
+  color: var(--text-1); font-family: inherit; font-size: 13px;
+  font-weight: 600; text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.sub-row-dose .sub-dose-input::-webkit-outer-spin-button,
+.sub-row-dose .sub-dose-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sub-row-dose .sub-dose-unit {
+  font-size: 11px; color: var(--text-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.sub-row-del {
+  background: transparent; border: none; color: var(--text-4);
+  font-size: 16px; cursor: pointer; padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.sub-row-del:hover { color: var(--bad); }
+
+/* ----- Buttons ----- */
+.btn-primary {
+  width: 100%; padding: 13px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary, #F2F2F2); border-radius: 12px;
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.45);
+  transition: transform 0.1s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-secondary {
+  padding: 11px 16px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-1); border-radius: 10px;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.10); }
+.modal-actions {
+  display: flex; gap: 8px; margin-top: 16px;
+}
+.modal-actions .btn-primary { flex: 1; }
+
+@media (max-width: 480px) {
+  .water-embed .shell { padding: 16px 12px 60px; }
+  .water-num { font-size: 48px; }
+}
+
+/* iPhone bottom-safe-area fix (ported from po-water.html's own fix, same
+   reasoning: keep the Settings modal's Done button and page bottom clear
+   of the home indicator). */
+.water-embed .shell {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+.water-embed .modal-bg {
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-top: max(20px, env(safe-area-inset-top));
+}
+.water-embed .modal {
+  max-height: calc(88vh - env(safe-area-inset-bottom));
+}
+.water-embed .water-plus-btn,
+.water-embed .water-minus-btn {
+  margin-bottom: max(0px, env(safe-area-inset-bottom));
+}
 </style>
 </head>
 <body>
@@ -374,6 +801,211 @@ body::after {
 
   <h1 class="dash-title">Gym</h1>
   <div class="dash-subtitle">Strength training</div>
+
+  <!-- WATER TRACKER (moved in from main.html, which had it ported
+       natively from po-water.html — see the copyright header below for
+       the full license this code carries). Kept outside #gymSections
+       since that wrapper is shown/hidden based on whether Hevy data
+       exists — Water Coach should stay up regardless. -->
+  <div class="section" id="water">
+    <div class="section-title">Water Tracker</div>
+    <section class="water-embed">
+      <!--
+      =====================================================
+      © 2026 Rowan Thistlebrooke — All Rights Reserved
+
+      Personal & Educational Use Only.
+      You may view and run this code locally for learning.
+      You may NOT use this code or data in a commercial
+      product, redistribute it, or republish it as your own.
+
+      Unauthorized use may be subject to copyright enforcement.
+      Contact: rowan.wisere@gmail.com
+      =====================================================
+      -->
+      <div class="shell">
+
+        <button class="day-pill" id="dayPill" type="button">
+          <span id="dayPillLabel">—</span>
+        </button>
+
+        <div class="header">
+          <h1 class="title" id="appTitle">Water Coach</h1>
+          <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+
+        <div class="divider"><span>WATER</span></div>
+
+        <div class="card">
+          <div class="water-label" id="waterUnitLabel">BOTTLES DRANK TODAY</div>
+          <div class="water-row">
+            <span class="water-num" id="waterNum">0</span>
+            <span class="water-target" id="waterTarget">/ 9</span>
+          </div>
+
+          <div class="water-bar-wrap">
+            <div class="water-bar-track">
+              <div class="water-bar-fill" id="waterBarFill" style="width:0%"></div>
+              <div class="water-bar-zone" id="waterBarZoneStart" style="left:55%"></div>
+              <div class="water-bar-zone" id="waterBarZoneEnd"   style="left:80%"></div>
+            </div>
+            <div class="water-bar-labels">
+              <span id="waterBarMin">0</span>
+              <span class="water-zone-name">healthy zone</span>
+              <span id="waterBarMax">12+</span>
+            </div>
+          </div>
+
+          <div class="water-actions">
+            <button class="water-minus-btn" id="waterMinusBtn" type="button" aria-label="Undo last">−</button>
+            <button class="water-plus-btn" id="waterPlusBtn" type="button">
+              <span id="waterPlusLabel">Drank a bottle</span>
+              <span>↑</span>
+            </button>
+          </div>
+          <div class="water-helper" id="waterHelper">Start the day — first one in.</div>
+
+          <button class="why-toggle" id="whyToggle" type="button" aria-expanded="false">
+            <span>Why this target?</span>
+            <span class="why-arrow">▾</span>
+          </button>
+          <div class="why-body" id="whyBody"></div>
+        </div>
+
+        <div class="card" id="historyCard">
+          <div class="water-label">LAST 14 DAYS</div>
+          <div class="spark-wrap">
+            <svg class="spark-svg" id="sparkSvg" viewBox="0 0 280 70" preserveAspectRatio="none"></svg>
+          </div>
+          <div id="histList" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- Settings modal -->
+      <div class="modal-bg" id="setModalBg">
+        <div class="modal">
+          <h3>Settings</h3>
+
+          <div class="set-section">
+            <h4>Profile</h4>
+            <div class="field-row">
+              <div class="field">
+                <label>Weight</label>
+                <input type="number" id="setWeight" step="0.5" min="20" max="300">
+              </div>
+              <div class="field">
+                <label>Weight unit</label>
+                <div class="seg" id="setWeightUnit">
+                  <button data-u="kg">kg</button>
+                  <button data-u="lb">lb</button>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Age</label>
+                <input type="number" id="setAge" min="13" max="100">
+              </div>
+              <div class="field">
+                <label>Sex</label>
+                <div class="seg" id="setSex">
+                  <button data-s="m">Male</button>
+                  <button data-s="f">Female</button>
+                  <button data-s="o">Other</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Activity (training hours per week)</label>
+              <input type="number" id="setActivity" min="0" max="40" step="0.5">
+            </div>
+          </div>
+
+          <div class="set-section">
+            <h4>Display</h4>
+            <div class="field">
+              <label>Show water as</label>
+              <div class="seg" id="setUnit">
+                <button data-u="bottle">Bottles</button>
+                <button data-u="glass">Glasses</button>
+                <button data-u="oz">oz</button>
+                <button data-u="ml">ml</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Bottle size (ml)</label>
+                <input type="number" id="setBottleMl" min="100" max="2000" step="50">
+              </div>
+              <div class="field">
+                <label>Glass size (ml)</label>
+                <input type="number" id="setGlassMl" min="100" max="500" step="10">
+              </div>
+            </div>
+          </div>
+
+          <div class="set-section">
+            <h4>Daily Target</h4>
+            <div class="field">
+              <label>Target mode</label>
+              <div class="seg" id="setTargetMode">
+                <button data-tm="auto">Auto (calculated)</button>
+                <button data-tm="manual">Manual</button>
+              </div>
+            </div>
+            <div class="field" id="setManualTargetField">
+              <label>Manual daily target (ml)</label>
+              <input type="number" id="setManualTargetMl" min="500" max="10000" step="100">
+            </div>
+          </div>
+
+          <div class="set-section">
+            <h4>Caffeine</h4>
+            <div class="field">
+              <label>Average caffeine per day (mg)</label>
+              <input type="number" id="setCaffeine" min="0" max="1000" step="10">
+              <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.4">
+                ~1 cup of coffee = 95mg · espresso shot = 75mg · energy drink = 160mg.
+                Above 200mg/day starts to add a small water requirement.
+              </div>
+            </div>
+          </div>
+
+          <div class="set-section">
+            <h4>Stimulants & meds</h4>
+            <div class="field">
+              <label>Search to add</label>
+              <div class="search-wrap">
+                <input type="text" class="search-input" id="subSearch" placeholder="Type a name (Adderall, Concerta, Lithium…)" autocomplete="off">
+                <div class="search-results" id="subResults"></div>
+              </div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.4">
+                Each substance bumps your daily water target. Includes ADHD stims,
+                diuretics, decongestants, nicotine, alcohol, and a few others.
+              </div>
+            </div>
+            <div class="subs-list" id="subsList"></div>
+          </div>
+
+          <div class="set-section">
+            <h4>Data</h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-secondary" id="setExport">Export JSON</button>
+              <button class="btn-secondary" id="setImport">Import JSON</button>
+              <button class="btn-secondary" id="setReset" style="color:var(--bad);border-color:rgba(255,138,138,0.3)">Reset all</button>
+            </div>
+            <input type="file" id="setImportFile" accept=".json" style="display:none">
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-primary" id="setClose">Done</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <div id="gymSections">
 
@@ -963,6 +1595,21 @@ document.addEventListener('DOMContentLoaded', function () {
     initCloudSync({ appKey: 'hevy', syncedKeys: ['hevy_v1'], onApplied: render });
   }
 })();
+
+// Water Coach's own sync channel — js/water.js only reads/writes
+// po_water_v1 locally, same as it did on main.html; opening the actual
+// Supabase channel is left to whichever page has it embedded (see
+// main.html's old js/sync-register.js, guarded so an iframe embed of
+// this page can't double-register it).
+if (typeof initCloudSync === 'function') {
+  try { if (window.self === window.top) {
+    initCloudSync({
+      appKey: 'water',
+      syncedKeys: ['po_water_v1'],
+      onApplied: function () { window.dispatchEvent(new Event('storage')); }
+    });
+  } } catch (e) {}
+}
 });
 </script>
 
