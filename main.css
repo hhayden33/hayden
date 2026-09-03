@@ -1369,6 +1369,14 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   color: var(--text-primary); font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+.sleep-duration-badges { display: flex; align-items: center; gap: 8px; }
+/* Garmin's own 0-100 sleep score — quiet by design, duration stays the
+   dominant number. Never shown for a manual/legacy entry (Garmin-only
+   field, nothing to fabricate for those nights). */
+.sleep-score {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: var(--text-tertiary);
+}
 .sleep-status {
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; white-space: nowrap;

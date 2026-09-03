@@ -123,6 +123,17 @@
       statusEl.style.display = 'none';
     }
 
+    // Garmin's own score, shown as-is — not used to compute Good/
+    // Excellent/Below target above (that's duration-only, per spec),
+    // and never present for a manual/legacy entry.
+    const scoreEl = document.getElementById('sleepScore');
+    if (typeof entry.score === 'number' && isFinite(entry.score)) {
+      scoreEl.textContent = 'Score ' + Math.round(entry.score);
+      scoreEl.style.display = '';
+    } else {
+      scoreEl.style.display = 'none';
+    }
+
     const pct = Math.max(0, Math.min(100, Math.round(entry.hours / SLEEP_TARGET_HOURS * 100)));
     document.getElementById('sleepTargetFill').style.width = pct + '%';
     document.getElementById('sleepTargetLabel').textContent = fmtHM(entry.hours) + ' / ' + fmtHM(SLEEP_TARGET_HOURS);
