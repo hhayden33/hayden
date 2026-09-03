@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', function () {
       window.dispatchEvent(new Event('storage'));
     }
   });
+  // Sleep — written by automation/garmin-cron-sync.mjs (every 30 min,
+  // see its launchd plist) straight to Supabase, not through this
+  // browser's own localStorage.setItem, so this channel's realtime
+  // subscription is the only thing that pulls a fresh night's data in
+  // without a manual reload.
+  initCloudSync({
+    appKey: 'sleep',
+    syncedPrefixes: ['sleep:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
   // Hevy summary (automation/hevy-sync.mjs -> Supabase app_state('hevy')).
   // gym.html reads the same hevy_v1 key directly, but the Gym row of
   // this page's own consistency heatmap needs it pulled in here too —

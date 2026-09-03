@@ -268,7 +268,11 @@
     </div>
   </div>
 
-  <!-- NIGHT ROUTINE -->
+  <!-- NIGHT ROUTINE + SLEEP — Night Routine is what you do before bed
+       (unchanged, still the primary/wider column); Sleep is how you
+       actually slept, a compact companion card fed by Garmin via
+       js/sleep.js (see that file's own header for the data source). -->
+  <div class="nr-sleep-row">
   <div class="section" id="nightRoutine">
     <div class="section-title">Night Routine</div>
     <div class="gm-card nr-card" id="nrCard">
@@ -286,6 +290,28 @@
     </div>
   </div>
 
+  <div class="section" id="sleep">
+    <div class="section-title">Sleep</div>
+    <div class="gm-card" id="sleepCard">
+      <div class="empty-state" id="sleepEmpty" style="display:none;">No sleep data yet.</div>
+      <div id="sleepBody" style="display:none;">
+        <div class="sleep-duration-row">
+          <span class="sleep-duration" id="sleepDuration">—</span>
+          <span class="sleep-status" id="sleepStatus"></span>
+        </div>
+        <div class="sleep-target-row">
+          <div class="sleep-target-track"><div class="sleep-target-fill" id="sleepTargetFill" style="width:0%"></div></div>
+          <span class="sleep-target-label" id="sleepTargetLabel"></span>
+        </div>
+        <div class="sleep-compare" id="sleepCompare" style="display:none;"></div>
+        <div class="sleep-stage-bar" id="sleepStageBar" style="display:none;"></div>
+        <div class="sleep-stage-list" id="sleepStageList" style="display:none;"></div>
+        <div class="sleep-times" id="sleepTimes" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
   <!-- CONSISTENCY HEATMAP — the summary of everything above it (Night
        Routine and Water now included, since both moved above Running). -->
   <div class="section" id="consistency">
@@ -301,6 +327,7 @@
 <script src="js/day-ring.js" defer></script>
 <script src="js/calendar.js" defer></script>
 <script src="js/night-routine.js" defer></script>
+<script src="js/sleep.js" defer></script>
 <script src="js/goals.js" defer></script>
 <script src="js/week-planner.js" defer></script>
 <!-- Running Overview widget was removed from this page, but this stays
