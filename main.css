@@ -1427,30 +1427,29 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
   font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono);
 }
 
-/* 7-day trend — dot size = that night's hours relative to target (same
-   dashed-hollow-ring-for-no-data language the rest of this card
-   already uses for "nothing available" rather than a fake zero), dot
-   color = the same Excellent/Good/Below-target read as the status pill
-   above. Deliberately just dots, not a bar/line chart. */
+/* 7-day trend — a compact bar sparkline, same idea as the water
+   tracker's own "last 14 days" mini chart elsewhere in this codebase:
+   bar height = that night's hours (scaled against whichever is taller,
+   the target or the best night, so a long night never overflows), a
+   thin dashed reference line at the 8h target, today full-strength and
+   every other bar dimmed so the most recent night reads first. A night
+   with no data gets a faint stub rather than a fabricated zero. */
 .sleep-trend { margin-top: 14px; }
 .sleep-trend-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--text-tertiary); margin-bottom: 10px;
 }
-.sleep-trend-row { display: flex; align-items: flex-end; gap: 4px; height: 26px; }
-.sleep-trend-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.sleep-trend-dot { border-radius: 50%; flex-shrink: 0; }
-.sleep-trend-dot.sleep-excellent { background: var(--success); }
-.sleep-trend-dot.sleep-good { background: var(--accent-cyan, #087CA3); }
-.sleep-trend-dot.sleep-below { background: var(--warning); }
-.sleep-trend-dot.sleep-none {
-  background: transparent;
-  border: 1.5px dashed var(--border-strong, rgba(120,160,180,0.28));
+.sleep-trend-svg { width: 100%; height: 40px; display: block; }
+.sleep-trend-bar { fill: var(--success); }
+.sleep-trend-bar.sleep-trend-bar-dim { opacity: 0.4; }
+.sleep-trend-bar.sleep-trend-bar-none { fill: var(--text-tertiary); opacity: 0.16; }
+.sleep-trend-target-line {
+  stroke: rgba(255,255,255,0.20); stroke-width: 1; stroke-dasharray: 3 3;
 }
-.sleep-trend-dot.sleep-trend-today {
-  box-shadow: 0 0 0 2px var(--surface, #19232D), 0 0 0 3.5px var(--text-secondary);
-}
-.sleep-trend-day {
+.sleep-trend-days { display: flex; margin-top: 6px; }
+.sleep-trend-days span {
+  flex: 1; text-align: center;
   font-size: 9px; font-weight: 600; color: var(--text-tertiary);
 }
+.sleep-trend-days span.sleep-trend-day-today { color: var(--text-secondary); font-weight: 800; }
 

@@ -97,52 +97,58 @@
     return out;
   }
 
-  // Dot diameter scales with that night's hours (capped at the target,
-  // so an unusually long night doesn't blow the row's height out); a
-  // missing night gets a small hollow dashed ring at a fixed size
-  // rather than a 0-size (invisible) or fabricated dot.
-  const TREND_DOT_MIN = 6, TREND_DOT_MAX = 20, TREND_DOT_NONE = 10;
+  // Same bar-sparkline idea as the water tracker's own "last 14 days"
+  // mini chart: height = that night's hours, scaled against whichever
+  // is taller (the target or the best night in the window) so nothing
+  // overflows and the target line is always visible on the chart. A
+  // missing night gets a faint stub, never a fabricated zero-hour bar.
   function renderTrend(todayDate) {
     const wrap = document.getElementById('sleepTrend');
-    const row = document.getElementById('sleepTrendRow');
-    if (!wrap || !row) return;
-    row.innerHTML = '';
+    const svg = document.getElementById('sleepTrendSvg');
+    const daysRow = document.getElementById('sleepTrendDays');
+    if (!wrap || !svg) return;
+
     const base = new Date(todayDate + 'T00:00:00');
-    let anyData = false;
+    const nights = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(base);
       d.setDate(d.getDate() - i);
       const e = getSleepEntry(dateKeyOf(d));
       const hasHours = e && typeof e.hours === 'number' && isFinite(e.hours);
-      if (hasHours) anyData = true;
-
-      const item = document.createElement('div');
-      item.className = 'sleep-trend-item';
-
-      const dot = document.createElement('span');
-      if (hasHours) {
-        const status = computeStatus(e.hours);
-        const size = Math.round(TREND_DOT_MIN + Math.max(0, Math.min(1, e.hours / SLEEP_TARGET_HOURS)) * (TREND_DOT_MAX - TREND_DOT_MIN));
-        dot.className = 'sleep-trend-dot' + (status ? ' ' + status.cls : '');
-        dot.style.width = size + 'px';
-        dot.style.height = size + 'px';
-        dot.title = fmtHM(e.hours);
-      } else {
-        dot.className = 'sleep-trend-dot sleep-none';
-        dot.style.width = TREND_DOT_NONE + 'px';
-        dot.style.height = TREND_DOT_NONE + 'px';
-      }
-      if (i === 0) dot.classList.add('sleep-trend-today');
-
-      const label = document.createElement('span');
-      label.className = 'sleep-trend-day';
-      label.textContent = d.toLocaleDateString('en-US', { weekday: 'narrow' });
-
-      item.appendChild(dot);
-      item.appendChild(label);
-      row.appendChild(item);
+      nights.push({ date: d, hours: hasHours ? e.hours : null });
     }
+    const anyData = nights.some(function (n) { return n.hours != null; });
     wrap.style.display = anyData ? '' : 'none';
+    if (!anyData) return;
+
+    const scaleMax = Math.max(SLEEP_TARGET_HOURS, Math.max.apply(null, nights.map(function (n) { return n.hours || 0; })));
+    const W = 280, H = 40, GAP = 4, N = nights.length;
+    const barW = (W - GAP * (N - 1)) / N;
+    const targetY = H - (SLEEP_TARGET_HOURS / scaleMax) * H;
+
+    let html = '<line class="sleep-trend-target-line" x1="0" y1="' + targetY.toFixed(1) + '" x2="' + W + '" y2="' + targetY.toFixed(1) + '"></line>';
+    nights.forEach(function (night, i) {
+      const x = i * (barW + GAP);
+      const isToday = i === N - 1;
+      if (night.hours == null) {
+        const h = H * 0.06;
+        html += '<rect class="sleep-trend-bar sleep-trend-bar-none" x="' + x.toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2"></rect>';
+      } else {
+        const h = Math.max(2, (night.hours / scaleMax) * H);
+        html += '<rect class="sleep-trend-bar' + (isToday ? '' : ' sleep-trend-bar-dim') + '" x="' + x.toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2"><title>' + fmtHM(night.hours) + '</title></rect>';
+      }
+    });
+    svg.innerHTML = html;
+
+    if (daysRow) {
+      daysRow.innerHTML = '';
+      nights.forEach(function (night, i) {
+        const span = document.createElement('span');
+        span.textContent = night.date.toLocaleDateString('en-US', { weekday: 'narrow' });
+        if (i === N - 1) span.className = 'sleep-trend-day-today';
+        daysRow.appendChild(span);
+      });
+    }
   }
 
   function render() {
