@@ -1359,7 +1359,14 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
    less lopsided split so Sleep isn't squeezed as hard as the 1.7:1
    desktop ratio would leave it. */
 @media (max-width: 480px) {
-  .nr-sleep-row { gap: 8px; }
+  /* Night Routine's height varies with its list (currently 7 items,
+     more if items are ever added) while Sleep's content is a fixed
+     height — align-items:stretch (the shared desktop rule above) forces
+     Sleep's card to match Night Routine's height regardless, which on a
+     narrow single-column-content Sleep card reads as a big dead area
+     below the 7-day trend chart rather than a filled card. Each card
+     sizes to its own content on mobile instead. */
+  .nr-sleep-row { gap: 8px; align-items: flex-start; }
   .nr-sleep-row > #nightRoutine { flex: 1.35; }
   .nr-sleep-row > .section > .gm-card { padding: 12px; }
   .nr-sleep-row .section-title { font-size: 9.5px; margin-bottom: 8px; }
