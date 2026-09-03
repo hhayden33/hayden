@@ -4,10 +4,16 @@
 <dict>
     <key>Label</key>
     <string>com.hayden.hevysync</string>
+    <!-- Points at ~/.garmin-dashboard-automation, not this repo's own
+         automation/ under ~/Desktop — launchd-spawned processes can't
+         read anything under ~/Desktop (~/Documents, ~/Downloads too),
+         confirmed by direct test; see install.sh's header comment.
+         Deploy there (and reload this job) after editing hevy-sync.mjs
+         or run-hevy-sync.sh: automation/install.sh && see README below. -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/hh.ayden/Desktop/claude /hayden/automation/run-hevy-sync.sh</string>
+        <string>/Users/hh.ayden/.garmin-dashboard-automation/run-hevy-sync.sh</string>
     </array>
     <!-- Workouts happen at unpredictable times of day (unlike Garmin's
          overnight-synced sleep/activity data), so this runs on a plain
@@ -17,9 +23,9 @@
     <key>StartInterval</key>
     <integer>1800</integer>
     <key>StandardOutPath</key>
-    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-hevy.out.log</string>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-hevy.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/hh.ayden/Desktop/claude /hayden/automation/logs/launchd-hevy.err.log</string>
+    <string>/Users/hh.ayden/.garmin-dashboard-automation/logs/launchd-hevy.err.log</string>
     <key>RunAtLoad</key>
     <false/>
 </dict>

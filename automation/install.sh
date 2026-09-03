@@ -18,7 +18,7 @@
 # deploys the dashboard's HTML/CSS/JS out of this same repo.
 #
 # Run this any time you edit garmin-cron-sync.mjs, run-garmin-sync.sh,
-# or garmin-sync.py.
+# garmin-sync.py, hevy-sync.mjs, run-hevy-sync.sh, or .env.
 # =============================================================
 set -euo pipefail
 
@@ -39,10 +39,20 @@ if [ ! -d "$DEST_DIR/node_modules" ]; then
   (cd "$DEST_DIR" && npm install --silent)
 fi
 
+# hevy-sync.mjs has zero external dependencies (built-in node:fs/node:url/
+# path + fetch only) — no package.json/node_modules needed for it. .env
+# holds HEVY_API_KEY; chmod 600 since it's a secret living outside the
+# repo's own git-ignore-protected directory.
+cp "$SRC_DIR/hevy-sync.mjs" "$DEST_DIR/"
+cp "$SRC_DIR/run-hevy-sync.sh" "$DEST_DIR/"
+cp "$SRC_DIR/.env" "$DEST_DIR/.env"
+chmod 600 "$DEST_DIR/.env"
+
 echo "Deployed to $DEST_DIR:"
 ls -la "$DEST_DIR" | grep -v node_modules
 
 echo ""
 echo "launchd jobs should point ProgramArguments at:"
 echo "  $DEST_DIR/run-garmin-sync.sh"
-echo "(see automation/com.hayden.garminsync.*.plist)"
+echo "  $DEST_DIR/run-hevy-sync.sh"
+echo "(see automation/com.hayden.garminsync.*.plist, automation/com.hayden.hevysync.plist)"
