@@ -14,10 +14,10 @@
 
   const NIGHT_ROUTINE_ITEMS = [
     'Prepare clothes for tomorrow',
+    'Brush teeth / skincare',
     'Pack work/gym bag',
-    'Complete remaining tasks',
     'Charge devices',
-    'Brush teeth / skincare'
+    'Complete remaining tasks'
   ];
   function nightRoutineKey() { return 'nightroutine:' + getActiveDateString(); }
   // Same items every night, but a fresh (unchecked) list each active day —
@@ -45,23 +45,33 @@
 
   // Today's list, if one's already seeded, keeps whatever it was seeded
   // with — getNightRoutine() only tops up an empty/missing list, so
-  // trimming/renaming NIGHT_ROUTINE_ITEMS above wouldn't otherwise show
-  // up until tomorrow's reseed. Fix today's copy directly instead.
-  // Matches by exact old text only — an item you'd already renamed via
-  // inline-edit is left alone rather than reverted.
+  // trimming/renaming/reordering NIGHT_ROUTINE_ITEMS above wouldn't
+  // otherwise show up until tomorrow's reseed. Fix today's copy
+  // directly instead. Matches by exact old text only — an item you'd
+  // already renamed via inline-edit is left alone rather than reverted.
   (function migrateEditedDefaults() {
     const key = nightRoutineKey();
     const list = storeGet(key);
     if (!Array.isArray(list) || !list.length) return;
     const REMOVED = new Set(["Review tomorrow's schedule", 'Prepare water', 'No phone', 'Get into bed']);
     let changed = false;
-    const next = list.filter(item => {
+    let next = list.filter(item => {
       if (REMOVED.has(item.text)) { changed = true; return false; }
       return true;
     });
     next.forEach(item => {
       if (item.text === 'Charge Garmin/watch') { item.text = 'Charge devices'; changed = true; }
     });
+    // Reorder to match NIGHT_ROUTINE_ITEMS' current order — a list
+    // seeded before an order change otherwise keeps its original order
+    // forever (nothing above ever re-seeds an existing list).
+    function orderIndex(text) {
+      const i = NIGHT_ROUTINE_ITEMS.indexOf(text);
+      return i === -1 ? NIGHT_ROUTINE_ITEMS.length : i;
+    }
+    const before = next;
+    next = next.slice().sort((a, b) => orderIndex(a.text) - orderIndex(b.text));
+    if (next.some((item, i) => item !== before[i])) changed = true;
     if (changed) storeSet(key, next);
   })();
 
