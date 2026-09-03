@@ -137,14 +137,6 @@
   filter: grayscale(100%) brightness(1.6); opacity: 1;
 }
 .bottombar-tab:active .bottombar-tab-icon { transform: scale(0.92); }
-/* The memo emoji (To-Do tab) renders with its own ink sitting noticeably
-   higher inside its line box than the other tabs' icons — confirmed via
-   getBoundingClientRect that the layout boxes are pixel-identical across
-   every tab, so this is purely how that one glyph is drawn, not a CSS
-   layout gap. Nudge it down to visually match; keep the :active press
-   scale working by composing both transforms rather than overriding. */
-.bottombar-tab[data-page="todo"] .bottombar-tab-icon { transform: translateY(4px); }
-.bottombar-tab[data-page="todo"]:active .bottombar-tab-icon { transform: translateY(4px) scale(0.92); }
 body.has-bottombar {
   padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
 }
@@ -212,8 +204,8 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   <a href="goals.html" class="bottombar-tab" data-page="goals">
     <span class="bottombar-tab-icon">🎯</span><span>Goals</span>
   </a>
-  <a href="todo.html" class="bottombar-tab" data-page="todo">
-    <span class="bottombar-tab-icon">📝</span><span>To-Do</span>
+  <a href="finance.html" class="bottombar-tab" data-page="finance">
+    <span class="bottombar-tab-icon">📊</span><span>Finance</span>
   </a>
   <a href="running.html" class="bottombar-tab" data-page="running">
     <span class="bottombar-tab-icon">🏃</span><span>Running</span>
@@ -235,7 +227,6 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('running.html')) return 'running';
     if (p.endsWith('gym.html')) return 'fitness';
-    if (p.endsWith('todo.html')) return 'todo';
     if (p.endsWith('goals.html')) return 'goals';
     return 'main';
   }
