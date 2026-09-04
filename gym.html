@@ -126,6 +126,9 @@ body::after {
 .fitness-top-row .water-embed .water-minus-btn { font-size: 18px; }
 .fitness-top-row .water-embed .water-bar-labels { font-size: 9px; }
 .fitness-top-row .water-embed .card { padding: 14px; }
+.fitness-top-row .gym-hero-num { font-size: 22px; }
+.fitness-top-row .gym-hero-label { font-size: 9px; letter-spacing: 0.06em; }
+.fitness-top-row .gm-card { padding: 14px; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
@@ -215,6 +218,11 @@ body::after {
 .gym-hero-cell {
   text-align: center; padding: 4px 8px;
   border-left: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  /* 1fr grid columns don't shrink below their content's min-content
+     width by default — in the narrow .fitness-top-row column that let
+     "AVG / WEEK" push the 3rd cell past the card's edge instead of
+     wrapping. min-width:0 lets the column actually shrink to fit. */
+  min-width: 0;
 }
 /* Row-start cells never get a left border, not just the very first
    cell overall — matters now that a 5th/6th stat can wrap onto a
