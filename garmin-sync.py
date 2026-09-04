@@ -161,8 +161,26 @@ def sync_sleep(sleep_by_date):
     if not sleep_by_date:
         return 0
     current = supa_get(SLEEP_APP_KEY)
+
+    now_ms = int(time.time() * 1000)
+    sync_meta = current.get('__sync')
+    if not isinstance(sync_meta, dict):
+        sync_meta = {}
+    updated_at = sync_meta.get('updatedAt')
+    if not isinstance(updated_at, dict):
+        updated_at = {}
+
     for date, entry in sleep_by_date.items():
         current[f'sleep:{date}'] = entry
+        # Same reasoning as main()'s '__sync' stamping below: without this,
+        # every 'sleep:<date>' key stays frozen at whichever timestamp a
+        # browser first pulled it at, so the next browser to load the page
+        # pushes its own stale cached night right back over this write.
+        updated_at[f'sleep:{date}'] = now_ms
+
+    sync_meta['updatedAt'] = updated_at
+    current['__sync'] = sync_meta
+
     supa_upsert(SLEEP_APP_KEY, current)
     return len(sleep_by_date)
 
@@ -218,6 +236,30 @@ def main():
     current['run:runs'] = runs
     current['run:pbs'] = pbs
     current['run:garminSnapshot'] = snapshot
+
+    # sync.js merges each key against '__sync.updatedAt[key]' and, on a
+    # tie, keeps whatever the browser already has cached locally. This
+    # script writes straight to Supabase over REST, bypassing sync.js
+    # entirely, so if it echoes the '__sync' blob back unchanged, these
+    # keys' timestamps stay frozen at whenever a browser first pulled
+    # them — every write after that looks like a tie (or a loss) to
+    # sync.js, and the next browser to load the page pushes its own
+    # now-stale cached copy right back over this fresh data. Stamping the
+    # keys actually touched this run with the current time keeps Garmin's
+    # data winning the merge, which is the whole point of a one-way sync.
+    now_ms = int(time.time() * 1000)
+    sync_meta = current.get('__sync')
+    if not isinstance(sync_meta, dict):
+        sync_meta = {}
+    updated_at = sync_meta.get('updatedAt')
+    if not isinstance(updated_at, dict):
+        updated_at = {}
+    updated_at['run:runs'] = now_ms
+    updated_at['run:garminSnapshot'] = now_ms
+    if pb_filled:
+        updated_at['run:pbs'] = now_ms
+    sync_meta['updatedAt'] = updated_at
+    current['__sync'] = sync_meta
 
     supa_upsert(APP_KEY, current)
     print(f'Synced to Supabase app_state[{APP_KEY}].')
