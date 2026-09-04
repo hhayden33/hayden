@@ -112,6 +112,20 @@ body::after {
   align-items: start;
 }
 .fitness-top-row > .section { margin-top: 8px; min-width: 0; }
+/* Half-width is too narrow for Water's normal (previously full-page)
+   scale — the 56px number and "Drank a bottle" button wrapped to 3
+   lines and spilled out of the pill shape. Compact just this
+   component's internals when it's inside this row; nothing about the
+   markup or js/water.js changes, only these sizes. */
+.fitness-top-row .section-title { gap: 8px; }
+.fitness-top-row .section-title::after { display: none; }
+.fitness-top-row .water-embed .water-num { font-size: 32px; }
+.fitness-top-row .water-embed .water-target { font-size: 14px; }
+.fitness-top-row .water-embed .water-actions { grid-template-columns: 40px 1fr; gap: 6px; }
+.fitness-top-row .water-embed .water-plus-btn { font-size: 12.5px; padding: 12px 6px; gap: 4px; }
+.fitness-top-row .water-embed .water-minus-btn { font-size: 18px; }
+.fitness-top-row .water-embed .water-bar-labels { font-size: 9px; }
+.fitness-top-row .water-embed .card { padding: 14px; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
