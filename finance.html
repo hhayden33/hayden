@@ -85,15 +85,19 @@ body::after {
   padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 100px max(16px, env(safe-area-inset-left));   /* extra bottom padding so tab bar doesn't cover content */
 }
 
-/* ===== Back to dashboard ===== */
+/* ===== Back to dashboard =====
+   Matches the rest of the app's card/border tokens (cool blue-grey,
+   var(--border-subtle)-equivalent) rather than a neutral white tint —
+   this page's own :root already defines the same values as
+   topbar.js/main.css under different variable names. */
 .fin-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px 8px 10px;
   margin: 0 0 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   color: var(--text-secondary);
   font-family: var(--font);
@@ -105,56 +109,57 @@ body::after {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .fin-back-btn:hover, .fin-back-btn:active {
-  background: rgba(255,255,255,0.07);
+  background: var(--surface-hover, #202B35);
   color: var(--text-primary);
 }
 .fin-back-btn svg { display: block; }
 
-/* ===== Bottom tab bar ===== */
+/* ===== Bottom tab bar =====
+   Restyled to match topbar.js's shared .bottombar/.bottombar-tab exactly
+   (same solid background + top border instead of a blur/gradient fade,
+   same desaturated icon treatment, same active-state gradient with no
+   extra border) — this bar serves a different job (switching this
+   page's own Net Worth/Subs/Orders/Wishlist views, not cross-page nav)
+   so it keeps its own markup/JS, but should read as the same component
+   language as every other page's bottom bar. */
 .bottom-tabs {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 100;
   display: flex;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px max(12px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-right));
-  background: linear-gradient(180deg, transparent, rgba(16,21,26,0.92) 30%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-.bottom-tabs::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 12px; right: 12px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
-  pointer-events: none;
+  justify-content: space-around;
+  align-items: stretch;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+  background: #10151A;
+  border-top: 1px solid var(--glass-border);
 }
 .bot-tab {
   flex: 1; max-width: 140px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--text-tertiary);
-  padding: 9px 14px 8px;
+  padding: 6px 0 4px;
   border-radius: 12px;
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-.bot-tab:hover { color: var(--text-secondary); background: var(--surface-hover, #202B35); }
+.bot-tab:hover { color: var(--text-secondary); background: rgba(8, 124, 163, 0.08); }
 .bot-tab.active {
   color: var(--text-primary);
-  background: linear-gradient(180deg, rgba(8,124,163,0.20), rgba(85,32,128,0.16));
-  border-color: rgba(8,124,163,0.35);
+  background: linear-gradient(180deg, rgba(8,124,163,0.18), rgba(85,32,128,0.14));
 }
-.bot-tab-icon { font-size: 18px; line-height: 1; }
+.bot-tab-icon {
+  font-size: 24px; line-height: 1;
+  filter: grayscale(100%) brightness(1.2); opacity: 0.55;
+  transition: opacity 0.15s, filter 0.15s;
+}
+.bot-tab.active .bot-tab-icon { filter: grayscale(100%) brightness(1.6); opacity: 1; }
 .bot-tab-label {
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 /* Sections: hide non-active when bottom tabs are in use */
