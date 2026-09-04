@@ -140,12 +140,12 @@ body::after {
    their sparse content across more width than it needs, opening up
    dead space in the middle of the card again (this time horizontal,
    same underlying issue the vertical space-between fix addressed
-   earlier). They now sit at a fixed, content-appropriate width;
-   Water — which actually has room-filling content (progress bar,
-   buttons) — absorbs 100% of whatever space is left over, up to
-   .page's own 1100px cap, so the row is never wider than it needs to
-   be and there's never a gap between cards. */
-.fitness-top-row > #water { flex: 1 1 340px; }
+   earlier). All three now sit at the same fixed 260px (flex-grow:0) —
+   Water briefly absorbed the row's leftover width on its own, but
+   that made it visibly wider than its two neighbours; matching all
+   three keeps every card, and its section-title banner above it,
+   identical in width. */
+.fitness-top-row > #water { flex: 0 0 260px; }
 .fitness-top-row > #heroSection { flex: 0 0 260px; }
 .fitness-top-row > #sleepSection { flex: 0 0 260px; }
 /* Training Status only has 4 natural content groups (headline number,
