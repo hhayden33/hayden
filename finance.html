@@ -114,6 +114,19 @@ body::after {
 }
 .fin-back-btn svg { display: block; }
 
+/* Page title — same gradient-text treatment as goals.html/running.html/
+   gym.html's own .dash-title. This page never had one; every other
+   secondary page opens with one right after its Back button. */
+.dash-title {
+  margin: 0 0 14px;
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #B9C7D4 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
 /* ===== Bottom tab bar =====
    Restyled to match topbar.js's shared .bottombar/.bottombar-tab exactly
    (same solid background + top border instead of a blur/gradient fade,
@@ -190,12 +203,6 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   opacity: 0.6;
 }
 .section-title-text { display: inline-flex; align-items: center; gap: 8px; }
-.section-title-text::before {
-  content: '⚡';
-  font-size: 14px;
-  color: var(--text-tertiary);
-  opacity: 0.5;
-}
 .section-reorder { display: inline-flex; gap: 6px; opacity: 0.5; }
 .section-reorder button {
   background: transparent;
@@ -215,26 +222,21 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
 }
 
-/* Card */
+/* Card — matches the rest of the app's .gm-card exactly: flat opaque
+   surface, no backdrop-filter blur or top-highlight edge. This page
+   used to run its own glassmorphism treatment (blur + translucent
+   background) that every other page abandoned in favor of a flatter
+   style; the class name stays .card (finance.html's JS never touches
+   it), only the look changes. */
 .card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  margin-bottom: 10px;
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: var(--glass-shadow);
+  background: var(--surface, #19232D);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   position: relative;
   overflow: hidden;
-}
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 14px; right: 14px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
-  pointer-events: none;
 }
 .card-grid {
   display: grid;
@@ -1598,6 +1600,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
   <span>Back</span>
 </a>
+
+<h1 class="dash-title">Finances</h1>
 
 <!-- ===== FINANCE TICKER (rotating subscription renewals) ===== -->
 <div class="finance-ticker hidden" id="financeTicker">
