@@ -402,30 +402,39 @@ body::after {
 }
 .shell { max-width: 720px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 80px max(16px, env(safe-area-inset-left)); }
 
-/* ----- Top day pill + header ----- */
+/* ----- Header: day pill + (visually hidden) title + settings gear -----
+   Used to be a day-pill on its own row, THEN a title+gear row, THEN a
+   "WATER" divider — three stacked headers before any real content,
+   directly under this page's own "Water Tracker" section-title. Down
+   to one slim row; .sr-only keeps the title in the accessibility tree
+   without taking visual space (js/water.js still sets its textContent). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
 .day-pill {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 12px;
-  background: rgba(255,255,255,0.04);
+  background: var(--surface-hover, rgba(255,255,255,0.04));
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-2);
   font-family: var(--font-mono);
   font-size: 11px; font-weight: 700; letter-spacing: 0.10em;
-  text-transform: uppercase; margin-bottom: 10px;
+  text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
 }
 .day-pill .day-sep { color: var(--text-4); }
-
-.header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 18px;
-}
-.title { font-size: 22px; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
 .icon-btn {
   width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.04);
+  background: var(--surface-hover, rgba(255,255,255,0.04));
   border: 1px solid var(--border);
   border-radius: 10px; color: var(--text-2); cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -433,25 +442,16 @@ body::after {
 }
 .icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-1); }
 
-/* ----- Eyebrow divider ----- */
-.divider {
-  display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
-}
-.divider::before, .divider::after {
-  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.10);
-}
-.divider span {
-  font-size: 11px; letter-spacing: 0.22em; font-weight: 600;
-  color: rgba(255,255,255,0.85);
-}
-
-/* ----- Card ----- */
+/* ----- Card — matches this page's own .gm-card exactly (16px radius,
+   20px padding, same drop shadow) instead of po-water.html's own
+   slightly different scale (18px/22px-20px-18px, no shadow). ----- */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 22px 20px 18px;
+  border-radius: 16px;
+  padding: 20px;
   margin-bottom: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
 html.is-embedded #historyCard { display: none; }
 html.is-embedded .shell { padding-bottom: 20px; }
@@ -825,18 +825,22 @@ html.is-embedded .shell { padding-bottom: 20px; }
       -->
       <div class="shell">
 
-        <button class="day-pill" id="dayPill" type="button">
-          <span id="dayPillLabel">—</span>
-        </button>
-
+        <!-- The outer "Water Tracker" section-title (see the .section
+             wrapping this component) already frames what this is — the
+             big "Water Coach" h1 + a "WATER" divider on top of that was
+             three stacked headings before reaching any actual content.
+             The title stays in the DOM (js/water.js sets its
+             textContent) but is visually hidden; the day pill and
+             settings gear now share one slim row instead of two. -->
         <div class="header">
-          <h1 class="title" id="appTitle">Water Coach</h1>
+          <button class="day-pill" id="dayPill" type="button">
+            <span id="dayPillLabel">—</span>
+          </button>
+          <h1 class="title sr-only" id="appTitle">Water Coach</h1>
           <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
-
-        <div class="divider"><span>WATER</span></div>
 
         <div class="card">
           <div class="water-label" id="waterUnitLabel">BOTTLES DRANK TODAY</div>
