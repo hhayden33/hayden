@@ -103,6 +103,15 @@ body::after {
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
 .section { margin-top: 8px; }
+
+/* Water Tracker + Current Status side by side. */
+.fitness-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.fitness-top-row > .section { margin-top: 8px; min-width: 0; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
@@ -807,7 +816,13 @@ html.is-embedded .shell { padding-bottom: 20px; }
        natively from po-water.html — see the copyright header below for
        the full license this code carries). Kept outside #gymSections
        since that wrapper is shown/hidden based on whether Hevy data
-       exists — Water Coach should stay up regardless. -->
+       exists — Water Coach should stay up regardless. Sits side by
+       side with Current Status (also pulled out of #gymSections, see
+       its own comment below) in .fitness-top-row; #heroSection keeps
+       its own hasData visibility toggle via setSectionVisible() in
+       render() below, so it still disappears with no Hevy data even
+       though it's no longer inside #gymSections itself. -->
+  <div class="fitness-top-row">
   <div class="section" id="water">
     <div class="section-title">Water Tracker</div>
     <section class="water-embed">
@@ -1012,18 +1027,24 @@ html.is-embedded .shell { padding-bottom: 20px; }
     </section>
   </div>
 
-  <div id="gymSections">
-
-    <div class="section" id="heroSection">
-      <div class="section-title">Current Status</div>
-      <div class="gm-card">
-        <div class="gym-hero">
-          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroWeek">—</div><div class="gym-hero-label">This Week</div></div>
-          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroMonth">—</div><div class="gym-hero-label" id="heroMonthLabel">This Month</div></div>
-          <div class="gym-hero-cell"><div class="gym-hero-num" id="heroAvg">—</div><div class="gym-hero-label">Avg / Week</div></div>
-        </div>
+  <!-- Pulled out of #gymSections so it can sit beside Water above —
+       render() below now toggles this element's own visibility
+       directly (setSectionVisible('heroSection', hasData)) instead of
+       relying on the parent wrapper, so it still hides with no Hevy
+       data exactly as before. -->
+  <div class="section" id="heroSection">
+    <div class="section-title">Current Status</div>
+    <div class="gm-card">
+      <div class="gym-hero">
+        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroWeek">—</div><div class="gym-hero-label">This Week</div></div>
+        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroMonth">—</div><div class="gym-hero-label" id="heroMonthLabel">This Month</div></div>
+        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroAvg">—</div><div class="gym-hero-label">Avg / Week</div></div>
       </div>
     </div>
+  </div>
+  </div><!-- /.fitness-top-row -->
+
+  <div id="gymSections">
 
     <div class="section" id="consistencySection">
       <div class="section-title">Consistency</div>
@@ -1308,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('gymSections').style.display = hasData ? '' : 'none';
     document.getElementById('emptyState').style.display = hasData ? 'none' : '';
+    setSectionVisible('heroSection', hasData);
     if (!hasData) return;
 
     renderHero(data);
