@@ -65,6 +65,35 @@
   function isItemList(v) {
     return Array.isArray(v) && v.every(function (x) { return x && typeof x === 'object' && !Array.isArray(x); });
   }
+  // week-planner.js's 'weekplan:<isoWeek>' values are { 'YYYY-MM-DD':
+  // [splits] } — a genuinely addressable dict (one entry per day), not an
+  // atomic blob. Without this, editing Tuesday on one device and
+  // Thursday on another still collapses to plain newest-key-wins on the
+  // WHOLE week, so whichever device pushes/pulls last wins the entire
+  // week and silently erases the other day's edit. The date-shaped-keys
+  // check keeps this narrowly scoped to that one shape, so it can't
+  // change how an unrelated plain-object value (a settings blob like
+  // run:garminSnapshot, keyed by field name, not date) merges.
+  function isDateKeyedDict(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+    const keys = Object.keys(v);
+    return keys.length > 0 && keys.every(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); });
+  }
+  // Union by date, newer side wins an actual same-date collision. A date
+  // deleted on one side (cleared back to no split) but still present on
+  // the other reappears here — there's no per-date tombstone to tell a
+  // real deletion apart from "this side just never touched that date."
+  // Same accepted tradeoff as the rest of this file's list merges: a
+  // rare, narrow edge case in exchange for edits to different days never
+  // clobbering each other, which is the actual day-to-day failure mode.
+  function mergeDateDict(localVal, remoteVal, localTs, remoteTs) {
+    const out = {};
+    const base = remoteTs >= localTs ? localVal : remoteVal;
+    const top = remoteTs >= localTs ? remoteVal : localVal;
+    Object.keys(base || {}).forEach(function (k) { out[k] = base[k]; });
+    Object.keys(top || {}).forEach(function (k) { out[k] = top[k]; });
+    return out;
+  }
 
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
@@ -288,6 +317,8 @@
             return; // local-only key: keep it, the push below carries it up
           } else if (localVal === undefined) {
             next = remoteVal;
+          } else if (isDateKeyedDict(localVal) && isDateKeyedDict(remoteVal)) {
+            next = mergeDateDict(localVal, remoteVal, localTs, remoteTs);
           } else {
             next = remoteTs > localTs ? remoteVal : localVal;
           }
@@ -316,8 +347,33 @@
       return state;
     }
 
+    // Pull the row as it stands right now and merge it in. Used before
+    // every push (see pushNow) and on init/refocus — the one thing it
+    // must never do is push, so a tab that's only pulling (e.g. because
+    // it just came back into view) can't accidentally clobber a peer
+    // mid-edit.
+    async function pullAndMerge() {
+      if (!supa) return false;
+      try {
+        const { data, error } = await supa.from('app_state').select('data').eq('key', appKey).maybeSingle();
+        if (error || !data || !data.data) return false;
+        if (JSON.stringify(data.data) === lastSyncedJson) return false;
+        return applyRemote(data.data);
+      } catch (e) { return false; }
+    }
+
     async function pushNow() {
       if (!supa) return;
+      // Reconcile against whatever's live on the server right now before
+      // overwriting it. Without this, a tab that's been open a while (or
+      // missed its realtime update — mobile browsers routinely suspend
+      // the websocket in the background) pushes a blind snapshot of its
+      // own local state, silently erasing a genuinely newer edit another
+      // device already landed. pullAndMerge() runs the same per-key/
+      // per-item merge init() already uses on load, so this can only ever
+      // advance the row, never regress it.
+      await pullAndMerge();
+
       const state = buildPayload();
       const json = JSON.stringify(state);
       if (json === lastSyncedJson) return;
@@ -383,6 +439,21 @@
           applyRemote(payload.new.data);
         })
         .subscribe();
+
+      // Belt-and-braces for the realtime channel above: mobile browsers
+      // routinely suspend a backgrounded tab's websocket, so a change
+      // made elsewhere while this tab was out of view can arrive on the
+      // channel but never actually get delivered. Re-pull whenever the
+      // tab becomes visible/focused again, so switching back to an
+      // already-open tab is itself enough to catch up — no reload needed.
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') pullAndMerge();
+        });
+      }
+      if (typeof window.addEventListener === 'function') {
+        window.addEventListener('focus', function () { pullAndMerge(); });
+      }
     })();
     window.addEventListener('beforeunload', flushOnUnload);
     window.addEventListener('pagehide', flushOnUnload);
