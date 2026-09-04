@@ -104,14 +104,20 @@ body::after {
 
 .section { margin-top: 8px; }
 
-/* Water Tracker + Current Status side by side. */
+/* Water Tracker + Current Status side by side — same trick as
+   main.html's .status-row (North Star + Marathon countdown): grid's
+   default align-items:stretch gives both cards equal height, and each
+   side drops its least-essential content so the stretch isn't just
+   padding out empty space on the shorter one. */
 .fitness-top-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  align-items: start;
 }
-.fitness-top-row > .section { margin-top: 8px; min-width: 0; }
+.fitness-top-row > .section { margin-top: 8px; min-width: 0; display: flex; flex-direction: column; }
+.fitness-top-row > .section > .gm-card,
+.fitness-top-row > .section > .card,
+.fitness-top-row > .section > .water-embed { flex: 1; }
 /* Half-width is too narrow for Water's normal (previously full-page)
    scale — the 56px number and "Drank a bottle" button wrapped to 3
    lines and spilled out of the pill shape. Compact just this
@@ -119,16 +125,30 @@ body::after {
    markup or js/water.js changes, only these sizes. */
 .fitness-top-row .section-title { gap: 8px; }
 .fitness-top-row .section-title::after { display: none; }
+.fitness-top-row .water-embed { display: flex; flex-direction: column; }
+/* .shell's own padding (24px top, 80px bottom) is sized for standing
+   alone as a full page with its own safe-area clearance and bottom-nav
+   gap — neither applies once it's a card's content, and the 80px was
+   the single biggest source of dead space under the button. */
+.fitness-top-row .water-embed .shell { display: flex; flex-direction: column; flex: 1; padding: 0; }
 .fitness-top-row .water-embed .water-num { font-size: 32px; }
 .fitness-top-row .water-embed .water-target { font-size: 14px; }
 .fitness-top-row .water-embed .water-actions { grid-template-columns: 40px 1fr; gap: 6px; }
 .fitness-top-row .water-embed .water-plus-btn { font-size: 12.5px; padding: 12px 6px; gap: 4px; }
 .fitness-top-row .water-embed .water-minus-btn { font-size: 18px; }
 .fitness-top-row .water-embed .water-bar-labels { font-size: 9px; }
-.fitness-top-row .water-embed .card { padding: 14px; }
+.fitness-top-row .water-embed .card { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+/* Least-essential Water content dropped in this compact context —
+   same move main.html made hiding North Star's pillar list: the
+   number, bar, and +1/-1 controls are what answer "where am I today",
+   the rest is one tap away on the full water tracker. */
+.fitness-top-row .water-embed .water-helper,
+.fitness-top-row .water-embed .why-toggle,
+.fitness-top-row .water-embed .why-body,
+.fitness-top-row .water-embed #historyCard { display: none !important; }
 .fitness-top-row .gym-hero-num { font-size: 22px; }
 .fitness-top-row .gym-hero-label { font-size: 9px; letter-spacing: 0.06em; }
-.fitness-top-row .gm-card { padding: 14px; }
+.fitness-top-row .gm-card { padding: 14px; display: flex; flex-direction: column; justify-content: center; }
 .section-title {
   font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
