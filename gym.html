@@ -13,6 +13,14 @@
 <script src="escape.js"></script>
 <script src="ticker.js" defer></script>
 <script src="js/water.js" defer></script>
+<!-- Sleep — reused verbatim from main.html, not reimplemented: same
+     js/dash-core.js (storeGet/getActiveDateString) + js/sleep.js
+     (reads the 'sleep:<date>' keys the Garmin sync pipeline already
+     writes), same markup ids sleep.js already targets. Nothing here
+     is new data plumbing, just this page opting into an existing
+     module. -->
+<script src="js/dash-core.js" defer></script>
+<script src="js/sleep.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
 <!-- =============================================================
@@ -104,23 +112,28 @@ body::after {
 
 .section { margin-top: 8px; }
 
-/* Water Tracker + Current Status side by side on desktop. Current
-   Status is deliberately NOT stretched to Water's height (align-items
-   defaults to stretch on a flex row — overridden to flex-start here)
-   — it should sit at its own natural, short height rather than being
+/* Water Tracker | Training Status | Sleep, side by side on desktop.
+   None of the three is stretched to match another's height
+   (align-items defaults to stretch on a flex row — overridden to
+   flex-start) — each sits at its own natural height rather than being
    inflated with dead space to visually match a taller neighbour.
-   Water keeps the larger width share as the primary, interactive
-   component; Current Status gets enough room for its 5 stats to sit
-   in one row instead of wrapping. Below 700px the row stacks (Water
-   full width, then Current Status), so neither card is ever squeezed
-   into a narrow column — every size below still renders each
-   component at its normal, un-shrunk scale. */
-.fitness-top-row { display: flex; align-items: flex-start; gap: 20px; }
+   Water keeps the largest width share as the primary, interactive
+   component; Training Status and Sleep share the rest. Below 900px
+   Sleep drops to its own full-width row under Water+Training Status;
+   below 700px everything stacks in one column. Every size renders
+   each component at its normal, un-shrunk scale — nothing here
+   shrinks fonts or hides content the way an earlier pass at this
+   layout did. */
+.fitness-top-row { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
 .fitness-top-row > .section { margin-top: 8px; min-width: 0; }
-.fitness-top-row > #water { flex: 1.3; }
-.fitness-top-row > #heroSection { flex: 1; }
+.fitness-top-row > #water { flex: 1.5 1 260px; }
+.fitness-top-row > #heroSection { flex: 1 1 220px; }
+.fitness-top-row > #sleepSection { flex: 1 1 220px; }
+@media (max-width: 900px) {
+  .fitness-top-row > #sleepSection { flex-basis: 100%; }
+}
 @media (max-width: 700px) {
-  .fitness-top-row { flex-direction: column; }
+  .fitness-top-row { flex-direction: column; flex-wrap: nowrap; }
 }
 .section-title {
   font-size: 10.5px; font-weight: 700;
@@ -164,6 +177,11 @@ body::after {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em; color: var(--text-primary); line-height: 1;
 }
+.gm-progress-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-left: 4px;
+}
 
 .stat-grid {
   display: grid;
@@ -203,44 +221,12 @@ body::after {
 .trend-down { color: var(--danger); }
 .trend-flat { color: var(--text-tertiary); }
 
-/* ===== Hero (header summary) — five plain numbers, not stat cards.
-   One row of 5 rather than wrapping so the card stays short — this is
-   the whole reason Current Status was tall before: 2 wrapped rows
-   inside a card stretched to match Water's height. ===== */
-.gym-hero {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-}
-.gym-hero-cell {
-  text-align: center; padding: 4px 6px;
-  border-left: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
-  /* 1fr grid columns don't shrink below their content's min-content
-     width by default, which would push a cell past the card's edge
-     instead of wrapping its label. */
-  min-width: 0;
-}
-.gym-hero-cell:first-child { border-left: none; }
-.gym-hero-num {
-  font-size: 26px; font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em; color: var(--text-primary); line-height: 1;
-}
-.gym-hero-label {
-  margin-top: 7px;
-  font-size: 9.5px; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-@media (max-width: 480px) {
-  .gym-hero-num { font-size: 19px; }
-  .gym-hero-cell { padding: 4px 3px; }
-}
-
-/* ===== Training Consistency — this week's Mon-Sun dots + streaks.
-   Same visual vocabulary as the 12-week strip just below (border/
-   background tokens, .consistency-summary's layout) rather than a new
-   pattern. ===== */
-.tc-days { display: flex; justify-content: space-between; margin-bottom: 14px; }
+/* ===== Training Status ===== */
+/* Primary metric uses .gm-progress-row/.gm-progress-num/
+   .gm-progress-label above, unchanged — same component this page
+   already uses for a headline number, not a new pattern.
+   Mon-Sun dot row + secondary stat line below it. */
+.tc-days { display: flex; justify-content: space-between; margin: 14px 0; }
 .tc-day { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .tc-day-label {
   font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em;
@@ -260,6 +246,101 @@ body::after {
   padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
 }
 .tc-stats b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ts-last {
+  margin-top: 10px; font-size: 12px; color: var(--text-tertiary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ts-last b { color: var(--text-secondary); font-weight: 600; }
+.ts-last-label {
+  font-weight: 700; letter-spacing: 0.08em; color: var(--text-tertiary);
+}
+
+/* ===== Sleep — ported from main.css verbatim (same class names,
+   same rules) so js/sleep.js's existing render() needs no changes at
+   all to work here. ===== */
+.sleep-duration-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; row-gap: 6px;
+  gap: 8px; margin-bottom: 10px;
+}
+.sleep-duration {
+  font-size: 32px; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--text-primary); font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.sleep-duration-badges { display: flex; align-items: center; gap: 8px; }
+.sleep-score {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: var(--text-tertiary);
+}
+.sleep-status {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; white-space: nowrap;
+  padding: 3px 9px; border-radius: 999px;
+}
+.sleep-status.sleep-excellent { color: var(--success); background: rgba(32,165,160,0.12); }
+.sleep-status.sleep-good { color: var(--accent-cyan, #087CA3); background: rgba(8,124,163,0.14); }
+.sleep-status.sleep-below { color: var(--warning); background: rgba(242,192,99,0.12); }
+
+.sleep-target-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.sleep-target-track {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: var(--surface-hover, #202B35); overflow: hidden;
+}
+.sleep-target-fill {
+  height: 100%; border-radius: 999px;
+  background: var(--gradient-progress, linear-gradient(90deg, #087CA3, #20A5A0));
+  transition: width 0.5s cubic-bezier(0.22,1,0.36,1);
+}
+.sleep-target-label {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.sleep-compare { font-size: 11px; color: var(--text-tertiary); margin-bottom: 14px; }
+.sleep-compare.sleep-compare-up { color: var(--success); }
+
+.sleep-stage-bar {
+  display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+  gap: 1px; margin-bottom: 10px;
+}
+.sleep-stage-seg { height: 100%; }
+.sleep-stage-seg-deep  { background: var(--accent-cyan, #087CA3); }
+.sleep-stage-seg-light { background: var(--accent-teal, #20A5A0); }
+.sleep-stage-seg-rem   { background: var(--accent-lavender, #B98AE0); }
+.sleep-stage-seg-awake { background: var(--text-tertiary); opacity: 0.5; }
+
+.sleep-stage-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.sleep-stage-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; }
+.sleep-stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.sleep-stage-name { color: var(--text-secondary); flex: 1; }
+.sleep-stage-dur {
+  font-family: var(--font-mono); color: var(--text-primary);
+  font-variant-numeric: tabular-nums; font-size: 11px;
+}
+
+.sleep-times {
+  font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono);
+}
+
+.sleep-trend { margin-top: 14px; }
+.sleep-trend-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 10px;
+}
+.sleep-trend-svg { width: 100%; height: 40px; display: block; }
+.sleep-trend-bar { fill: var(--success); }
+.sleep-trend-bar.sleep-trend-bar-dim { opacity: 0.4; }
+.sleep-trend-bar.sleep-trend-bar-none { fill: var(--text-tertiary); opacity: 0.16; }
+.sleep-trend-target-line {
+  stroke: rgba(255,255,255,0.20); stroke-width: 1; stroke-dasharray: 3 3;
+}
+.sleep-trend-days { display: flex; margin-top: 6px; }
+.sleep-trend-days span {
+  flex: 1; text-align: center;
+  font-size: 9px; font-weight: 600; color: var(--text-tertiary);
+}
+.sleep-trend-days span.sleep-trend-day-today { color: var(--text-secondary); font-weight: 800; }
 
 /* ===== Consistency — 12-week intensity strip ===== */
 .consistency-strip { display: flex; gap: 5px; margin-bottom: 8px; }
@@ -1076,40 +1157,71 @@ html.is-embedded .shell { padding-bottom: 20px; }
        render() below now toggles this element's own visibility
        directly (setSectionVisible('heroSection', hasData)) instead of
        relying on the parent wrapper, so it still hides with no Hevy
-       data exactly as before. -->
+       data exactly as before. Replaces the old 5-stat "Current Status"
+       grid: one primary metric (sessions this week — no invented
+       weekly target, since none exists anywhere in this app; see the
+       code comment on renderHero), the same Mon-Sun dot row the old
+       standalone "Training Consistency" section had (merged in here
+       rather than shown twice), a streak + all-time total line, and
+       the most recent session in one subtle row. -->
   <div class="section" id="heroSection">
-    <div class="section-title">Current Status</div>
+    <div class="section-title">Training Status</div>
     <div class="gm-card">
-      <div class="gym-hero">
-        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroWeek">—</div><div class="gym-hero-label">This Week</div></div>
-        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroMonth">—</div><div class="gym-hero-label" id="heroMonthLabel">This Month</div></div>
-        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroAvg">—</div><div class="gym-hero-label">Avg / Week</div></div>
-        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroTotal">—</div><div class="gym-hero-label">All-Time</div></div>
-        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroLastGap">—</div><div class="gym-hero-label">Since Last</div></div>
+      <div class="gm-eyebrow">This Week</div>
+      <div class="gm-progress-row">
+        <div class="gm-progress-num" id="tsSessionsNum">—</div>
+        <div class="gm-progress-label" id="tsSessionsLabel">SESSIONS</div>
+      </div>
+
+      <div class="tc-days" id="tcDays"></div>
+
+      <div class="tc-stats">
+        <span id="tcStreak">—</span>
+        <span id="tcTotal">—</span>
+      </div>
+
+      <div class="ts-last" id="tsLast" style="display:none">
+        <span class="ts-last-label">LAST SESSION</span> · <b id="tsLastName"></b> · <span id="tsLastGap"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sleep — identical markup/ids to main.html's Sleep card so
+       js/sleep.js (linked in <head>, unmodified) renders it exactly as
+       it already does there: real Garmin-synced stage data or an
+       honest empty state, never a fabricated score or placeholder
+       numbers. -->
+  <div class="section" id="sleepSection">
+    <div class="section-title">Sleep</div>
+    <div class="gm-card" id="sleepCard">
+      <div class="empty-state" id="sleepEmpty" style="display:none;">No sleep data yet.</div>
+      <div id="sleepBody" style="display:none;">
+        <div class="sleep-duration-row">
+          <span class="sleep-duration" id="sleepDuration">—</span>
+          <span class="sleep-duration-badges">
+            <span class="sleep-score" id="sleepScore" style="display:none;"></span>
+            <span class="sleep-status" id="sleepStatus"></span>
+          </span>
+        </div>
+        <div class="sleep-target-row">
+          <div class="sleep-target-track"><div class="sleep-target-fill" id="sleepTargetFill" style="width:0%"></div></div>
+          <span class="sleep-target-label" id="sleepTargetLabel"></span>
+        </div>
+        <div class="sleep-compare" id="sleepCompare" style="display:none;"></div>
+        <div class="sleep-stage-bar" id="sleepStageBar" style="display:none;"></div>
+        <div class="sleep-stage-list" id="sleepStageList" style="display:none;"></div>
+        <div class="sleep-times" id="sleepTimes" style="display:none;"></div>
+        <div class="sleep-trend" id="sleepTrend" style="display:none;">
+          <div class="sleep-trend-label">7-DAY TREND</div>
+          <svg class="sleep-trend-svg" id="sleepTrendSvg" viewBox="0 0 280 40" preserveAspectRatio="none"></svg>
+          <div class="sleep-trend-days" id="sleepTrendDays"></div>
+        </div>
       </div>
     </div>
   </div>
   </div><!-- /.fitness-top-row -->
 
   <div id="gymSections">
-
-    <!-- Weekly view (Mon-Sun dots + streaks) — distinct from the
-         12-week "Consistency" strip further down: this answers "am I
-         on track this week", that one answers "how has the last
-         quarter gone". Built entirely from data already fetched for
-         this page (data.recent's dates, data.consistency.weeks'
-         counts) — no new fields, no new sync logic. -->
-    <div class="section" id="trainingConsistencySection">
-      <div class="section-title">Training Consistency</div>
-      <div class="gm-card">
-        <div class="tc-days" id="tcDays"></div>
-        <div class="tc-stats">
-          <span id="tcSessions">—</span>
-          <span id="tcStreak">—</span>
-          <span id="tcBestStreak">—</span>
-        </div>
-      </div>
-    </div>
 
     <!-- Recent Training: same renderRecent()/#recentList/workout-item
          markup and click-to-expand detail as the original "Recent
@@ -1404,7 +1516,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!hasData) return;
 
     renderHero(data);
-    renderTrainingConsistency(data);
     renderRecent((data.recent || []).slice(0, 5));
     renderConsistency(data.consistency);
     renderLoad(data.load);
@@ -1415,11 +1526,17 @@ document.addEventListener('DOMContentLoaded', function () {
     renderInsights(data.insights || []);
   }
 
-  // ---------- 1a. Training Consistency (this week) ----------
-  // Built entirely from data the page already has: data.recent's dates
-  // (which day this week had a session) and data.consistency.weeks
-  // (the same 12-week counts the Consistency strip below renders — read
-  // a second time here for weekly streaks, no new fetch/field).
+  // ---------- 1. Training Status ----------
+  // Primary metric is the actual session count this week
+  // (data.workoutsThisWeek, already computed by the sync) with no
+  // denominator — no weekly session-COUNT target exists anywhere in
+  // this app (goals-data.js's REQUIRED_SPLITS tracks split-TYPE
+  // coverage — push/pull/legs/full — a different concept from a
+  // session count, so it isn't reused as one here). Mon-Sun dots come
+  // from data.recent's dates (merged in from what used to be a
+  // separate "Training Consistency" section, rather than shown
+  // twice); streak/total and the last-session line reuse the same
+  // fields the old 5-stat grid did.
   function mondayOf(d) {
     const date = new Date(d);
     const day = date.getDay();
@@ -1430,12 +1547,15 @@ document.addEventListener('DOMContentLoaded', function () {
   function ymdKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   const TC_DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  function renderTrainingConsistency(data) {
+  function renderHero(data) {
+    const sessions = data.workoutsThisWeek != null ? data.workoutsThisWeek : 0;
+    document.getElementById('tsSessionsNum').textContent = sessions;
+    document.getElementById('tsSessionsLabel').textContent = sessions === 1 ? 'SESSION' : 'SESSIONS';
+
     const daysEl = document.getElementById('tcDays');
     const monday = mondayOf(new Date());
     const todayKey = ymdKey(new Date());
     const trainedDates = new Set((data.recent || []).map(function (w) { return w.date; }));
-
     daysEl.innerHTML = '';
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday); d.setDate(d.getDate() + i);
@@ -1447,47 +1567,32 @@ document.addEventListener('DOMContentLoaded', function () {
       daysEl.appendChild(cell);
     }
 
-    const sessionsThisWeek = data.workoutsThisWeek != null ? data.workoutsThisWeek : 0;
-    document.getElementById('tcSessions').innerHTML = '<b>' + sessionsThisWeek + ' / 7</b> sessions this week';
-
     // Weekly streak (consecutive weeks with >=1 session) — the
     // resolution consistency.weeks actually offers is weekly, not
-    // daily, so that's the unit here too, labelled explicitly as such.
+    // daily, so it's labelled a week streak rather than a daily one
+    // this data can't actually support.
     const weeks = (data.consistency && data.consistency.weeks) || [];
     let current = 0;
     for (let i = weeks.length - 1; i >= 0; i--) {
       if (weeks[i].count > 0) current++; else break;
     }
-    let best = 0, run = 0;
-    weeks.forEach(function (w) {
-      if (w.count > 0) { run++; best = Math.max(best, run); } else { run = 0; }
-    });
     document.getElementById('tcStreak').innerHTML = '<b>' + current + '</b> week streak';
-    document.getElementById('tcBestStreak').innerHTML = 'Best <b>' + best + '</b> weeks';
-  }
+    document.getElementById('tcTotal').innerHTML = '<b>' + (data.totalWorkouts != null ? data.totalWorkouts : '—') + '</b> total';
 
-  // ---------- 1. Header / current status ----------
-  function renderHero(data) {
-    document.getElementById('heroWeek').textContent = data.workoutsThisWeek != null ? data.workoutsThisWeek : '—';
-    document.getElementById('heroMonth').textContent = data.workoutsThisMonth != null ? data.workoutsThisMonth : '—';
-    document.getElementById('heroMonthLabel').textContent = MONTHS[new Date().getMonth()];
-    document.getElementById('heroAvg').textContent = data.avgPerWeek != null ? data.avgPerWeek : '—';
-    document.getElementById('heroTotal').textContent = data.totalWorkouts != null ? data.totalWorkouts : '—';
-
-    // "Since Last" — days between the most recent logged workout and
-    // today, using the same day-boundary math as fmtDate/parseYMD below
-    // (calendar-day diff, not a 24h-rolling one) so "Today"/"1d" line up
-    // with what Recent Workouts shows for that same session.
+    // Last session — days between the most recent logged workout and
+    // today, same calendar-day diff Recent Training's dates use.
     const recent = Array.isArray(data.recent) ? data.recent : [];
-    const lastGapEl = document.getElementById('heroLastGap');
+    const lastEl = document.getElementById('tsLast');
     if (recent.length && recent[0] && recent[0].date) {
       const last = parseYMD(recent[0].date);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       last.setHours(0, 0, 0, 0);
       const days = Math.round((today - last) / 86400000);
-      lastGapEl.textContent = days <= 0 ? 'Today' : days === 1 ? '1d' : days + 'd';
+      document.getElementById('tsLastName').textContent = recent[0].title || 'Workout';
+      document.getElementById('tsLastGap').textContent = days <= 0 ? 'Today' : days === 1 ? '1d ago' : days + 'd ago';
+      lastEl.style.display = '';
     } else {
-      lastGapEl.textContent = '—';
+      lastEl.style.display = 'none';
     }
   }
 
@@ -1774,6 +1879,22 @@ if (typeof initCloudSync === 'function') {
       appKey: 'water',
       syncedKeys: ['po_water_v1'],
       onApplied: function () { window.dispatchEvent(new Event('storage')); }
+    });
+  } } catch (e) {}
+}
+
+// Sleep's own sync channel — same 'sleep' appKey/syncedPrefixes
+// main.html's js/sync-register.js already registers there, opened
+// separately here since this page has js/sleep.js embedded too.
+// js/sleep.js itself has no storage-event listener of its own (only
+// main.html's js/goals.js wraps one for it), so this calls its
+// exposed render() directly when a remote sleep update lands.
+if (typeof initCloudSync === 'function') {
+  try { if (window.self === window.top) {
+    initCloudSync({
+      appKey: 'sleep',
+      syncedPrefixes: ['sleep:'],
+      onApplied: function () { if (window.Sleep) window.Sleep.render(); }
     });
   } } catch (e) {}
 }
