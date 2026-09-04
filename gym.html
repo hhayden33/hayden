@@ -216,7 +216,11 @@ body::after {
   text-align: center; padding: 4px 8px;
   border-left: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
 }
-.gym-hero-cell:first-child { border-left: none; }
+/* Row-start cells never get a left border, not just the very first
+   cell overall — matters now that a 5th/6th stat can wrap onto a
+   second row of this 3-column grid. */
+.gym-hero-cell:nth-child(3n+1) { border-left: none; }
+.gym-hero { row-gap: 14px; }
 .gym-hero-num {
   font-size: 36px; font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1053,6 +1057,8 @@ html.is-embedded .shell { padding-bottom: 20px; }
         <div class="gym-hero-cell"><div class="gym-hero-num" id="heroWeek">—</div><div class="gym-hero-label">This Week</div></div>
         <div class="gym-hero-cell"><div class="gym-hero-num" id="heroMonth">—</div><div class="gym-hero-label" id="heroMonthLabel">This Month</div></div>
         <div class="gym-hero-cell"><div class="gym-hero-num" id="heroAvg">—</div><div class="gym-hero-label">Avg / Week</div></div>
+        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroTotal">—</div><div class="gym-hero-label">All-Time</div></div>
+        <div class="gym-hero-cell"><div class="gym-hero-num" id="heroLastGap">—</div><div class="gym-hero-label">Since Last</div></div>
       </div>
     </div>
   </div>
@@ -1363,6 +1369,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('heroMonth').textContent = data.workoutsThisMonth != null ? data.workoutsThisMonth : '—';
     document.getElementById('heroMonthLabel').textContent = MONTHS[new Date().getMonth()];
     document.getElementById('heroAvg').textContent = data.avgPerWeek != null ? data.avgPerWeek : '—';
+    document.getElementById('heroTotal').textContent = data.totalWorkouts != null ? data.totalWorkouts : '—';
+
+    // "Since Last" — days between the most recent logged workout and
+    // today, using the same day-boundary math as fmtDate/parseYMD below
+    // (calendar-day diff, not a 24h-rolling one) so "Today"/"1d" line up
+    // with what Recent Workouts shows for that same session.
+    const recent = Array.isArray(data.recent) ? data.recent : [];
+    const lastGapEl = document.getElementById('heroLastGap');
+    if (recent.length && recent[0] && recent[0].date) {
+      const last = parseYMD(recent[0].date);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      last.setHours(0, 0, 0, 0);
+      const days = Math.round((today - last) / 86400000);
+      lastGapEl.textContent = days <= 0 ? 'Today' : days === 1 ? '1d' : days + 'd';
+    } else {
+      lastGapEl.textContent = '—';
+    }
   }
 
   // ---------- 2. Consistency ----------
