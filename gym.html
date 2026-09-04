@@ -138,10 +138,18 @@ body::after {
 .fitness-top-row > #water { flex: 1.5 1 260px; }
 .fitness-top-row > #heroSection { flex: 1 1 220px; }
 .fitness-top-row > #sleepSection { flex: 1 1 220px; }
-/* Training Status's 4 natural groups (headline number, day-dot row,
-   streak/total line, last-session line) spread out to fill whatever
-   height the row settles on. */
-.fitness-top-row #heroSection .gm-card { justify-content: space-between; }
+/* Training Status only has 4 natural content groups (headline number,
+   day-dot row, streak/total line, last-session line) — space-between
+   across just 4 groups on a card stretched to match Water/Sleep's
+   height produced three ~70px gaps that read as disconnected chunks
+   floating in empty space, not intentional design. Clustered instead:
+   the first 3 groups keep a normal, modest gap between them, and
+   last-session (the least important line — secondary detail, same
+   role as a card footer) absorbs ALL the leftover height in one
+   place, pinned to the card's bottom edge, rather than three separate
+   awkward gaps. */
+.fitness-top-row #heroSection .gm-card { gap: 18px; }
+.fitness-top-row #heroSection .gm-card .ts-last { margin-top: auto; }
 /* Sleep already has this exact stretch-fill rule on main.html
    (#sleepBody, in main.css) — same fix, same reason: ported here so
    its several content groups (duration, target bar, stage breakdown,
