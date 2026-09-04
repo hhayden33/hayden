@@ -135,9 +135,19 @@ body::after {
 .fitness-top-row > .section { margin-top: 8px; min-width: 0; display: flex; flex-direction: column; }
 .fitness-top-row > .section > .gm-card,
 .fitness-top-row > .section > .water-embed { flex: 1; display: flex; flex-direction: column; }
-.fitness-top-row > #water { flex: 2.2 1 300px; }
-.fitness-top-row > #heroSection { flex: 1 1 220px; }
-.fitness-top-row > #sleepSection { flex: 1 1 220px; }
+/* Training Status/Sleep no longer grow at all (flex-grow:0) — on a
+   wide screen, letting all three grow proportionally just stretched
+   their sparse content across more width than it needs, opening up
+   dead space in the middle of the card again (this time horizontal,
+   same underlying issue the vertical space-between fix addressed
+   earlier). They now sit at a fixed, content-appropriate width;
+   Water — which actually has room-filling content (progress bar,
+   buttons) — absorbs 100% of whatever space is left over, up to
+   .page's own 1100px cap, so the row is never wider than it needs to
+   be and there's never a gap between cards. */
+.fitness-top-row > #water { flex: 1 1 340px; }
+.fitness-top-row > #heroSection { flex: 0 0 260px; }
+.fitness-top-row > #sleepSection { flex: 0 0 260px; }
 /* Training Status only has 4 natural content groups (headline number,
    day-dot row, streak/total line, last-session line) — space-between
    across just 4 groups on a card stretched to match Water/Sleep's
