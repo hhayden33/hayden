@@ -156,7 +156,14 @@ body::after {
    number) that space-between would pull apart. In practice Water is
    the tallest of the three anyway (it's what the other two are
    stretching to match), so this mostly just future-proofs it. */
-.fitness-top-row .water-embed .shell { display: flex; flex-direction: column; flex: 1; }
+/* padding:0 — .shell's own padding (24px top, 20px bottom) is sized
+   for standing alone as a full page with its own safe-area clearance;
+   none of that applies once it's living inside a card. Dropped by
+   accident in the equal-height rewrite; this is what was actually
+   making Water's visible card background shorter than Training
+   Status/Sleep even though the .section around it was already the
+   same height as theirs. */
+.fitness-top-row .water-embed .shell { display: flex; flex-direction: column; flex: 1; padding: 0; }
 .fitness-top-row .water-embed .shell > .card { flex: 1; }
 @media (max-width: 900px) {
   .fitness-top-row > #sleepSection { flex-basis: 100%; }
