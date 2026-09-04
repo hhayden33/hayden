@@ -112,23 +112,52 @@ body::after {
 
 .section { margin-top: 8px; }
 
-/* Water Tracker | Training Status | Sleep, side by side on desktop.
-   None of the three is stretched to match another's height
-   (align-items defaults to stretch on a flex row — overridden to
-   flex-start) — each sits at its own natural height rather than being
-   inflated with dead space to visually match a taller neighbour.
+/* Water Tracker | Training Status | Sleep, side by side on desktop,
+   all three the SAME height (align-items:stretch, the flex row
+   default) — Water is naturally the tallest of the three (progress
+   bar + two actions + helper text + the "why this target?"
+   disclosure), so Training Status and Sleep stretch to match it.
+   Rather than leave that extra height as dead space at the bottom
+   (which is exactly what looked "all over the place" — 208px of
+   Training Status content in a 246px box next to Water's 333px), each
+   card is a flex column with justify-content:space-between across its
+   own natural content groups, so the extra room reads as intentional
+   breathing room between groups instead of a gap after the last one.
    Water keeps the largest width share as the primary, interactive
    component; Training Status and Sleep share the rest. Below 900px
    Sleep drops to its own full-width row under Water+Training Status;
-   below 700px everything stacks in one column. Every size renders
-   each component at its normal, un-shrunk scale — nothing here
-   shrinks fonts or hides content the way an earlier pass at this
-   layout did. */
-.fitness-top-row { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-.fitness-top-row > .section { margin-top: 8px; min-width: 0; }
+   below 700px everything stacks in one column (stretch is a no-op
+   there — flex-direction:column ignores cross-axis stretch across
+   rows, each card is simply its own natural height stacked). Every
+   size renders each component at its normal, un-shrunk scale —
+   nothing here shrinks fonts or hides content. */
+.fitness-top-row { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
+.fitness-top-row > .section { margin-top: 8px; min-width: 0; display: flex; flex-direction: column; }
+.fitness-top-row > .section > .gm-card,
+.fitness-top-row > .section > .water-embed { flex: 1; display: flex; flex-direction: column; }
 .fitness-top-row > #water { flex: 1.5 1 260px; }
 .fitness-top-row > #heroSection { flex: 1 1 220px; }
 .fitness-top-row > #sleepSection { flex: 1 1 220px; }
+/* Training Status's 4 natural groups (headline number, day-dot row,
+   streak/total line, last-session line) spread out to fill whatever
+   height the row settles on. */
+.fitness-top-row #heroSection .gm-card { justify-content: space-between; }
+/* Sleep already has this exact stretch-fill rule on main.html
+   (#sleepBody, in main.css) — same fix, same reason: ported here so
+   its several content groups (duration, target bar, stage breakdown,
+   times, trend) space out instead of leaving a gap under the trend
+   chart. */
+#sleepCard { display: flex; flex-direction: column; }
+#sleepBody { display: flex; flex-direction: column; flex: 1; justify-content: space-between; }
+/* Water's own shell (day-pill/header row, then the tracker card) can
+   grow to fill the row's height like the other two — no
+   space-between here though: its 7 direct children include tightly
+   coupled pairs (the "BOTTLES DRANK TODAY" label sits right above its
+   number) that space-between would pull apart. In practice Water is
+   the tallest of the three anyway (it's what the other two are
+   stretching to match), so this mostly just future-proofs it. */
+.fitness-top-row .water-embed .shell { display: flex; flex-direction: column; flex: 1; }
+.fitness-top-row .water-embed .shell > .card { flex: 1; }
 @media (max-width: 900px) {
   .fitness-top-row > #sleepSection { flex-basis: 100%; }
 }
@@ -1167,10 +1196,12 @@ html.is-embedded .shell { padding-bottom: 20px; }
   <div class="section" id="heroSection">
     <div class="section-title">Training Status</div>
     <div class="gm-card">
-      <div class="gm-eyebrow">This Week</div>
-      <div class="gm-progress-row">
-        <div class="gm-progress-num" id="tsSessionsNum">—</div>
-        <div class="gm-progress-label" id="tsSessionsLabel">SESSIONS</div>
+      <div>
+        <div class="gm-eyebrow">This Week</div>
+        <div class="gm-progress-row">
+          <div class="gm-progress-num" id="tsSessionsNum">—</div>
+          <div class="gm-progress-label" id="tsSessionsLabel">SESSIONS</div>
+        </div>
       </div>
 
       <div class="tc-days" id="tcDays"></div>
