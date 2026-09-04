@@ -131,6 +131,19 @@ body::after {
    rows, each card is simply its own natural height stacked). Every
    size renders each component at its normal, un-shrunk scale —
    nothing here shrinks fonts or hides content. */
+/* Outer panel — same background/border/radius/shadow tokens as every
+   .gm-card elsewhere on the page, spanning .page's full width (same
+   as Recent Training, Consistency, etc. below it) so the top row
+   lines up with the rest of the page instead of being a narrower,
+   centered island with its own left/right edges. */
+.fitness-top-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
 .fitness-top-row { display: flex; align-items: stretch; justify-content: center; gap: 20px; flex-wrap: wrap; }
 .fitness-top-row > .section { margin-top: 8px; min-width: 0; display: flex; flex-direction: column; }
 .fitness-top-row > .section > .gm-card,
@@ -1003,6 +1016,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
        its own hasData visibility toggle via setSectionVisible() in
        render() below, so it still disappears with no Hevy data even
        though it's no longer inside #gymSections itself. -->
+  <div class="fitness-top-panel">
   <div class="fitness-top-row">
   <div class="section" id="water">
     <div class="section-title">Water Tracker</div>
@@ -1280,6 +1294,7 @@ html.is-embedded .shell { padding-bottom: 20px; }
     </div>
   </div>
   </div><!-- /.fitness-top-row -->
+  </div><!-- /.fitness-top-panel -->
 
   <div id="gymSections">
 
