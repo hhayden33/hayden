@@ -314,13 +314,28 @@ body::after {
   padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
 }
 .tc-stats b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.ts-last {
-  margin-top: 10px; font-size: 12px; color: var(--text-tertiary);
+/* Expanded from a single truncated line to a small block — same
+   name/date/meta vocabulary as Recent Training's own .workout-row
+   (font sizes, colors), just stacked vertically instead of one row,
+   since this card's column is much narrower than that list. Real data
+   only: date, duration, sets, volume are all already on
+   data.recent[0], nothing invented to fill space. */
+.ts-last-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.10em;
+  text-transform: uppercase; color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.ts-last-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.ts-last-name {
+  color: var(--text-primary); font-weight: 600; font-size: 14px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.ts-last b { color: var(--text-secondary); font-weight: 600; }
-.ts-last-label {
-  font-weight: 700; letter-spacing: 0.08em; color: var(--text-tertiary);
+.ts-last-gap { color: var(--text-tertiary); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.ts-last-meta {
+  margin-top: 3px; color: var(--text-secondary); font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== Sleep — ported from main.css verbatim (same class names,
@@ -1255,7 +1270,12 @@ html.is-embedded .shell { padding-bottom: 20px; }
       </div>
 
       <div class="ts-last" id="tsLast" style="display:none">
-        <span class="ts-last-label">LAST SESSION</span> · <b id="tsLastName"></b> · <span id="tsLastGap"></span>
+        <div class="ts-last-label">Last Session</div>
+        <div class="ts-last-row">
+          <span class="ts-last-name" id="tsLastName"></span>
+          <span class="ts-last-gap" id="tsLastGap"></span>
+        </div>
+        <div class="ts-last-meta" id="tsLastMeta"></div>
       </div>
     </div>
   </div>
@@ -1655,16 +1675,26 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('tcTotal').innerHTML = '<b>' + (data.totalWorkouts != null ? data.totalWorkouts : '—') + '</b> total';
 
     // Last session — days between the most recent logged workout and
-    // today, same calendar-day diff Recent Training's dates use.
+    // today (same calendar-day diff Recent Training's dates use), plus
+    // the same date/duration/sets/volume fields Recent Training's own
+    // rows already show, just reformatted for this narrower card.
     const recent = Array.isArray(data.recent) ? data.recent : [];
     const lastEl = document.getElementById('tsLast');
     if (recent.length && recent[0] && recent[0].date) {
-      const last = parseYMD(recent[0].date);
+      const w = recent[0];
+      const last = parseYMD(w.date);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       last.setHours(0, 0, 0, 0);
       const days = Math.round((today - last) / 86400000);
-      document.getElementById('tsLastName').textContent = recent[0].title || 'Workout';
+      document.getElementById('tsLastName').textContent = w.title || 'Workout';
       document.getElementById('tsLastGap').textContent = days <= 0 ? 'Today' : days === 1 ? '1d ago' : days + 'd ago';
+      const metaParts = [
+        fmtDate(w.date),
+        w.durationMin ? w.durationMin + ' min' : null,
+        w.setCount ? w.setCount + ' sets' : null,
+        w.volumeKg ? fmtVolume(w.volumeKg) : null
+      ].filter(Boolean);
+      document.getElementById('tsLastMeta').textContent = metaParts.join(' · ');
       lastEl.style.display = '';
     } else {
       lastEl.style.display = 'none';
