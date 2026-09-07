@@ -65,6 +65,18 @@ body::before {
   color: var(--text-tertiary);
 }
 .home-section-gap { margin-top: 36px; }
+.today-group-link {
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.today-group-link:hover { color: var(--text-primary); }
+.today-list a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.today-list a:hover { color: var(--text-primary); }
 @media (max-width: 480px) {
   .home-page { padding: 32px 16px 50px; }
   .home-date { font-size: 18px; }
@@ -101,7 +113,7 @@ body::before {
           <div class="today-empty" id="homeLifeEmpty" style="display:none;">Nothing left for today.</div>
         </div>
         <div>
-          <div class="today-group-label">Work</div>
+          <a href="/work/tasks.html" class="today-group-label today-group-link">Work</a>
           <ul class="today-list" id="homeWorkToday"></ul>
           <div class="today-empty" id="homeWorkEmpty" style="display:none;">Nothing left for today.</div>
         </div>
@@ -142,14 +154,21 @@ body::before {
   function storeGet(key) {
     try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
   }
-  function renderTodayList(listEl, emptyEl, items) {
+  function renderTodayList(listEl, emptyEl, items, href) {
     listEl.innerHTML = '';
     const pending = items.filter((t) => !t.done).slice(0, 3);
     if (!pending.length) { emptyEl.style.display = ''; return; }
     emptyEl.style.display = 'none';
     pending.forEach((t) => {
       const li = document.createElement('li');
-      li.textContent = t.text;
+      if (href) {
+        const a = document.createElement('a');
+        a.href = href;
+        a.textContent = t.text;
+        li.appendChild(a);
+      } else {
+        li.textContent = t.text;
+      }
       listEl.appendChild(li);
     });
   }
@@ -159,11 +178,12 @@ body::before {
   }
 
   // ---------- Today: Work ----------
-  // 'work:tasks:v1' is the same store js/work-list.js writes on the Work
-  // dashboard's Tasks page — see the equivalent read above for Life.
+  // 'work:tasks:v1' is the same store work/tasks.html's simple-list.js
+  // writes to — each item here links straight back there, since that's
+  // the only place these tasks can actually be edited or checked off.
   function renderWorkToday() {
     const tasks = storeGet('work:tasks:v1') || [];
-    renderTodayList(document.getElementById('homeWorkToday'), document.getElementById('homeWorkEmpty'), tasks);
+    renderTodayList(document.getElementById('homeWorkToday'), document.getElementById('homeWorkEmpty'), tasks, '/work/tasks.html');
   }
 
   renderLifeToday();
