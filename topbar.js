@@ -181,36 +181,36 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
 
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <a href="main.html#wkCard" class="topbar-split-badge" id="topbarSplitBadge" aria-label="Today's training"></a>
+  <a href="/life/index.html#wkCard" class="topbar-split-badge" id="topbarSplitBadge" aria-label="Today's training"></a>
   <div class="topbar-water-wrap">
-    <a href="main.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
+    <a href="/life/index.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
       <span class="topbar-pill-emoji">🥛</span>
       <span class="topbar-pill-dot"></span>
       <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
     </a>
     <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
+  <a href="/life/finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
     <span class="topbar-finance-icon">📊</span>
   </a>
   <div class="topbar-sync" id="topbarSync" role="status" aria-live="polite"></div>
 </header>`;
 
   const bottombarHtml = `
-<nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="main.html" class="bottombar-tab" data-page="main">
-    <span class="bottombar-tab-icon">🏠</span><span>Main</span>
+<nav class="bottombar" id="bottombar" role="navigation" aria-label="Life tabs">
+  <a href="/life/index.html" class="bottombar-tab" data-page="main">
+    <span class="bottombar-tab-icon">🏠</span><span>Dashboard</span>
   </a>
-  <a href="goals.html" class="bottombar-tab" data-page="goals">
-    <span class="bottombar-tab-icon">🎯</span><span>Goals</span>
+  <a href="/life/personal.html" class="bottombar-tab" data-page="personal">
+    <span class="bottombar-tab-icon">🎯</span><span>Personal</span>
   </a>
-  <a href="finance.html" class="bottombar-tab" data-page="finance">
+  <a href="/life/finance.html" class="bottombar-tab" data-page="finance">
     <span class="bottombar-tab-icon">📊</span><span>Finance</span>
   </a>
-  <a href="running.html" class="bottombar-tab" data-page="running">
+  <a href="/life/running.html" class="bottombar-tab" data-page="running">
     <span class="bottombar-tab-icon">🏃</span><span>Running</span>
   </a>
-  <a href="gym.html" class="bottombar-tab" data-page="fitness">
+  <a href="/life/gym.html" class="bottombar-tab" data-page="fitness">
     <span class="bottombar-tab-icon">💪</span><span>Fitness</span>
   </a>
 </nav>`;
@@ -227,8 +227,9 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('running.html')) return 'running';
     if (p.endsWith('gym.html')) return 'fitness';
-    if (p.endsWith('goals.html')) return 'goals';
-    return 'main';
+    if (p.endsWith('personal.html')) return 'personal';
+    if (p.endsWith('/life/index.html') || p.endsWith('/life/')) return 'main';
+    return null; // sleep.html, health.html, finance.html — no matching tab, none highlighted
   }
 
   function injectStyleAndHTML() {

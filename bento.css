@@ -1,0 +1,202 @@
+/* =================================================================
+   HAYDEN OS — shared bento/card system used by index.html (Home),
+   life/index.html's module grid, and the Work dashboard + its own
+   module grid. One definition so all three read as the same system
+   rather than three near-identical copies drifting apart.
+   ================================================================= */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 168px;
+  gap: 14px;
+  grid-auto-flow: dense;
+}
+
+.bento-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.bento-tile:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 24px -8px var(--accent); }
+
+.bento-tile.big  { grid-column: span 2; grid-row: span 2; }
+.bento-tile.wide { grid-column: span 2; grid-row: span 1; }
+
+.bento-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.bento-num {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+.bento-emoji {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px var(--accent));
+}
+.bento-tile.big .bento-emoji { font-size: 34px; }
+
+.bento-spacer { flex: 1; }
+
+.bento-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.bento-tile.big .bento-title { font-size: 23px; }
+
+.bento-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.bento-subtitle {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bento-arrow {
+  font-size: 15px; font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bento-tile:hover .bento-arrow { transform: translateX(4px); }
+
+@media (max-width: 720px) {
+  .bento-grid { grid-template-columns: repeat(2, 1fr); }
+  .bento-tile.big { grid-row: span 1; }
+}
+@media (max-width: 440px) {
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-tile.big, .bento-tile.wide { grid-column: span 1; }
+}
+
+/* A module directory (e.g. Life's 6 subpages) reads cleaner as an even
+   3-across grid than wrapping 4-per-row and leaving a gap. */
+.bento-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .bento-grid.cols-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 440px) { .bento-grid.cols-3 { grid-template-columns: 1fr; } }
+
+/* ---------- Work module lists (js/simple-list.js): the one bit of
+   list-row chrome that doesn't already exist in main.css's .gm-row
+   system — a small cycling status pill for Projects/Applications. --- */
+.sl-status-pill {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  margin-right: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: inherit;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+.sl-status-pill:hover { border-color: var(--accent-cyan, #087CA3); color: var(--text-primary); }
+
+/* ---------- Environment picker (Home page only): two large,
+   deliberately calmer cards — no emoji/number chrome, just the
+   environment name and a way in. ---------- */
+.env-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.env-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px;
+  padding: 44px 20px;
+  min-height: 168px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.env-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 28px -8px var(--accent); }
+.env-card-name {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.env-card-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent);
+}
+@media (max-width: 560px) {
+  .env-grid { grid-template-columns: 1fr; }
+  .env-card { padding: 32px 20px; min-height: 128px; }
+}
+
+/* ---------- Today panel: shared shape for the "what matters today"
+   card on Home, and reused as the section header rhythm on the Life
+   and Work dashboards' own module grids. ---------- */
+.today-card {
+  padding: 22px 24px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.today-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+}
+.today-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.today-group-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.today-list { list-style: none; margin: 0; padding: 0; }
+.today-list li {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 7px 0;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(120, 160, 180, 0.08);
+}
+.today-list li:last-child { border-bottom: none; }
+.today-list li::before {
+  content: '○';
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.today-empty {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 6px 0;
+}
+@media (max-width: 560px) {
+  .today-groups { grid-template-columns: 1fr; gap: 16px; }
+}

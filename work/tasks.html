@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10151A">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<meta name="apple-mobile-web-app-title" content="Tasks">
+
+<title>Tasks · Work · Hayden OS</title>
+<script src="/js/os-nav.js" defer></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/main.css">
+<link rel="stylesheet" href="/bento.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="dash-header">
+    <h1 class="dash-title"><span class="dash-title-mark">Tasks</span><span class="dash-title-orb"></span><span class="dash-title-kicker">Hayden OS · Work</span></h1>
+    <a href="/work/index.html" class="dash-home-btn" aria-label="Back to Work dashboard" title="Back to Work dashboard">▦</a>
+  </div>
+
+  <nav class="quickjump" aria-label="Work quick jump">
+    <a href="/work/tasks.html" class="quickjump-chip">Tasks</a>
+    <a href="/work/projects.html" class="quickjump-chip">Projects</a>
+    <a href="/work/career.html" class="quickjump-chip">Career</a>
+    <a href="/work/applications.html" class="quickjump-chip">Applications</a>
+    <a href="/work/performance.html" class="quickjump-chip">Performance</a>
+    <a href="/work/notes.html" class="quickjump-chip">Notes</a>
+  </nav>
+
+  <div class="section">
+    <div class="section-title">Tasks</div>
+    <div class="gm-card">
+      <ul class="goal-list gm-list" id="listEl"></ul>
+      <div class="empty-state" id="emptyEl" style="display:none;">No tasks yet — add what needs doing below.</div>
+      <div class="goal-input-wrap gm-input-wrap">
+        <input id="inputEl" class="gm-input" type="text" placeholder="Add a task…" autocomplete="off">
+        <button type="button" id="addBtn" class="gm-add">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/simple-list.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  initSimpleList({
+    storageKey: 'work:tasks:v1',
+    listEl: document.getElementById('listEl'),
+    inputEl: document.getElementById('inputEl'),
+    addBtn: document.getElementById('addBtn'),
+    emptyEl: document.getElementById('emptyEl'),
+    useDone: true
+  });
+});
+</script>
+</body>
+</html>

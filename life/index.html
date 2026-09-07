@@ -22,22 +22,24 @@
      regular Safari, which isn't wanted here. -->
 <meta name="apple-mobile-web-app-title" content="88YYDS">
 
-<title>88YYDS Dashboard</title>
-<script src="vendor/supabase-js@2.112.4.min.js"></script>
-<script src="sync.js" defer></script>
-<script src="topbar.js" defer></script>
-<script src="goals-data.js"></script>
-<script src="escape.js"></script>
-<script src="ticker.js" defer></script>
-<link rel="stylesheet" href="theme.css">
-<link rel="stylesheet" href="main.css">
+<title>Life · Hayden OS</title>
+<script src="/vendor/supabase-js@2.112.4.min.js"></script>
+<script src="/sync.js" defer></script>
+<script src="/topbar.js" defer></script>
+<script src="/js/os-nav.js" defer></script>
+<script src="/goals-data.js"></script>
+<script src="/escape.js"></script>
+<script src="/ticker.js" defer></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/main.css">
+<link rel="stylesheet" href="/bento.css">
 </head>
 <body>
 <div class="page">
 
   <div class="dash-header">
     <h1 class="dash-title"><span class="dash-title-mark">88YYDS</span><span class="dash-title-orb"></span><span class="dash-title-kicker">AIO</span></h1>
-    <a href="index.html" class="dash-home-btn" aria-label="Back to dashboard menu" title="Back to dashboard menu">▦</a>
+    <a href="/index.html" class="dash-home-btn" aria-label="Back to Hayden OS" title="Back to Hayden OS">▦</a>
   </div>
   <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
   <div class="hero-weather" id="heroWeather"></div>
@@ -48,6 +50,45 @@
     <a href="#nightRoutine" class="quickjump-chip">Night Routine</a>
     <a href="#consistency" class="quickjump-chip">Consistency</a>
   </nav>
+
+  <div class="bento-grid cols-3" style="margin-bottom:28px;">
+    <a href="/life/finance.html" class="bento-tile" style="--accent:#552080">
+      <div class="bento-top"><span class="bento-num">·01</span><span class="bento-emoji">📊</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Finance</div>
+      <div class="bento-footer"><span class="bento-subtitle">Net worth & spending</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/life/gym.html" class="bento-tile" style="--accent:#087CA3">
+      <div class="bento-top"><span class="bento-num">·02</span><span class="bento-emoji">💪</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Gym</div>
+      <div class="bento-footer"><span class="bento-subtitle">Hevy workouts & streaks</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/life/running.html" class="bento-tile" style="--accent:#A83FAF">
+      <div class="bento-top"><span class="bento-num">·03</span><span class="bento-emoji">🏃</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Running</div>
+      <div class="bento-footer"><span class="bento-subtitle">Marathon training</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/life/sleep.html" class="bento-tile" style="--accent:#F2C063">
+      <div class="bento-top"><span class="bento-num">·04</span><span class="bento-emoji">😴</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Sleep</div>
+      <div class="bento-footer"><span class="bento-subtitle">Score & trend</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/life/health.html" class="bento-tile" style="--accent:#B98AE0">
+      <div class="bento-top"><span class="bento-num">·05</span><span class="bento-emoji">💧</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Health</div>
+      <div class="bento-footer"><span class="bento-subtitle">Hydration coach</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/life/personal.html" class="bento-tile" style="--accent:#6F4AA8">
+      <div class="bento-top"><span class="bento-num">·06</span><span class="bento-emoji">🎯</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Personal</div>
+      <div class="bento-footer"><span class="bento-subtitle">North Star & milestones</span><span class="bento-arrow">→</span></div>
+    </a>
+  </div>
 
   <div class="status-row">
     <div class="day-ring-wrap is-compact">
@@ -83,7 +124,7 @@
 
     <!-- NORTH STAR (compact) — same statement/progress goals.html shows,
          both read from GD.getNorthStar()/GD.computeOverallProgress(). -->
-    <a href="goals.html" class="gm-card card-link northstar-mini-card">
+    <a href="/life/personal.html" class="gm-card card-link northstar-mini-card">
       <div class="ns-mini-eyebrow-row">
         <span class="ns-mini-eyebrow">North Star</span>
         <span class="ns-mini-link">View Goals →</span>
@@ -96,7 +137,7 @@
       </div>
     </a>
 
-    <a href="running.html" id="cdTile" class="gm-card card-link cd-tile"></a>
+    <a href="/life/running.html" id="cdTile" class="gm-card card-link cd-tile"></a>
   </div>
 
   <div id="nudgeSlot"></div>
@@ -333,24 +374,24 @@
 
 </div>
 
-<script src="js/dash-core.js" defer></script>
-<script src="js/greeting.js" defer></script>
-<script src="js/weather.js" defer></script>
-<script src="js/day-ring.js" defer></script>
-<script src="js/calendar.js" defer></script>
-<script src="js/night-routine.js" defer></script>
-<script src="js/sleep.js" defer></script>
-<script src="js/goals.js" defer></script>
-<script src="js/week-planner.js" defer></script>
+<script src="/js/dash-core.js" defer></script>
+<script src="/js/greeting.js" defer></script>
+<script src="/js/weather.js" defer></script>
+<script src="/js/day-ring.js" defer></script>
+<script src="/js/calendar.js" defer></script>
+<script src="/js/night-routine.js" defer></script>
+<script src="/js/sleep.js" defer></script>
+<script src="/js/goals.js" defer></script>
+<script src="/js/week-planner.js" defer></script>
 <!-- Running Overview widget was removed from this page, but this stays
      loaded: it's what opens the 'running' Supabase sync channel that
      keeps run: keys (and so the Consistency heatmap's Run row) populated
      on a device where running.html itself hasn't been opened yet.
      renderRunningOverview() no-ops as soon as it can't find #runningOverview. -->
-<script src="js/running.js" defer></script>
-<script src="js/heatmap.js" defer></script>
-<script src="js/countdown.js" defer></script>
-<script src="js/nudge.js" defer></script>
-<script src="js/sync-register.js" defer></script>
+<script src="/js/running.js" defer></script>
+<script src="/js/heatmap.js" defer></script>
+<script src="/js/countdown.js" defer></script>
+<script src="/js/nudge.js" defer></script>
+<script src="/js/sync-register.js" defer></script>
 </body>
 </html>

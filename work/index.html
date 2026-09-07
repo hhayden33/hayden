@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10151A">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<meta name="apple-mobile-web-app-title" content="Work">
+
+<title>Work · Hayden OS</title>
+<script src="/js/os-nav.js" defer></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/main.css">
+<link rel="stylesheet" href="/bento.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="dash-header">
+    <h1 class="dash-title"><span class="dash-title-mark">Work</span><span class="dash-title-orb"></span><span class="dash-title-kicker">Hayden OS</span></h1>
+    <a href="/index.html" class="dash-home-btn" aria-label="Back to Hayden OS" title="Back to Hayden OS">▦</a>
+  </div>
+
+  <nav class="quickjump" aria-label="Work quick jump">
+    <a href="/work/tasks.html" class="quickjump-chip">Tasks</a>
+    <a href="/work/projects.html" class="quickjump-chip">Projects</a>
+    <a href="/work/career.html" class="quickjump-chip">Career</a>
+    <a href="/work/applications.html" class="quickjump-chip">Applications</a>
+    <a href="/work/performance.html" class="quickjump-chip">Performance</a>
+    <a href="/work/notes.html" class="quickjump-chip">Notes</a>
+  </nav>
+
+  <div class="section">
+    <div class="section-title">Today</div>
+    <div class="gm-card">
+      <ul class="goal-list gm-list" id="workTodayList"></ul>
+      <div class="empty-state" id="workTodayEmpty" style="display:none;">Nothing on today — add a task to get started.</div>
+    </div>
+  </div>
+
+  <div class="section-title">Modules</div>
+  <div class="bento-grid cols-3">
+    <a href="/work/tasks.html" class="bento-tile" style="--accent:#087CA3">
+      <div class="bento-top"><span class="bento-num">·01</span><span class="bento-emoji">✅</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Tasks</div>
+      <div class="bento-footer"><span class="bento-subtitle">What needs doing</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/work/projects.html" class="bento-tile" style="--accent:#552080">
+      <div class="bento-top"><span class="bento-num">·02</span><span class="bento-emoji">📁</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Projects</div>
+      <div class="bento-footer"><span class="bento-subtitle">Current work</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/work/career.html" class="bento-tile" style="--accent:#20A5A0">
+      <div class="bento-top"><span class="bento-num">·03</span><span class="bento-emoji">📈</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Career</div>
+      <div class="bento-footer"><span class="bento-subtitle">Progression & goals</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/work/applications.html" class="bento-tile" style="--accent:#A83FAF">
+      <div class="bento-top"><span class="bento-num">·04</span><span class="bento-emoji">✉️</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Applications</div>
+      <div class="bento-footer"><span class="bento-subtitle">Job pipeline</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/work/performance.html" class="bento-tile" style="--accent:#F2C063">
+      <div class="bento-top"><span class="bento-num">·05</span><span class="bento-emoji">🎯</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Performance</div>
+      <div class="bento-footer"><span class="bento-subtitle">Reviews & metrics</span><span class="bento-arrow">→</span></div>
+    </a>
+    <a href="/work/notes.html" class="bento-tile" style="--accent:#B98AE0">
+      <div class="bento-top"><span class="bento-num">·06</span><span class="bento-emoji">🗒️</span></div>
+      <div class="bento-spacer"></div>
+      <div class="bento-title">Notes</div>
+      <div class="bento-footer"><span class="bento-subtitle">Freeform</span><span class="bento-arrow">→</span></div>
+    </a>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function storeGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+  function render() {
+    const tasks = storeGet('work:tasks:v1') || [];
+    const pending = tasks.filter(function (t) { return !t.done; });
+    const listEl = document.getElementById('workTodayList');
+    const emptyEl = document.getElementById('workTodayEmpty');
+    listEl.innerHTML = '';
+    if (!pending.length) { emptyEl.style.display = ''; return; }
+    emptyEl.style.display = 'none';
+    pending.slice(0, 5).forEach(function (t) {
+      const li = document.createElement('li');
+      li.className = 'gm-row';
+      const span = document.createElement('span');
+      span.className = 'gm-text';
+      span.textContent = t.text;
+      li.appendChild(span);
+      listEl.appendChild(li);
+    });
+  }
+  render();
+  window.addEventListener('storage', render);
+})();
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@
       ]
     },
     {
-      "source": "/main.html",
+      "source": "/life/index.html",
       "headers": [
         {
           "key": "Content-Security-Policy",
