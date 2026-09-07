@@ -90,7 +90,7 @@
   font-size: 13.5px;
 }
 
-.az-section { margin-top: 32px; scroll-margin-top: 110px; }
+.az-section { margin-top: 32px; scroll-margin-top: 160px; }
 .az-section-head { margin-bottom: 4px; }
 .az-purpose {
   font-size: 13px;
@@ -157,10 +157,6 @@
   color: var(--text-primary);
   border-radius: 3px;
   padding: 0 1px;
-}
-
-@media (max-width: 480px) {
-  .az-toolbar { top: 0; }
 }
 </style>
 </head>
@@ -459,7 +455,7 @@
       if (!visible.length) return;
       visible.sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
       setActiveNav(visible[0].target.id);
-    }, { rootMargin: '-110px 0px -70% 0px', threshold: 0 });
+    }, { rootMargin: '-160px 0px -70% 0px', threshold: 0 });
     sections.forEach(function (s) { observer.observe(s); });
   }
 

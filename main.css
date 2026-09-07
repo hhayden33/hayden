@@ -878,6 +878,18 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 }
 .gm-status.gm-status-error { color: var(--danger); }
 
+/* .gm-input's flex:1/min-width:0 lets it shrink arbitrarily narrow to
+   stay on one row with .gm-add/.gm-polish rather than wrapping (flexbox
+   only wraps once shrinking is exhausted) — fine for short placeholders,
+   but a longer one (e.g. Work's "Add an application (company – role)…")
+   gets crushed to a sliver and clips mid-word on a phone. Forcing the
+   input onto its own full-width row below ~420px sidesteps that; the
+   input row already sits inside .goal-input-wrap.gm-input-wrap's
+   flex-wrap:wrap, so this is the only change needed to make it stack. */
+@media (max-width: 420px) {
+  .gm-input { flex-basis: 100%; }
+}
+
 /* ---------- Night Routine ---------- */
 /* A calm, fixed checklist — reuses the .gm-row/.gm-check chassis from the
    goal list above for visual consistency, but drops the drag handle, queue
