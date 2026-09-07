@@ -1,8 +1,8 @@
 // =============================================================
 // Generic add/toggle/delete list, backed by one localStorage key holding
 // an array of { id, text, done, status, createdAt }. Powers every Work
-// module page (Tasks, Projects, Career, Applications, Performance,
-// Notes) so each one isn't a hand-rolled copy of the same CRUD loop —
+// module page (Tasks, Jobs Applied, Applications, Performance, Notes)
+// so each one isn't a hand-rolled copy of the same CRUD loop —
 // they differ only in storage key, copy, and whether items carry a
 // done checkbox and/or a cycling status pill.
 //
