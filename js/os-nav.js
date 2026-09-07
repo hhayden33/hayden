@@ -26,16 +26,37 @@
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 .os-nav-home {
-  display: inline-flex; align-items: center; gap: 7px;
-  text-decoration: none; color: #AEB7C0;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s;
+  opacity: 0.92;
+  transition: opacity 0.15s;
 }
-.os-nav-home:hover { color: #F2F2F2; }
-.os-nav-home-icon { font-size: 15px; line-height: 1; opacity: 0.85; }
-.os-nav-home-label {
-  font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
-  text-transform: uppercase; white-space: nowrap;
+.os-nav-home:hover { opacity: 1; }
+.os-nav-logo-mark {
+  font-size: 14px; font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  padding-right: 0.05em;
+  background: linear-gradient(120deg, #FFFFFF 0%, #EAF1F5 38%, #9FD9DA 68%, #C9A6EE 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  white-space: nowrap;
+}
+.os-nav-logo-orb {
+  align-self: center;
+  flex-shrink: 0;
+  width: 5px; height: 5px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #F1E0FF 0%, #B98AE0 45%, #552080 100%);
+  box-shadow: 0 0 8px 1px rgba(168, 63, 175, 0.5);
+}
+.os-nav-logo-kicker {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #687580;
+  white-space: nowrap;
 }
 .os-nav-switch {
   display: inline-flex; align-items: center;
@@ -65,7 +86,7 @@
 .os-nav-switch a.is-active .os-nav-dot { opacity: 1; box-shadow: 0 0 6px currentColor; }
 @media (max-width: 480px) {
   .os-nav { padding: 0 10px; }
-  .os-nav-home-label { display: none; }
+  .os-nav-logo-kicker { display: none; }
   .os-nav-switch a { padding: 6px 10px; font-size: 11.5px; }
 }
 `;
@@ -73,8 +94,9 @@
   const html = `
 <header class="os-nav" id="osNav" role="navigation" aria-label="88YYDS AIO">
   <a href="/index.html" class="os-nav-home" aria-label="88YYDS AIO home">
-    <span class="os-nav-home-icon">⌂</span>
-    <span class="os-nav-home-label">88YYDS AIO</span>
+    <span class="os-nav-logo-mark">88YYDS</span>
+    <span class="os-nav-logo-orb"></span>
+    <span class="os-nav-logo-kicker">AIO</span>
   </a>
   <nav class="os-nav-switch" aria-label="Switch environment">
     <a href="/life/index.html" data-env="life"><span class="os-nav-dot"></span>Life</a>
