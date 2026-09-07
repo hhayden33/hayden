@@ -646,7 +646,7 @@ a.card-link:hover .ns-mini-link { color: var(--text-primary); transform: transla
 }
 
 .gm-row {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
   padding: 12px 14px;
   margin-bottom: 6px;
   background: var(--surface-hover, #202B35);

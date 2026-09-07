@@ -160,7 +160,7 @@
 
       const textWrap = document.createElement('span');
       textWrap.style.flex = '1';
-      textWrap.style.minWidth = '0';
+      textWrap.style.minWidth = '140px';
 
       const text = document.createElement('span');
       text.className = 'gm-text';

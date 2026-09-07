@@ -20,13 +20,14 @@
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
   height: ${NAV_HEIGHT}px;
+  margin-bottom: 20px;
   padding: 0 max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
   background: #10151A;
   border-bottom: 1px solid rgba(120, 160, 180, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 .os-nav-home {
-  display: inline-flex; align-items: baseline; gap: 6px;
+  display: inline-flex; align-items: baseline; gap: 8px;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   opacity: 0.92;
@@ -34,7 +35,7 @@
 }
 .os-nav-home:hover { opacity: 1; }
 .os-nav-logo-mark {
-  font-size: 14px; font-weight: 800;
+  font-size: 21px; font-weight: 800;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   padding-right: 0.05em;
@@ -46,14 +47,14 @@
 .os-nav-logo-orb {
   align-self: center;
   flex-shrink: 0;
-  width: 5px; height: 5px;
-  margin-left: -2px;
+  width: 8px; height: 8px;
+  margin-left: -3px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #F1E0FF 0%, #B98AE0 45%, #552080 100%);
-  box-shadow: 0 0 8px 1px rgba(168, 63, 175, 0.5);
+  box-shadow: 0 0 12px 2px rgba(168, 63, 175, 0.55);
 }
 .os-nav-logo-kicker {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #687580;
   white-space: nowrap;
@@ -85,9 +86,16 @@
 }
 .os-nav-switch a.is-active .os-nav-dot { opacity: 1; box-shadow: 0 0 6px currentColor; }
 @media (max-width: 480px) {
-  .os-nav { padding: 0 10px; }
+  .os-nav { padding: 0 10px; gap: 8px; }
+  .os-nav-home { gap: 5px; }
+  .os-nav-logo-mark { font-size: 14px; }
+  .os-nav-logo-orb { width: 5px; height: 5px; margin-left: -2px; }
+  .os-nav-logo-kicker { font-size: 8px; letter-spacing: 0.12em; }
+  .os-nav-switch { padding: 2px; gap: 1px; }
+  .os-nav-switch a { padding: 5px 9px; font-size: 11px; gap: 4px; }
+}
+@media (max-width: 340px) {
   .os-nav-logo-kicker { display: none; }
-  .os-nav-switch a { padding: 6px 10px; font-size: 11.5px; }
 }
 `;
 
