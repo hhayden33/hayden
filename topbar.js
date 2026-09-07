@@ -215,21 +215,18 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   </a>
 </nav>`;
 
-  function isFinancePage() {
-    const p = (window.location.pathname || '').toLowerCase();
-    return p.endsWith('/finance.html') || p.endsWith('finance.html');
-  }
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
-  function shouldShowChrome() { return !isFinancePage() && !isEmbedded(); }
+  function shouldShowChrome() { return !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('running.html')) return 'running';
     if (p.endsWith('gym.html')) return 'fitness';
     if (p.endsWith('personal.html')) return 'personal';
+    if (p.endsWith('finance.html')) return 'finance';
     if (p.endsWith('/life/index.html') || p.endsWith('/life/')) return 'main';
-    return null; // sleep.html, health.html, finance.html — no matching tab, none highlighted
+    return null; // sleep.html, health.html — no matching tab, none highlighted
   }
 
   function injectStyleAndHTML() {
