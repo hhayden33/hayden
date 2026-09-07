@@ -90,9 +90,17 @@
 @media (max-width: 720px) { .bento-grid.cols-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 440px) { .bento-grid.cols-3 { grid-template-columns: 1fr; } }
 
-/* ---------- Work module lists (js/simple-list.js): the one bit of
-   list-row chrome that doesn't already exist in main.css's .gm-row
-   system — a small cycling status pill for Projects/Applications. --- */
+/* A 2x2 grid of 4 tiles (e.g. Work's module grid) reads as a single
+   square block rather than a directory list — shorter rows than the
+   default 168px keep each tile a wide rectangle instead of a square,
+   which suits 2-per-row better. */
+.bento-grid.cols-2 { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 130px; }
+@media (max-width: 440px) { .bento-grid.cols-2 { grid-template-columns: 1fr; grid-auto-rows: 110px; } }
+
+/* ---------- Work module lists (js/simple-list.js): the row chrome
+   that doesn't already exist in main.css's .gm-row system — a cycling
+   status pill, a free-choice dropdown, a forward-only stage tracker,
+   and a small "added X ago" timestamp. ---------- */
 .sl-status-pill {
   flex-shrink: 0;
   padding: 3px 10px;
@@ -108,6 +116,53 @@
   transition: border-color 0.15s, color 0.15s;
 }
 .sl-status-pill:hover { border-color: var(--accent-cyan, #087CA3); color: var(--text-primary); }
+
+.sl-status-select {
+  flex-shrink: 0;
+  margin-right: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: rgba(0,0,0,0.28);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 11.5px; font-weight: 700;
+  cursor: pointer;
+}
+.sl-status-select:focus { outline: none; border-color: var(--accent-cyan, #087CA3); }
+
+.sl-stage-wrap {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.sl-stage-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sl-stage-push {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(32, 165, 160, 0.35);
+  background: rgba(32, 165, 160, 0.10);
+  color: var(--success, #20A5A0);
+  font-family: inherit;
+  font-size: 10.5px; font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.sl-stage-push:hover { background: rgba(32, 165, 160, 0.20); }
+
+.sl-timestamp {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
 
 /* ---------- Environment picker (Home page only): two large,
    deliberately calmer cards — no emoji/number chrome, just the

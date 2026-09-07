@@ -34,12 +34,14 @@
   <div class="section">
     <div class="section-title">Notes</div>
     <div class="gm-card">
+      <input id="searchEl" class="gm-input" type="text" placeholder="Search notes…" autocomplete="off" style="margin-bottom:14px;">
       <ul class="goal-list gm-list" id="listEl"></ul>
       <div class="empty-state" id="emptyEl" style="display:none;">No notes yet — jot something down below.</div>
       <div class="goal-input-wrap gm-input-wrap">
         <input id="inputEl" class="gm-input" type="text" placeholder="Add a note…" autocomplete="off">
         <button type="button" id="addBtn" class="gm-add">+ Add</button>
       </div>
+      <div class="gm-status">Click a note's text to edit it in place.</div>
     </div>
   </div>
 
@@ -54,7 +56,10 @@ document.addEventListener('DOMContentLoaded', function () {
     inputEl: document.getElementById('inputEl'),
     addBtn: document.getElementById('addBtn'),
     emptyEl: document.getElementById('emptyEl'),
-    useDone: false
+    searchInputEl: document.getElementById('searchEl'),
+    useDone: false,
+    editable: true,
+    showTimestamp: true
   });
 });
 </script>

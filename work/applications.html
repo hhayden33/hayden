@@ -32,12 +32,12 @@
   </nav>
 
   <div class="section">
-    <div class="section-title">Job Applications</div>
+    <div class="section-title">Applications</div>
     <div class="gm-card">
       <ul class="goal-list gm-list" id="listEl"></ul>
-      <div class="empty-state" id="emptyEl" style="display:none;">No applications yet — add one below to start tracking your pipeline.</div>
+      <div class="empty-state" id="emptyEl" style="display:none;">No applications yet — add one below to start tracking it through to assessment.</div>
       <div class="goal-input-wrap gm-input-wrap">
-        <input id="inputEl" class="gm-input" type="text" placeholder="Add an application (company – role)…" autocomplete="off">
+        <input id="inputEl" class="gm-input" type="text" placeholder="Add an application…" autocomplete="off">
         <button type="button" id="addBtn" class="gm-add">+ Add</button>
       </div>
     </div>
@@ -55,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function () {
     addBtn: document.getElementById('addBtn'),
     emptyEl: document.getElementById('emptyEl'),
     useDone: false,
-    statuses: ['Applied', 'Interview', 'Offer', 'Rejected']
+    statuses: ['Awaiting Docs', 'Work Return', 'Pending Assessment'],
+    statusUi: 'stage'
   });
 });
 </script>

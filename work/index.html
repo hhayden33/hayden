@@ -11,9 +11,73 @@
 
 <title>Work · 88YYDS AIO</title>
 <script src="/js/os-nav.js" defer></script>
+<script src="/js/greeting.js" defer></script>
+<script src="/js/weather.js" defer></script>
+<script src="/js/work-ring.js" defer></script>
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/main.css">
 <link rel="stylesheet" href="/bento.css">
+<style>
+/* ---------- Performance: Mon-Fri opportunity log ---------- */
+.perf-day-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid rgba(120, 160, 180, 0.08);
+}
+.perf-day-row:first-child { border-top: none; }
+.perf-day-label { flex: 0 0 96px; }
+.perf-day-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.perf-day-date { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+.perf-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  flex: 1 1 160px; min-width: 0;
+}
+.perf-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.perf-tag-del {
+  background: none; border: none; padding: 0 2px;
+  color: var(--text-tertiary);
+  font-size: 13px; line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.perf-tag-del:hover { color: var(--danger); }
+.perf-empty { font-size: 11.5px; font-style: italic; color: var(--text-tertiary); }
+.perf-add {
+  display: flex; gap: 6px; flex-shrink: 0;
+  margin-left: auto;
+}
+.perf-add select {
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: rgba(0,0,0,0.28);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 11.5px; font-weight: 700;
+  cursor: pointer;
+}
+.perf-add button {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
+  color: var(--text-primary);
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+}
+@media (max-width: 480px) {
+  .perf-day-row { align-items: flex-start; }
+  .perf-add { margin-left: 0; flex-basis: 100%; }
+}
+</style>
 </head>
 <body>
 <div class="page">
@@ -21,6 +85,33 @@
   <div class="dash-header">
     <h1 class="dash-title"><span class="dash-title-mark">Work</span><span class="dash-title-orb"></span><span class="dash-title-kicker">88YYDS AIO</span></h1>
     <a href="/index.html" class="dash-home-btn" aria-label="Back to 88YYDS AIO" title="Back to 88YYDS AIO">▦</a>
+  </div>
+  <div class="hero-greeting"><span id="heroGreetingSub">Good morning,</span> <span class="hero-greeting-name">Hayden</span></div>
+  <div class="hero-weather" id="heroWeather"></div>
+
+  <div class="day-ring-wrap">
+    <div class="day-ring">
+      <svg viewBox="0 0 120 120">
+        <defs>
+          <filter id="dayRingGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#5B3A8E" flood-opacity="0.55" />
+            <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#6F4AA8" flood-opacity="0.45" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6.5" flood-color="#A98BCB" flood-opacity="0.35" />
+          </filter>
+        </defs>
+        <circle class="day-ring-track" cx="60" cy="60" r="52" />
+        <circle class="day-ring-fill" cx="60" cy="60" r="52" id="workRingFill" />
+      </svg>
+      <div class="day-ring-overlay">
+        <div class="day-ring-percent" id="workRingPercent">—</div>
+        <div class="day-ring-phase" id="workRingPhase">—</div>
+        <div class="day-ring-clock" id="workRingClock">—</div>
+      </div>
+    </div>
+    <div class="day-ring-text">
+      <div class="day-ring-status" id="workRingStatus">Loading…</div>
+      <div class="day-ring-remaining" id="workRingRemaining">—</div>
+    </div>
   </div>
 
   <nav class="quickjump" aria-label="Work quick jump">
@@ -46,7 +137,7 @@
   </a>
 
   <div class="section-title">Modules</div>
-  <div class="bento-grid cols-3">
+  <div class="bento-grid cols-2">
     <a href="/work/tasks.html" class="bento-tile" style="--accent:#087CA3">
       <div class="bento-top"><span class="bento-num">·01</span><span class="bento-emoji">✅</span></div>
       <div class="bento-spacer"></div>
@@ -63,7 +154,7 @@
       <div class="bento-top"><span class="bento-num">·03</span><span class="bento-emoji">✉️</span></div>
       <div class="bento-spacer"></div>
       <div class="bento-title">Applications</div>
-      <div class="bento-footer"><span class="bento-subtitle">Job pipeline</span><span class="bento-arrow">→</span></div>
+      <div class="bento-footer"><span class="bento-subtitle">Awaiting docs → assessment</span><span class="bento-arrow">→</span></div>
     </a>
     <a href="/work/notes.html" class="bento-tile" style="--accent:#B98AE0">
       <div class="bento-top"><span class="bento-num">·04</span><span class="bento-emoji">🗒️</span></div>
@@ -71,6 +162,11 @@
       <div class="bento-title">Notes</div>
       <div class="bento-footer"><span class="bento-subtitle">Freeform</span><span class="bento-arrow">→</span></div>
     </a>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Performance</div>
+    <div class="gm-card" id="perfCard"></div>
   </div>
 
 </div>
@@ -97,6 +193,132 @@
       listEl.appendChild(li);
     });
   }
+  render();
+  window.addEventListener('storage', render);
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- Performance: opportunities logged Mon-Fri, this week ----------
+  // Keyed by real calendar date ('YYYY-MM-DD'), not a floating "Monday"
+  // label, so last week's log stays intact once a new week starts.
+  const OPP_KEY = 'work:opportunities:v1';
+  const OPP_TYPES = ['A-Z', 'DDA', 'Working Capital', 'Business Ref', 'Home Loan Ref'];
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function mondayOfThisWeek() {
+    const now = new Date();
+    const dow = now.getDay(); // 0=Sun..6=Sat
+    const diff = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(now);
+    monday.setDate(monday.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+  function weekdayDates() {
+    const monday = mondayOfThisWeek();
+    const out = [];
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      out.push(d);
+    }
+    return out;
+  }
+  function storeGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+  function storeSet(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  const card = document.getElementById('perfCard');
+
+  function render() {
+    const data = storeGet(OPP_KEY) || {};
+    const dates = weekdayDates();
+    card.innerHTML = '';
+    dates.forEach(function (d, i) {
+      const key = dateKey(d);
+      const entries = data[key] || [];
+
+      const row = document.createElement('div');
+      row.className = 'perf-day-row';
+
+      const label = document.createElement('div');
+      label.className = 'perf-day-label';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'perf-day-name';
+      nameEl.textContent = DAY_NAMES[i];
+      const dateEl = document.createElement('div');
+      dateEl.className = 'perf-day-date';
+      dateEl.textContent = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+      label.appendChild(nameEl);
+      label.appendChild(dateEl);
+      row.appendChild(label);
+
+      const tags = document.createElement('div');
+      tags.className = 'perf-tags';
+      if (!entries.length) {
+        const empty = document.createElement('span');
+        empty.className = 'perf-empty';
+        empty.textContent = 'No opportunities logged';
+        tags.appendChild(empty);
+      } else {
+        entries.forEach(function (type, ei) {
+          const tag = document.createElement('span');
+          tag.className = 'perf-tag';
+          const label2 = document.createElement('span');
+          label2.textContent = type;
+          tag.appendChild(label2);
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'perf-tag-del';
+          del.setAttribute('aria-label', 'Remove');
+          del.textContent = '×';
+          del.addEventListener('click', function () {
+            const cur = storeGet(OPP_KEY) || {};
+            (cur[key] || []).splice(ei, 1);
+            if (cur[key] && !cur[key].length) delete cur[key];
+            storeSet(OPP_KEY, cur);
+            render();
+          });
+          tag.appendChild(del);
+          tags.appendChild(tag);
+        });
+      }
+      row.appendChild(tags);
+
+      const addWrap = document.createElement('div');
+      addWrap.className = 'perf-add';
+      const select = document.createElement('select');
+      OPP_TYPES.forEach(function (t) {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        select.appendChild(opt);
+      });
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.textContent = '+ Add';
+      addBtn.addEventListener('click', function () {
+        const cur = storeGet(OPP_KEY) || {};
+        cur[key] = cur[key] || [];
+        cur[key].push(select.value);
+        storeSet(OPP_KEY, cur);
+        render();
+      });
+      addWrap.appendChild(select);
+      addWrap.appendChild(addBtn);
+      row.appendChild(addWrap);
+
+      card.appendChild(row);
+    });
+  }
+
   render();
   window.addEventListener('storage', render);
 })();
