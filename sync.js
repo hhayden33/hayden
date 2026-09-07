@@ -95,6 +95,62 @@
     return out;
   }
 
+  // po_water_v1 (and anything shaped like it) is one settings blob with a
+  // 'logs' sub-object keyed by date -> a running tally for that day. The
+  // outer blob isn't itself date-keyed (top-level keys are things like
+  // 'profile'/'unit'/'logs'), so it used to fall through to plain
+  // newest-blob-wins — meaning ANY edit on a device holding a stale copy
+  // of the whole blob (e.g. one that hasn't been opened today) would
+  // silently overwrite a same-day count another device had already
+  // pushed, because "most recently touched" beat "factually correct".
+  // That's the exact failure that lost a real drink count on 2026-09-07.
+  // Fixing it properly needs a per-date timestamp, which this data shape
+  // doesn't carry — so instead, any nested field that looks like a
+  // date -> number tally gets unioned by MAX per date rather than
+  // replaced wholesale; every other field in the blob still resolves by
+  // newest-wins as before. Trade-off, same spirit as mergeDateDict above:
+  // a deliberate same-day manual decrease racing a stale device could get
+  // pulled back up, but silently losing real increments — the far more
+  // common failure — can't happen anymore.
+  function isDateKeyedCountDict(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+    const keys = Object.keys(v);
+    return keys.length > 0 && keys.every(function (k) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v[k] === 'number';
+    });
+  }
+  function mergeCountDict(localDict, remoteDict) {
+    const out = {};
+    const keys = new Set(Object.keys(localDict || {}).concat(Object.keys(remoteDict || {})));
+    keys.forEach(function (k) {
+      out[k] = Math.max((localDict && localDict[k]) || 0, (remoteDict && remoteDict[k]) || 0);
+    });
+    return out;
+  }
+  function isPlainObject(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function hasNestedCountDict(a, b) {
+    const keys = new Set(Object.keys(a || {}).concat(Object.keys(b || {})));
+    for (const k of keys) {
+      if (isDateKeyedCountDict(a && a[k])) return true;
+      if (isDateKeyedCountDict(b && b[k])) return true;
+    }
+    return false;
+  }
+  function mergeBlobWithCountDicts(localVal, remoteVal, localTs, remoteTs) {
+    const newer = remoteTs > localTs ? remoteVal : localVal;
+    const older = remoteTs > localTs ? localVal : remoteVal;
+    const out = Object.assign({}, newer);
+    Object.keys(out).forEach(function (k) {
+      if (isDateKeyedCountDict(out[k]) || (older && isDateKeyedCountDict(older[k]))) {
+        out[k] = mergeCountDict(out[k], older && older[k]);
+      }
+    });
+    if (older) {
+      Object.keys(older).forEach(function (k) { if (!(k in out)) out[k] = older[k]; });
+    }
+    return out;
+  }
+
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
     const syncedKeys = (config && config.syncedKeys) || [];
@@ -319,6 +375,8 @@
             next = remoteVal;
           } else if (isDateKeyedDict(localVal) && isDateKeyedDict(remoteVal)) {
             next = mergeDateDict(localVal, remoteVal, localTs, remoteTs);
+          } else if (isPlainObject(localVal) && isPlainObject(remoteVal) && hasNestedCountDict(localVal, remoteVal)) {
+            next = mergeBlobWithCountDicts(localVal, remoteVal, localTs, remoteTs);
           } else {
             next = remoteTs > localTs ? remoteVal : localVal;
           }
