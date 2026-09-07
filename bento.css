@@ -1,8 +1,7 @@
 /* =================================================================
-   HAYDEN OS — shared bento/card system used by index.html (Home),
-   life/index.html's module grid, and the Work dashboard + its own
-   module grid. One definition so all three read as the same system
-   rather than three near-identical copies drifting apart.
+   HAYDEN OS — shared bento/card system used by index.html (Home) and
+   the Work dashboard's module grid. One definition so both read as
+   the same system rather than near-identical copies drifting apart.
    ================================================================= */
 
 .bento-grid {
@@ -199,4 +198,47 @@
 }
 @media (max-width: 560px) {
   .today-groups { grid-template-columns: 1fr; gap: 16px; }
+}
+
+/* ---------- Feature card: one prominent, full-width entry point below
+   Today (e.g. the Work dashboard's A–Z Review) — bigger and calmer than
+   a bento tile, for the one module that deserves more visual weight
+   than the rest of the grid. ---------- */
+.feature-card {
+  display: block;
+  margin: 20px 0;
+  padding: 22px 24px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  background: var(--surface, #19232D);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.feature-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-cyan, #087CA3);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 24px -8px var(--accent-cyan, #087CA3);
+}
+.feature-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+.feature-flow {
+  font-size: 16px; font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+.feature-cta {
+  margin-top: 14px;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent-cyan, #087CA3);
+}
+@media (max-width: 480px) {
+  .feature-flow { font-size: 14px; }
 }

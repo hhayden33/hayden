@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10151A">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+<meta name="apple-mobile-web-app-title" content="A–Z Review">
+
+<title>A–Z Review · Work · 88YYDS AIO</title>
+<script src="/js/os-nav.js" defer></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/main.css">
+<style>
+/* =================================================================
+   A–Z Review — a read-only question guide, not a form. No answer
+   fields, no customer data, nothing saved anywhere: every question
+   below is generic and static. See the header comment in the script
+   block for why (this replaces "what should I ask next", not the
+   OneNote page where answers actually get typed).
+   ================================================================= */
+.az-subtitle {
+  margin: -6px 0 18px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.az-toolbar {
+  position: sticky;
+  top: 46px; /* os-nav.js's own bar height */
+  z-index: 30;
+  background: #10151A;
+  padding: 10px 0 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+}
+.az-search {
+  width: 100%;
+  padding: 11px 14px;
+  margin-bottom: 10px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  -webkit-appearance: none;
+}
+.az-search::placeholder { color: var(--text-tertiary); }
+.az-search:focus { outline: none; border-color: var(--accent-cyan, #087CA3); background: rgba(0,0,0,0.36); }
+
+.az-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.az-nav::-webkit-scrollbar { display: none; }
+.az-nav-item {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid transparent;
+  color: var(--text-tertiary);
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.az-nav-item:hover { color: var(--text-secondary); }
+.az-nav-item .az-nav-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.45; flex-shrink: 0;
+}
+.az-nav-item.is-active {
+  color: var(--text-primary);
+  background: linear-gradient(180deg, rgba(8, 124, 163, 0.28), rgba(85, 32, 128, 0.22));
+}
+.az-nav-item.is-active .az-nav-dot { opacity: 1; box-shadow: 0 0 6px currentColor; }
+
+.az-search-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13.5px;
+}
+
+.az-section { margin-top: 32px; scroll-margin-top: 110px; }
+.az-section-head { margin-bottom: 4px; }
+.az-purpose {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 16px;
+  max-width: 62ch;
+}
+.az-note {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(242, 192, 99, 0.08);
+  border: 1px solid rgba(242, 192, 99, 0.22);
+  color: #F2C063;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.qgroup {
+  background: var(--surface, #19232D);
+  border: 1px solid var(--border-subtle, rgba(120, 160, 180, 0.15));
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.qgroup[hidden] { display: none; }
+.qgroup > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 13px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+}
+.qgroup > summary::-webkit-details-marker { display: none; }
+.qgroup > summary::after {
+  content: '⌄';
+  color: var(--text-tertiary);
+  font-size: 15px;
+  transition: transform 0.2s ease;
+}
+.qgroup[open] > summary::after { transform: rotate(180deg); }
+.qgroup > summary:hover { background: rgba(255,255,255,0.03); }
+
+.qz-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 16px 14px;
+}
+.qz-item {
+  padding: 9px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  border-top: 1px solid rgba(120, 160, 180, 0.08);
+}
+.qz-item:first-child { border-top: none; }
+.qz-item[hidden] { display: none; }
+.qz-item mark {
+  background: rgba(242, 192, 99, 0.28);
+  color: var(--text-primary);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+@media (max-width: 480px) {
+  .az-toolbar { top: 0; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="dash-header">
+    <h1 class="dash-title"><span class="dash-title-mark">A–Z Review</span><span class="dash-title-orb"></span><span class="dash-title-kicker">88YYDS AIO · Work</span></h1>
+    <a href="/work/index.html" class="dash-home-btn" aria-label="Back to Work dashboard" title="Back to Work dashboard">▦</a>
+  </div>
+  <div class="az-subtitle">Questions to guide the conversation</div>
+
+  <div class="az-toolbar">
+    <input type="text" id="azSearch" class="az-search" placeholder="Search questions…" autocomplete="off" aria-label="Search questions">
+    <nav class="az-nav" id="azNav" aria-label="A–Z Review sections">
+      <a href="#business" class="az-nav-item is-active" data-section="business"><span class="az-nav-dot"></span>Business & Discovery</a>
+      <a href="#money-in" class="az-nav-item" data-section="money-in"><span class="az-nav-dot"></span>Money In</a>
+      <a href="#managing-money" class="az-nav-item" data-section="managing-money"><span class="az-nav-dot"></span>Managing Money</a>
+      <a href="#money-out" class="az-nav-item" data-section="money-out"><span class="az-nav-dot"></span>Money Out</a>
+      <a href="#personal" class="az-nav-item" data-section="personal"><span class="az-nav-dot"></span>Personal</a>
+    </nav>
+  </div>
+
+  <div class="az-search-empty" id="azSearchEmpty" style="display:none;">No questions match that search.</div>
+
+  <div id="azSections"></div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===============================================================
+  // Static question bank — the entire page. No answer fields, no
+  // customer data, nothing persisted: this is a read-only reference,
+  // the LEFT column of an ANZ OneNote A–Z Review. Answers still go in
+  // OneNote, get cleaned up in Copilot — this dashboard has no role in
+  // that and never will, so don't add storage here.
+  // ===============================================================
+  var SECTIONS = [
+    {
+      id: 'business',
+      label: 'Business & Discovery',
+      purpose: 'Understand the business properly before moving into Money In, Managing Money or Money Out.',
+      note: 'Understand the business before looking for the solution.',
+      groups: [
+        {
+          title: 'The Business',
+          questions: [
+            'What does the business do?',
+            'Can you talk me through the business?',
+            'How does the business make money?',
+            'Who are your main customers?',
+            'What products or services do you provide?',
+            'How long have you been operating?',
+            'How did the business start?',
+            'What does a typical day look like for the business?'
+          ]
+        },
+        {
+          title: 'Structure & Operations',
+          questions: [
+            'How is the business structured?',
+            'Who owns the business?',
+            'Who is involved in running the business?',
+            'How many employees do you have?',
+            'Where does the business operate from?',
+            'How do you normally manage the day-to-day finances?'
+          ]
+        },
+        {
+          title: 'Revenue & Cashflow',
+          questions: [
+            'How does money generally flow through the business?',
+            'When do you typically get paid?',
+            'Are there particular times of the month where cashflow is stronger or weaker?',
+            'Is the business seasonal?',
+            'Are there periods where cashflow becomes tighter?',
+            'What does your cashflow generally look like throughout the year?'
+          ]
+        },
+        {
+          title: 'Current Position',
+          questions: [
+            "How is the business going at the moment?",
+            "What's changed recently?",
+            "What are the biggest challenges you're facing?",
+            'Is there anything putting pressure on the business at the moment?',
+            "What's working well?",
+            "Is there anything you'd like to improve?"
+          ]
+        },
+        {
+          title: 'Future',
+          questions: [
+            'What are your plans for the business?',
+            'Are you looking to grow?',
+            'Are you planning to hire?',
+            'Are you looking at expanding?',
+            'Are there any major purchases coming up?',
+            'What does the next 12–24 months look like?',
+            'What are you hoping to achieve?'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'money-in',
+      label: 'Money In',
+      purpose: 'Understand how money comes into the business and whether there are opportunities to improve access to cashflow.',
+      groups: [
+        {
+          title: 'Questions',
+          questions: [
+            'How do your customers normally pay you?',
+            'How are you currently receiving payments?',
+            'Do you invoice your customers?',
+            'How long does it normally take customers to pay?',
+            'Do you have customers who regularly pay late?',
+            'Are there any delays between making a sale and receiving the money?',
+            'Does the timing of your incoming payments ever create pressure?',
+            'Are there particular periods where money coming in slows down?',
+            'How do you manage cashflow when you are waiting to get paid?',
+            'Would having quicker access to funds make things easier?'
+          ]
+        },
+        {
+          title: 'Explore Further',
+          questions: [
+            'Do you currently use a credit card for the business?',
+            'Have you ever needed an overdraft to get through a tight period?',
+            'How do you usually cover a short-term cashflow gap?',
+            'Is there anything about how you take payments that could be smoother?',
+            'If cash was tied up somewhere, how easily could you access more?'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'managing-money',
+      label: 'Managing Money',
+      purpose: 'Understand how the customer manages and organises their business banking and finances.',
+      groups: [
+        {
+          title: 'Questions',
+          questions: [
+            'What accounting software do you use?',
+            'How do you currently manage the business finances?',
+            'Who manages the books?',
+            'How often do you reconcile your accounts?',
+            'How do you normally pay your suppliers?',
+            'How do you manage regular payments?',
+            'How are your business accounts currently structured?',
+            'Do you use direct debits?',
+            'How do you keep track of incoming and outgoing payments?',
+            'Do you find managing the business finances straightforward?',
+            "Is there anything about your current setup that you'd like to make easier?",
+            'How many accounts do you currently use for the business?',
+            'How do you separate different types of business expenses?'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'money-out',
+      label: 'Money Out',
+      purpose: 'Understand what money is leaving the business and where the major expenses sit.',
+      groups: [
+        {
+          title: 'Questions',
+          questions: [
+            'What are your biggest regular expenses?',
+            'What are your biggest day-to-day expenses?',
+            'What are your biggest supplier costs?',
+            'How frequently do you pay your suppliers?',
+            'Do you have any large upcoming expenses?',
+            'Are your expenses fairly consistent?',
+            'Do your expenses fluctuate throughout the year?',
+            'Are there particular times where expenses increase?',
+            'Do you ever experience pressure when large expenses need to be paid?',
+            'How do you normally manage those periods?',
+            'Are there any significant changes to your expenses coming up?'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'personal',
+      label: 'Personal',
+      purpose: "Once the business conversation is understood, broaden the conversation to the customer's personal financial needs where appropriate.",
+      note: "Don't forget the person behind the business.",
+      noteAfter: true,
+      groups: [
+        {
+          title: 'Questions',
+          questions: [
+            'What are your personal financial goals at the moment?',
+            'Are there any major personal plans coming up?',
+            'Have you considered buying a home?',
+            'Are you currently looking at property?',
+            'Is home ownership something you\'re interested in?',
+            "Is there anything outside the business that you're currently working towards?",
+            'Is there anything else we could potentially help you with?'
+          ]
+        }
+      ]
+    }
+  ];
+
+  var sectionsHost = document.getElementById('azSections');
+  var searchInput = document.getElementById('azSearch');
+  var searchEmpty = document.getElementById('azSearchEmpty');
+  var navItems = document.querySelectorAll('.az-nav-item');
+
+  function noteHtml(text) {
+    return '<div class="az-note">💡 ' + text + '</div>';
+  }
+
+  function render() {
+    var html = '';
+    SECTIONS.forEach(function (section) {
+      html += '<section class="az-section" id="' + section.id + '" data-section="' + section.id + '">';
+      html += '<div class="section-title">' + section.label + '</div>';
+      if (section.purpose) html += '<div class="az-purpose">' + section.purpose + '</div>';
+      if (section.note && !section.noteAfter) html += noteHtml(section.note);
+      section.groups.forEach(function (group, gi) {
+        html += '<details class="qgroup" open data-group="' + gi + '">';
+        html += '<summary>' + group.title + '</summary>';
+        html += '<ul class="qz-list">';
+        group.questions.forEach(function (q) {
+          html += '<li class="qz-item">' + q + '</li>';
+        });
+        html += '</ul></details>';
+      });
+      if (section.note && section.noteAfter) html += noteHtml(section.note);
+      html += '</section>';
+    });
+    sectionsHost.innerHTML = html;
+  }
+
+  // ---------- Search: filter in place, auto-expand matching groups,
+  // hide empty groups/sections, restore everything when cleared. ----------
+  function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function highlight(el, term) {
+    var text = el.textContent;
+    if (!term) { el.innerHTML = text; return; }
+    var re = new RegExp('(' + escapeRegExp(term) + ')', 'ig');
+    el.innerHTML = text.replace(re, '<mark>$1</mark>');
+  }
+
+  function applySearch() {
+    var term = searchInput.value.trim();
+    var anyVisible = false;
+    var items = sectionsHost.querySelectorAll('.qz-item');
+    items.forEach(function (li) {
+      var text = li.textContent;
+      var match = !term || text.toLowerCase().indexOf(term.toLowerCase()) !== -1;
+      li.hidden = !match;
+      if (match) { anyVisible = true; highlight(li, term); }
+    });
+    sectionsHost.querySelectorAll('.qgroup').forEach(function (group) {
+      var visibleCount = group.querySelectorAll('.qz-item:not([hidden])').length;
+      group.hidden = term && visibleCount === 0;
+      if (term && visibleCount > 0) group.open = true;
+    });
+    sectionsHost.querySelectorAll('.az-section').forEach(function (section) {
+      var visibleGroups = section.querySelectorAll('.qgroup:not([hidden])').length;
+      section.style.display = (term && visibleGroups === 0) ? 'none' : '';
+    });
+    searchEmpty.style.display = (term && !anyVisible) ? '' : 'none';
+    document.getElementById('azNav').style.display = term ? 'none' : '';
+  }
+  searchInput.addEventListener('input', applySearch);
+
+  // ---------- Section nav: smooth scroll + scroll-spy active state ----------
+  navItems.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var target = document.getElementById(a.dataset.section);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  var sections = [];
+  function setActiveNav(id) {
+    navItems.forEach(function (a) {
+      a.classList.toggle('is-active', a.dataset.section === id);
+    });
+  }
+  function initScrollSpy() {
+    sections = Array.prototype.slice.call(sectionsHost.querySelectorAll('.az-section'));
+    if (!('IntersectionObserver' in window) || !sections.length) return;
+    var observer = new IntersectionObserver(function (entries) {
+      var visible = entries.filter(function (e) { return e.isIntersecting; });
+      if (!visible.length) return;
+      visible.sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+      setActiveNav(visible[0].target.id);
+    }, { rootMargin: '-110px 0px -70% 0px', threshold: 0 });
+    sections.forEach(function (s) { observer.observe(s); });
+  }
+
+  render();
+  initScrollSpy();
+})();
+</script>
+</body>
+</html>
