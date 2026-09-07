@@ -1,5 +1,5 @@
 // =============================================================
-// Hayden OS — global top-level nav shared by every page: a compact
+// 88YYDS AIO — global top-level nav shared by every page: a compact
 // strip with a Home link back to index.html, and a LIFE/WORK pill
 // that jumps straight into the other environment's own dashboard
 // (never routes back through index.html to switch). Self-injecting,
@@ -71,10 +71,10 @@
 `;
 
   const html = `
-<header class="os-nav" id="osNav" role="navigation" aria-label="Hayden OS">
-  <a href="/index.html" class="os-nav-home" aria-label="Hayden OS home">
+<header class="os-nav" id="osNav" role="navigation" aria-label="88YYDS AIO">
+  <a href="/index.html" class="os-nav-home" aria-label="88YYDS AIO home">
     <span class="os-nav-home-icon">⌂</span>
-    <span class="os-nav-home-label">Hayden OS</span>
+    <span class="os-nav-home-label">88YYDS AIO</span>
   </a>
   <nav class="os-nav-switch" aria-label="Switch environment">
     <a href="/life/index.html" data-env="life"><span class="os-nav-dot"></span>Life</a>
