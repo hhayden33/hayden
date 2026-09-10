@@ -1766,7 +1766,7 @@ body::after {
     panelFill: 'rgba(255,255,255,0.97)', panelStroke: 'rgba(11,13,15,0.07)',
     eyebrow: 'rgba(11,13,15,0.42)',
     dividerMain: 'rgba(11,13,15,0.12)', dividerSecondary: 'rgba(11,13,15,0.08)',
-    statColor: '#12161A',
+    statColor: '#12161A', statUnitColor: 'rgba(11,13,15,0.45)',
     labelColor: 'rgba(11,13,15,0.40)',
     wordmarkStops: ['#0E5C78', '#124F6B', '#2C6B72', '#552080'],
     aioColor: 'rgba(11,13,15,0.42)'
@@ -1930,17 +1930,59 @@ body::after {
     const pad = 64;
     const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
 
+    // Derived purely from distanceM/durationSec rather than any
+    // precomputed km/pace/partial fields — garmin-sync.py's own splits
+    // (distanceM, durationSec, avgHr, maxHr, elevationGainM, cadence,
+    // avgPower) don't carry those, and deriving them here means this
+    // renders correctly regardless of which sync pipeline populated a
+    // given run's splits.
+    let cumulativeM = 0;
+    const rows = splits.map((s, i) => {
+      cumulativeM += s.distanceM || 0;
+      const isPartial = (i === splits.length - 1) && (s.distanceM || 0) < 950;
+      const kmLabel = 'KM ' + (isPartial ? (cumulativeM / 1000).toFixed(2) : String(i + 1));
+      const paceSecPerKm = s.distanceM ? s.durationSec / (s.distanceM / 1000) : null;
+      return { kmLabel, paceSecPerKm, paceLabel: fmtPace(paceSecPerKm) };
+    });
+    const validPaces = rows.map(x => x.paceSecPerKm).filter(p => p != null && isFinite(p));
+    const minPace = validPaces.length ? Math.min.apply(null, validPaces) : 0;
+    const maxPace = validPaces.length ? Math.max.apply(null, validPaces) : 0;
+    // Longer bar = faster split. Normalized within this run's own
+    // range (not an absolute pace scale) so "faster/slower immediately
+    // obvious" holds for a 3:30/km track session and an 8:00/km recovery
+    // jog alike — a fixed floor keeps even the slowest split's bar from
+    // disappearing to a sliver.
+    const BAR_MIN_FRAC = 0.22;
+    function barFrac(pace) {
+      if (pace == null || !isFinite(pace) || maxPace === minPace) return 1;
+      const t = (maxPace - pace) / (maxPace - minPace);
+      return BAR_MIN_FRAC + t * (1 - BAR_MIN_FRAC);
+    }
+
     const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
     const locationLineGap = 34;
     const headerToDivider = 50 + (locationText ? locationLineGap : 0);
-    const topMargin = 96, bottomMargin = 64;
-    const tableTopGap = 48, colHeaderH = 34, colHeaderToRows = 28;
+    const topMargin = 96, bottomMargin = 60;
+
+    // ---- top stats row (Distance / Time / Pace) — same drawStatValue/
+    // fitSharedStatSize machinery the Minimal/Full Stats layouts use,
+    // just a fixed comfortable size rather than solved from a whole
+    // stat set, since this row is always exactly these three.
+    const statsParts = ['distance', 'time', 'pace'].map(k => shareStatParts(k, r));
+    const colW = contentW / 3;
+    const { numSize, unitSize } = fitSharedStatSize(ctx, statsParts, colW * 0.84, 56, 38, 0.38);
+    const statsLabelSize = 14;
+    const statsTopGap = 46, numBaselineOffset = Math.round(numSize * 0.8);
+    const statsLabelGap = Math.round(numSize * 0.42);
+    const statsToDivider2Gap = 32, divider2ToPaceLabel = 40;
+    const paceLabelSize = 15, paceLabelToRows = 30;
 
     const n = Math.max(1, splits.length);
-    const fixedOverhead = topMargin + headerToDivider + tableTopGap + colHeaderH + colHeaderToRows + bottomMargin;
+    const fixedOverhead = topMargin + headerToDivider + statsTopGap + numBaselineOffset + statsLabelGap +
+      statsToDivider2Gap + divider2ToPaceLabel + paceLabelToRows + bottomMargin;
     const panelBottom = 1650;
     const maxPanelH = panelBottom - 140;
-    const rowH = Math.max(20, Math.min(58, (maxPanelH - fixedOverhead) / n));
+    const rowH = Math.max(26, Math.min(56, (maxPanelH - fixedOverhead) / n));
     const panelH = Math.min(maxPanelH, fixedOverhead + rowH * n);
     const panelY = panelBottom - panelH;
 
@@ -1971,61 +2013,57 @@ body::after {
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
 
-    // Column layout: KM left-aligned, the rest right-aligned within
-    // their own band so the numbers themselves line up like a real
-    // splits table rather than drifting per row.
-    const col1End = contentX + contentW * 0.50;
-    const col2End = contentX + contentW * 0.75;
-    const col3End = contentRight;
+    const statsNumBaselineY = dividerY + statsTopGap + numBaselineOffset;
+    const statsLabelBaselineY = statsNumBaselineY + statsLabelGap;
+    statsParts.forEach((p, i) => {
+      const cx = contentX + colW * i + colW / 2;
+      drawStatValue(ctx, cx, statsNumBaselineY, p.value, p.unit, { numSize, unitSize, color: theme.statColor, unitColor: theme.statUnitColor });
+      drawTrackedText(ctx, p.label.toUpperCase(), cx, statsLabelBaselineY, { size: statsLabelSize, weight: 600, color: theme.labelColor, spacing: 2.5, align: 'center' });
+    });
 
-    const colHeaderBaselineY = dividerY + tableTopGap + colHeaderH * 0.6;
-    const headerLabelOpts = { size: 14, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' };
-    drawTrackedText(ctx, 'KM', contentX, colHeaderBaselineY, Object.assign({}, headerLabelOpts, { align: 'left' }));
-    drawTrackedText(ctx, 'PACE', col1End, colHeaderBaselineY, headerLabelOpts);
-    drawTrackedText(ctx, 'TIME', col2End, colHeaderBaselineY, headerLabelOpts);
-    drawTrackedText(ctx, 'HR', col3End, colHeaderBaselineY, headerLabelOpts);
-
-    const rowsHeaderRuleY = colHeaderBaselineY + 16;
+    const divider2Y = statsLabelBaselineY + statsToDivider2Gap;
     ctx.strokeStyle = theme.dividerMain;
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(contentX, rowsHeaderRuleY); ctx.lineTo(contentRight, rowsHeaderRuleY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(contentX, divider2Y); ctx.lineTo(contentRight, divider2Y); ctx.stroke();
 
-    const rowsTopY = rowsHeaderRuleY + colHeaderToRows;
-    const rowFontSize = Math.max(13, Math.min(23, Math.round(rowH * 0.40)));
-    ctx.font = '600 ' + rowFontSize + 'px ' + SHARE_FONT;
-    ctx.fillStyle = theme.statColor;
+    const paceLabelBaselineY = divider2Y + divider2ToPaceLabel;
+    drawTrackedText(ctx, 'PACE', contentX, paceLabelBaselineY, { size: paceLabelSize, weight: 700, color: theme.labelColor, spacing: 2.5, align: 'left' });
 
-    // Derived purely from distanceM/durationSec/avgHr rather than any
-    // precomputed km/pace/partial fields — garmin-sync.py's own splits
-    // (distanceM, durationSec, avgHr, maxHr, elevationGainM, cadence,
-    // avgPower) don't carry those, and deriving them here means this
-    // renders correctly regardless of which sync pipeline populated a
-    // given run's splits.
-    let cumulativeM = 0;
-    splits.forEach((s, i) => {
-      cumulativeM += s.distanceM || 0;
-      const isPartial = (i === splits.length - 1) && (s.distanceM || 0) < 950;
-      const baselineY = rowsTopY + rowH * i + rowH * 0.68;
-      const kmLabel = isPartial ? (cumulativeM / 1000).toFixed(2) : String(i + 1);
-      const paceSecPerKm = s.distanceM ? s.durationSec / (s.distanceM / 1000) : null;
-      const paceLabel = fmtPace(paceSecPerKm);
-      const timeLabel = fmtDuration(s.durationSec);
-      const hrLabel = (s.avgHr != null) ? String(Math.round(s.avgHr)) : '—';
+    // ---- per-km horizontal bars — KM label, a bar whose length is
+    // this split's pace relative to the run's own fastest/slowest, then
+    // the pace value trailing the bar so its own position reinforces
+    // "further right = faster" rather than sitting in a fixed column.
+    const rowsTopY = paceLabelBaselineY + paceLabelToRows;
+    const kmColW = 118;
+    const valueReserve = 140;
+    const barTrackX = contentX + kmColW;
+    const barTrackMaxW = Math.max(40, contentW - kmColW - valueReserve);
+    const rowFontSize = Math.max(13, Math.min(22, Math.round(rowH * 0.38)));
+    const barH = Math.max(10, Math.min(20, Math.round(rowH * 0.36)));
+    const wm = theme.wordmarkStops;
+
+    rows.forEach((row, i) => {
+      const rowCenterY = rowsTopY + rowH * i + rowH * 0.5;
+      const baselineY = rowCenterY + rowFontSize * 0.32;
+      const barY = rowCenterY - barH / 2;
+      const barW = Math.max(barH, barTrackMaxW * barFrac(row.paceSecPerKm));
 
       ctx.font = '700 ' + rowFontSize + 'px ' + SHARE_FONT;
-      ctx.textAlign = 'left'; ctx.fillText(kmLabel, contentX, baselineY);
-      ctx.font = '600 ' + rowFontSize + 'px ' + SHARE_FONT;
-      ctx.textAlign = 'right';
-      ctx.fillText(paceLabel, col1End, baselineY);
-      ctx.fillText(timeLabel, col2End, baselineY);
-      ctx.fillText(hrLabel, col3End, baselineY);
+      ctx.fillStyle = theme.statColor;
+      ctx.textAlign = 'left';
+      ctx.fillText(row.kmLabel, contentX, baselineY);
 
-      if (i < splits.length - 1) {
-        const ruleY = rowsTopY + rowH * (i + 1);
-        ctx.strokeStyle = theme.dividerSecondary;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(contentX, ruleY); ctx.lineTo(contentRight, ruleY); ctx.stroke();
-      }
+      drawRoundedRectPath(ctx, barTrackX, barY, barW, barH, barH / 2);
+      const grad = ctx.createLinearGradient(barTrackX, 0, barTrackX + barW, 0);
+      grad.addColorStop(0, wm[0]); grad.addColorStop(0.4, wm[1]);
+      grad.addColorStop(0.7, wm[2]); grad.addColorStop(1, wm[3]);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.font = '600 ' + rowFontSize + 'px ' + SHARE_FONT;
+      ctx.fillStyle = theme.statColor;
+      ctx.textAlign = 'left';
+      ctx.fillText(row.paceLabel, barTrackX + barW + 16, baselineY);
     });
   }
 
