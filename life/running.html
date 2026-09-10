@@ -1753,6 +1753,25 @@ body::after {
     }
   };
 
+  // Splits deliberately ignores the Dark/Light toggle — a real split
+  // table (Strava's own share cards included) reads as a clean white
+  // card regardless of the rest of the app's theme, so this is one
+  // fixed palette rather than swapped like the two stat-tile layouts.
+  // Near-opaque white (not the ~20-35% scrim the other layouts use)
+  // since the goal here is a card that sits on the photo, not a tint
+  // over it — legibility comes from the card itself, not a text glow,
+  // so no textShadow is defined; the panel gets its own soft drop
+  // shadow for elevation instead (see renderSplitsCanvas).
+  const SPLITS_CARD_THEME = {
+    panelFill: 'rgba(255,255,255,0.97)', panelStroke: 'rgba(11,13,15,0.07)',
+    eyebrow: 'rgba(11,13,15,0.42)',
+    dividerMain: 'rgba(11,13,15,0.12)', dividerSecondary: 'rgba(11,13,15,0.08)',
+    statColor: '#12161A',
+    labelColor: 'rgba(11,13,15,0.40)',
+    wordmarkStops: ['#0E5C78', '#124F6B', '#2C6B72', '#552080'],
+    aioColor: 'rgba(11,13,15,0.42)'
+  };
+
   const runShareModalBg = document.getElementById('runShareModalBg');
   const runShareCanvas = document.getElementById('runShareCanvas');
   const shareCtx = runShareCanvas.getContext('2d');
@@ -1904,17 +1923,18 @@ body::after {
   // start from a comfortable max and shrink only as far as the number
   // of rows actually requires, so a 5K reads big and a half marathon
   // still fits without spilling off the canvas.
-  function renderSplitsCanvas(ctx, theme, r) {
+  function renderSplitsCanvas(ctx, r) {
+    const theme = SPLITS_CARD_THEME;
     const splits = r.splits || [];
     const panelX = 64, panelW = SHARE_W - panelX * 2;
-    const pad = 56;
+    const pad = 64;
     const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
 
     const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
     const locationLineGap = 34;
-    const headerToDivider = 46 + (locationText ? locationLineGap : 0);
-    const topMargin = 90, bottomMargin = 54;
-    const tableTopGap = 40, colHeaderH = 34, colHeaderToRows = 22;
+    const headerToDivider = 50 + (locationText ? locationLineGap : 0);
+    const topMargin = 96, bottomMargin = 64;
+    const tableTopGap = 48, colHeaderH = 34, colHeaderToRows = 28;
 
     const n = Math.max(1, splits.length);
     const fixedOverhead = topMargin + headerToDivider + tableTopGap + colHeaderH + colHeaderToRows + bottomMargin;
@@ -1924,26 +1944,31 @@ body::after {
     const panelH = Math.min(maxPanelH, fixedOverhead + rowH * n);
     const panelY = panelBottom - panelH;
 
+    // Card elevation — a soft, low shadow under the whole shape rather
+    // than a text glow, so it reads as a crisp white card sitting on
+    // top of the photo instead of a tinted scrim over it.
+    ctx.save();
+    ctx.shadowColor = 'rgba(16,24,32,0.22)'; ctx.shadowBlur = 46; ctx.shadowOffsetY = 18;
     drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
     ctx.fillStyle = theme.panelFill;
     ctx.fill();
-    ctx.lineWidth = 2;
+    ctx.restore();
+    ctx.lineWidth = 1;
     ctx.strokeStyle = theme.panelStroke;
+    drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
     ctx.stroke();
-
-    ctx.shadowColor = theme.textShadow; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
 
     const headerBaselineY = panelY + topMargin;
     drawWordmark(ctx, contentX, headerBaselineY, theme);
     const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
-    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: 20, weight: 700, color: theme.eyebrow, spacing: 3, align: 'right' });
+    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: 19, weight: 600, color: theme.eyebrow, spacing: 3, align: 'right' });
     if (locationText) {
-      drawTrackedText(ctx, locationText.toUpperCase(), contentRight, headerBaselineY + locationLineGap, { size: 15, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' });
+      drawTrackedText(ctx, locationText.toUpperCase(), contentRight, headerBaselineY + locationLineGap, { size: 14, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' });
     }
 
     const dividerY = headerBaselineY + headerToDivider;
     ctx.strokeStyle = theme.dividerMain;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
 
     // Column layout: KM left-aligned, the rest right-aligned within
@@ -1954,30 +1979,42 @@ body::after {
     const col3End = contentRight;
 
     const colHeaderBaselineY = dividerY + tableTopGap + colHeaderH * 0.6;
-    const headerLabelOpts = { size: 15, weight: 700, color: theme.labelColor, spacing: 2, align: 'right' };
+    const headerLabelOpts = { size: 14, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' };
     drawTrackedText(ctx, 'KM', contentX, colHeaderBaselineY, Object.assign({}, headerLabelOpts, { align: 'left' }));
     drawTrackedText(ctx, 'PACE', col1End, colHeaderBaselineY, headerLabelOpts);
     drawTrackedText(ctx, 'TIME', col2End, colHeaderBaselineY, headerLabelOpts);
     drawTrackedText(ctx, 'HR', col3End, colHeaderBaselineY, headerLabelOpts);
 
-    const rowsHeaderRuleY = colHeaderBaselineY + 14;
-    ctx.strokeStyle = theme.dividerSecondary;
-    ctx.lineWidth = 1.5;
+    const rowsHeaderRuleY = colHeaderBaselineY + 16;
+    ctx.strokeStyle = theme.dividerMain;
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(contentX, rowsHeaderRuleY); ctx.lineTo(contentRight, rowsHeaderRuleY); ctx.stroke();
 
     const rowsTopY = rowsHeaderRuleY + colHeaderToRows;
-    const rowFontSize = Math.max(13, Math.min(24, Math.round(rowH * 0.44)));
-    ctx.font = '700 ' + rowFontSize + 'px ' + SHARE_FONT;
+    const rowFontSize = Math.max(13, Math.min(23, Math.round(rowH * 0.40)));
+    ctx.font = '600 ' + rowFontSize + 'px ' + SHARE_FONT;
     ctx.fillStyle = theme.statColor;
 
+    // Derived purely from distanceM/durationSec/avgHr rather than any
+    // precomputed km/pace/partial fields — garmin-sync.py's own splits
+    // (distanceM, durationSec, avgHr, maxHr, elevationGainM, cadence,
+    // avgPower) don't carry those, and deriving them here means this
+    // renders correctly regardless of which sync pipeline populated a
+    // given run's splits.
+    let cumulativeM = 0;
     splits.forEach((s, i) => {
+      cumulativeM += s.distanceM || 0;
+      const isPartial = (i === splits.length - 1) && (s.distanceM || 0) < 950;
       const baselineY = rowsTopY + rowH * i + rowH * 0.68;
-      const kmLabel = s.partial ? s.cumulativeKm.toFixed(2) : String(s.km);
-      const paceLabel = fmtPace(s.paceSecPerKm);
-      const timeLabel = fmtDuration(s.elapsedSec);
-      const hrLabel = (s.avgHr != null) ? String(s.avgHr) : '—';
+      const kmLabel = isPartial ? (cumulativeM / 1000).toFixed(2) : String(i + 1);
+      const paceSecPerKm = s.distanceM ? s.durationSec / (s.distanceM / 1000) : null;
+      const paceLabel = fmtPace(paceSecPerKm);
+      const timeLabel = fmtDuration(s.durationSec);
+      const hrLabel = (s.avgHr != null) ? String(Math.round(s.avgHr)) : '—';
 
+      ctx.font = '700 ' + rowFontSize + 'px ' + SHARE_FONT;
       ctx.textAlign = 'left'; ctx.fillText(kmLabel, contentX, baselineY);
+      ctx.font = '600 ' + rowFontSize + 'px ' + SHARE_FONT;
       ctx.textAlign = 'right';
       ctx.fillText(paceLabel, col1End, baselineY);
       ctx.fillText(timeLabel, col2End, baselineY);
@@ -1986,12 +2023,10 @@ body::after {
       if (i < splits.length - 1) {
         const ruleY = rowsTopY + rowH * (i + 1);
         ctx.strokeStyle = theme.dividerSecondary;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(contentX, ruleY); ctx.lineTo(contentRight, ruleY); ctx.stroke();
       }
     });
-
-    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
 
   function renderShareCanvas() {
@@ -2002,7 +2037,7 @@ body::after {
     ctx.clearRect(0, 0, SHARE_W, SHARE_H);
 
     if (shareLayout === 'splits') {
-      if (r.splits && r.splits.length) renderSplitsCanvas(ctx, theme, r);
+      if (r.splits && r.splits.length) renderSplitsCanvas(ctx, r);
       return;
     }
 
