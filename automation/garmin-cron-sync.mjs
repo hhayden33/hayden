@@ -245,9 +245,18 @@ async function main() {
     // `ACTIVITIES_LIMIT=100 node garmin-cron-sync.mjs`) — get_activities
     // takes a count, not a date range, so a limit has to stand in for "how
     // far back," same tradeoff as get_activities has everywhere else this
-    // pipeline uses it.
+    // pipeline uses it. 100 is Garmin's own per-request cap; anything above
+    // that is paginated via `start` (100 at a time) until enough are
+    // collected or a page comes back short (no more history left).
     const activitiesLimit = parseInt(process.env.ACTIVITIES_LIMIT, 10) || 15;
-    activities = await callTool('get_activities', { activityType: 'running', limit: activitiesLimit });
+    activities = [];
+    for (let start = 0; activities.length < activitiesLimit; start += 100) {
+      const pageSize = Math.min(100, activitiesLimit - start);
+      const page = await callTool('get_activities', { activityType: 'running', start, limit: pageSize });
+      if (!Array.isArray(page) || page.length === 0) break;
+      activities.push(...page);
+      if (page.length < pageSize) break; // ran out of history before hitting the limit
+    }
 
     // Per-km/mile splits, one get_activity_splits call per activity — no
     // batch endpoint exists. One activity's splits failing (or an activity
