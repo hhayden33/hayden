@@ -433,22 +433,14 @@ body::after {
     border-radius: 18px !important;
   }
 }
-.run-share-layout-toggle, .run-share-theme-toggle, .run-share-loc-toggle {
+.run-share-layout-toggle, .run-share-theme-toggle {
   display: flex; gap: 8px; margin-bottom: 10px;
 }
 /* Trims the modal's own chrome — scoped to this modal only, not the
    shared .modal-body/.modal-head rules every other modal uses — so the
-   whole layout/theme/location picker + preview + actions fits within
-   one screen with no internal scroll, even on a short phone. */
+   whole layout/theme picker + preview + actions fits within one screen
+   with no internal scroll, even on a short phone. */
 .run-share-modal .modal-body { padding-top: 14px; padding-bottom: 14px; }
-.run-share-loc-field { margin-bottom: 10px; }
-.run-share-loc-value {
-  width: 100%; padding: 8px 12px;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-secondary);
-  font-family: inherit; font-size: 14px;
-}
-.run-share-loc-value .run-share-loc-pin { opacity: 0.6; margin-right: 6px; }
 .run-share-layout-btn {
   flex: 1;
   padding: 7px 10px;
@@ -849,16 +841,6 @@ body::after {
       <div class="run-share-theme-toggle" role="tablist" aria-label="Overlay theme">
         <button class="run-share-layout-btn run-share-theme-btn active" type="button" data-theme="dark" role="tab" aria-selected="true">Dark</button>
         <button class="run-share-layout-btn run-share-theme-btn" type="button" data-theme="light" role="tab" aria-selected="false">Light</button>
-      </div>
-      <div class="run-share-loc-toggle" role="tablist" aria-label="Show location">
-        <button class="run-share-layout-btn run-share-loc-btn active" type="button" data-loc="off" role="tab" aria-selected="true">No Location</button>
-        <button class="run-share-layout-btn run-share-loc-btn" type="button" data-loc="on" role="tab" aria-selected="false" id="runShareLocBtn">Location</button>
-      </div>
-      <!-- Read-only — location is detected from the run's own GPS start
-           point and formatted for its country (see js/geo.js), never
-           typed in and never showing a precise street address. -->
-      <div class="run-share-loc-field" id="runShareLocField" style="display:none">
-        <div class="run-share-loc-value" id="runShareLocValue"><span class="run-share-loc-pin">📍</span><span id="runShareLocText"></span></div>
       </div>
       <div class="run-share-canvas-wrap">
         <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
@@ -1764,46 +1746,12 @@ body::after {
     }
   };
 
-  // Splits gets its own near-opaque card palette per theme (not the
-  // ~20-35% scrim Minimal/Full Stats use) since the goal is a card that
-  // sits on the photo, not a tint over it — legibility comes from the
-  // card itself, not a text glow, so neither variant defines a
-  // textShadow; the panel gets its own soft drop shadow for elevation
-  // instead (see renderSplitsCanvas). Still follows the Dark/Light
-  // toggle like the other two layouts — light started as the only
-  // option but a pure white card doesn't fit every photo any better
-  // than Minimal/Full Stats' scrim would, so dark gets the same
-  // charcoal-card treatment, just inverted.
-  const SPLITS_CARD_THEMES = {
-    light: {
-      panelFill: 'rgba(255,255,255,0.97)', panelStroke: 'rgba(11,13,15,0.07)',
-      eyebrow: 'rgba(11,13,15,0.42)',
-      dividerMain: 'rgba(11,13,15,0.12)', dividerSecondary: 'rgba(11,13,15,0.08)',
-      statColor: '#12161A', statUnitColor: 'rgba(11,13,15,0.45)',
-      labelColor: 'rgba(11,13,15,0.40)',
-      wordmarkStops: ['#0E5C78', '#124F6B', '#2C6B72', '#552080'],
-      aioColor: 'rgba(11,13,15,0.42)',
-      cardShadow: 'rgba(16,24,32,0.22)'
-    },
-    dark: {
-      panelFill: 'rgba(19,24,30,0.97)', panelStroke: 'rgba(255,255,255,0.08)',
-      eyebrow: 'rgba(255,255,255,0.50)',
-      dividerMain: 'rgba(255,255,255,0.13)', dividerSecondary: 'rgba(255,255,255,0.09)',
-      statColor: '#FFFFFF', statUnitColor: 'rgba(255,255,255,0.55)',
-      labelColor: 'rgba(255,255,255,0.45)',
-      wordmarkStops: ['#FFFFFF', '#EAF1F5', '#9FD9DA', '#C9A6EE'],
-      aioColor: 'rgba(174,183,192,0.75)',
-      cardShadow: 'rgba(0,0,0,0.5)'
-    }
-  };
-
   const runShareModalBg = document.getElementById('runShareModalBg');
   const runShareCanvas = document.getElementById('runShareCanvas');
   const shareCtx = runShareCanvas.getContext('2d');
   let shareActiveRun = null;
   let shareLayout = 'minimal';
   let shareTheme = 'dark';
-  let shareShowLocation = false;
 
   function shareStatParts(key, r) {
     const pace = (r.distanceKm > 0 && r.durationSec > 0) ? r.durationSec / r.distanceKm : null;
@@ -1949,7 +1897,7 @@ body::after {
   // of rows actually requires, so a 5K reads big and a half marathon
   // still fits without spilling off the canvas.
   function renderSplitsCanvas(ctx, r) {
-    const theme = SPLITS_CARD_THEMES[shareTheme] || SPLITS_CARD_THEMES.light;
+    const theme = SHARE_THEMES[shareTheme] || SHARE_THEMES.dark;
     const splits = r.splits || [];
     const panelX = 64, panelW = SHARE_W - panelX * 2;
     const pad = 64;
@@ -1961,11 +1909,13 @@ body::after {
     // avgPower) don't carry those, and deriving them here means this
     // renders correctly regardless of which sync pipeline populated a
     // given run's splits.
-    let cumulativeM = 0;
     const rows = splits.map((s, i) => {
-      cumulativeM += s.distanceM || 0;
+      // The partial final km is labelled by how much of that last
+      // kilometre was actually covered (e.g. "0.12"), not the run's
+      // cumulative distance — "KM 5.12" read as a 6th label in the
+      // sequence instead of "here's the leftover bit after KM 5".
       const isPartial = (i === splits.length - 1) && (s.distanceM || 0) < 950;
-      const kmLabel = 'KM ' + (isPartial ? (cumulativeM / 1000).toFixed(2) : String(i + 1));
+      const kmLabel = 'KM ' + (isPartial ? (s.distanceM / 1000).toFixed(2) : String(i + 1));
       const paceSecPerKm = s.distanceM ? s.durationSec / (s.distanceM / 1000) : null;
       return { kmLabel, paceSecPerKm, paceLabel: fmtPace(paceSecPerKm) };
     });
@@ -1984,7 +1934,7 @@ body::after {
       return BAR_MIN_FRAC + t * (1 - BAR_MIN_FRAC);
     }
 
-    const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
+    const locationText = (r.location && r.location.trim()) ? r.location.trim() : '';
     const locationLineGap = 34;
     const headerToDivider = 50 + (locationText ? locationLineGap : 0);
     const topMargin = 96, bottomMargin = 60;
@@ -2011,19 +1961,17 @@ body::after {
     const panelH = Math.min(maxPanelH, fixedOverhead + rowH * n);
     const panelY = panelBottom - panelH;
 
-    // Card elevation — a soft, low shadow under the whole shape rather
-    // than a text glow, so it reads as a crisp white card sitting on
-    // top of the photo instead of a tinted scrim over it.
-    ctx.save();
-    ctx.shadowColor = theme.cardShadow; ctx.shadowBlur = 46; ctx.shadowOffsetY = 18;
     drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
     ctx.fillStyle = theme.panelFill;
     ctx.fill();
-    ctx.restore();
     ctx.lineWidth = 1;
     ctx.strokeStyle = theme.panelStroke;
-    drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
     ctx.stroke();
+
+    // Text shadow for legibility over an arbitrary photo — same
+    // treatment as Minimal/Full Stats, applies to everything drawn
+    // below (wordmark, labels, bars, values), reset at the end.
+    ctx.shadowColor = theme.textShadow; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
 
     const headerBaselineY = panelY + topMargin;
     drawWordmark(ctx, contentX, headerBaselineY, theme);
@@ -2090,6 +2038,8 @@ body::after {
       ctx.textAlign = 'left';
       ctx.fillText(row.paceLabel, barTrackX + barW + 16, baselineY);
     });
+
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
 
   function renderShareCanvas() {
@@ -2132,7 +2082,7 @@ body::after {
     // type·date eyebrow, right-aligned to match it. Blank/whitespace-only
     // text is treated as "not set" even with the toggle on, so this never
     // draws an empty line.
-    const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
+    const locationText = (r.location && r.location.trim()) ? r.location.trim() : '';
     const locationLineGap = 34;
 
     // ---- vertical rhythm, computed bottom-up from the fitted size so
@@ -2224,21 +2174,6 @@ body::after {
     });
     renderShareCanvas();
   }
-  function setShareLocation(on) {
-    shareShowLocation = on;
-    document.querySelectorAll('.run-share-loc-btn').forEach(b => {
-      const active = (b.dataset.loc === 'on') === on;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    const field = document.getElementById('runShareLocField');
-    field.style.display = (on && shareActiveRun && shareActiveRun.location) ? '' : 'none';
-    if (shareActiveRun) {
-      document.getElementById('runShareLocText').textContent = shareActiveRun.location || '';
-    }
-    renderShareCanvas();
-  }
-
   // ---------------------------------------------------------------
   // Sharing workflow
   //
@@ -2309,16 +2244,9 @@ body::after {
     splitsBtn.title = hasSplits ? '' : 'No split data for this run';
     setShareLayout('minimal');
     setShareTheme('dark');
-    // Location is detected from the run's own GPS (see js/geo.js /
-    // garmin-sync.py) — never typed in, so there's nothing to prefill;
-    // the toggle just disables itself when a run has none. Defaults to
-    // off every time regardless of availability, so sharing a location
-    // is always an explicit choice, not an opt-out.
-    const locBtn = document.getElementById('runShareLocBtn');
-    const hasLocation = !!(r.location && r.location.trim());
-    locBtn.disabled = !hasLocation;
-    locBtn.title = hasLocation ? '' : 'No location detected for this run';
-    setShareLocation(false);
+    // Location is detected from the run's own GPS (see garmin-sync.py)
+    // and always shown on the card when available — no toggle, nothing
+    // to opt into or out of.
     openModal(runShareModalBg);
   }
 
@@ -2327,9 +2255,6 @@ body::after {
   });
   document.querySelectorAll('.run-share-theme-btn').forEach(btn => {
     btn.addEventListener('click', () => setShareTheme(btn.dataset.theme));
-  });
-  document.querySelectorAll('.run-share-loc-btn').forEach(btn => {
-    btn.addEventListener('click', () => setShareLocation(btn.dataset.loc === 'on'));
   });
   document.getElementById('runShareCloseX').addEventListener('click', () => closeModal(runShareModalBg));
   document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
