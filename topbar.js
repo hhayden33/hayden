@@ -406,18 +406,46 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
       caffeineMgPerDay: 200, substances: [], logs: {}
     };
   }
+  // health.html's own initCloudSync instance for 'water' unions the
+  // 'logs' date->count dict by max per date rather than replacing it
+  // wholesale (see sync.js's mergeBlobWithCountDicts) — that protection
+  // was added after a stale device's sync silently lost a real drink
+  // count. This quick +1 button bypasses that whole pipeline (it's a
+  // raw Supabase upsert, not routed through sync.js's localStorage
+  // interception), so it has to apply the same per-date-max union
+  // itself, or a device whose *this-origin* localStorage cache is
+  // stale (hasn't had health.html/personal.html open today) would
+  // blind-replace remote's 'logs' with its own stale copy the instant
+  // someone taps +1 there — silently erasing today's already-logged
+  // count. Settings fields (profile/unit/target/etc.) stay remote-wins
+  // since this button never edits them; the real water page is the
+  // only writer for those.
+  function mergeWaterLogs(localLogs, remoteLogs) {
+    const out = {};
+    const keys = new Set(Object.keys(localLogs || {}).concat(Object.keys(remoteLogs || {})));
+    keys.forEach(function (k) {
+      out[k] = Math.max((localLogs && localLogs[k]) || 0, (remoteLogs && remoteLogs[k]) || 0);
+    });
+    return out;
+  }
   async function pushWaterMergedToSupabase(localWater) {
     if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) return;
     if (TOPBAR_SUPABASE_URL.indexOf('PASTE-') === 0) return;
     try {
       const supa = window.supabase.createClient(TOPBAR_SUPABASE_URL, TOPBAR_SUPABASE_KEY);
-      // Water lives in its own 'water' row (see po-water.html's
+      // Water lives in its own 'water' row (see health.html's
       // initCloudSync) — merge-read-write here just in case anything
       // else ever gets added to it, same as before.
       const { data } = await supa
         .from('app_state').select('data').eq('key', 'water').maybeSingle();
       const current = (data && data.data) || {};
-      const merged = Object.assign({}, current, { po_water_v1: localWater });
+      const remoteWater = current.po_water_v1 || {};
+      const mergedWater = Object.assign({}, remoteWater, localWater, {
+        logs: mergeWaterLogs(localWater.logs, remoteWater.logs)
+      });
+      const sync = Object.assign({}, current.__sync);
+      sync.updatedAt = Object.assign({}, sync.updatedAt, { po_water_v1: Date.now() });
+      const merged = Object.assign({}, current, { po_water_v1: mergedWater, __sync: sync });
       await supa.from('app_state').upsert(
         { key: 'water', data: merged, updated_at: new Date().toISOString() },
         { onConflict: 'key' }
