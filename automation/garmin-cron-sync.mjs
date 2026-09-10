@@ -87,7 +87,25 @@ function toSlimActivity(a) {
     trainingLoad: a.activityTrainingLoad != null ? Math.round(a.activityTrainingLoad) : null,
     trainingEffectLabel: a.trainingEffectLabel ?? null,
     calories: a.calories ?? null,
+    splits: a.splits || [],
   };
+}
+
+// get_activity_splits returns real per-km/mile laps in lapDTOs (each one
+// an 'INTERVAL' lap Garmin auto-marks at each distance unit) — distinct
+// from get_activities' own splitSummaries, which are just aggregate
+// stand/run/walk totals, not a per-km breakdown.
+function toSlimSplits(splitsResult) {
+  const laps = splitsResult?.lapDTOs || [];
+  return laps.map((lap) => ({
+    distanceM: Math.round((lap.distance || 0) * 10) / 10,
+    durationSec: Math.round((lap.duration || 0) * 10) / 10,
+    avgHr: lap.averageHR ?? null,
+    maxHr: lap.maxHR ?? null,
+    elevationGainM: lap.elevationGain ?? null,
+    cadence: lap.averageRunCadence != null ? Math.round(lap.averageRunCadence) : null,
+    avgPower: lap.averagePower ?? null,
+  }));
 }
 
 // Garmin's personal-record typeIds are stable/well-known: 3=5K, 4=10K,
@@ -230,6 +248,23 @@ async function main() {
     // pipeline uses it.
     const activitiesLimit = parseInt(process.env.ACTIVITIES_LIMIT, 10) || 15;
     activities = await callTool('get_activities', { activityType: 'running', limit: activitiesLimit });
+
+    // Per-km/mile splits, one get_activity_splits call per activity — no
+    // batch endpoint exists. One activity's splits failing (or an activity
+    // with none, e.g. a very short recovery jog) doesn't block the rest.
+    if (Array.isArray(activities)) {
+      for (const a of activities) {
+        try {
+          const splitsResult = await callTool('get_activity_splits', { activityId: a.activityId });
+          a.splits = toSlimSplits(splitsResult);
+        } catch (e) {
+          log(`WARN: get_activity_splits failed for activity ${a.activityId} (non-fatal): ${e.message}`);
+          a.splits = [];
+        }
+      }
+      log(`Fetched splits for ${activities.length} activities.`);
+    }
+
     vo2max = await callTool('get_vo2max', {}).catch((e) => {
       log(`WARN: get_vo2max failed (non-fatal): ${e.message}`);
       return null;

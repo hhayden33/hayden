@@ -30,6 +30,8 @@
 # activities.json: array of objects with at least:
 #   garminActivityId, date (YYYY-MM-DD), distanceKm, durationSec,
 #   avgHr, maxHr, elevationM, vo2Max, trainingLoad, trainingEffectLabel, name
+#   splits (optional): [{ distanceM, durationSec, avgHr, maxHr,
+#     elevationGainM, cadence, avgPower }, ...] — per-km/mile laps
 # wellness.json: object merged as-is into run:garminSnapshot
 # pbs.json (optional): { fiveK, tenK, fifteenK, half, marathon, thirtyK,
 #   fiftyK } in seconds — only fills currently-empty run:pbs fields
@@ -97,6 +99,10 @@ def to_run_entry(a):
         'trainingEffectLabel': a.get('trainingEffectLabel'),
         'source': 'garmin',
         'notes': build_notes(a),
+        # Per-km/mile laps from get_activity_splits — [] when Garmin has
+        # none for this activity (e.g. a very short run) rather than absent,
+        # so a consumer can always safely iterate it.
+        'splits': a.get('splits') or [],
     }
 
 
