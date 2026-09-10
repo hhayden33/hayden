@@ -88,6 +88,12 @@ function toSlimActivity(a) {
     trainingEffectLabel: a.trainingEffectLabel ?? null,
     calories: a.calories ?? null,
     splits: a.splits || [],
+    // Reverse-geocoded into a locality string by garmin-sync.py — never
+    // sent any further than that (see its format_locality/reverse_geocode).
+    // Absent (not just null) on a treadmill/indoor activity, same as Garmin
+    // itself omits them, so the geocoding step naturally skips those.
+    ...(a.startLatitude != null && { startLatitude: a.startLatitude }),
+    ...(a.startLongitude != null && { startLongitude: a.startLongitude }),
   };
 }
 
