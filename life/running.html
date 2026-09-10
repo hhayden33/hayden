@@ -1943,7 +1943,7 @@ body::after {
     // fitSharedStatSize machinery the Minimal/Full Stats layouts use,
     // just a fixed comfortable size rather than solved from a whole
     // stat set, since this row is always exactly these three.
-    const statsParts = ['distance', 'time', 'pace'].map(k => shareStatParts(k, r));
+    const statsParts = ['distance', 'pace', 'time'].map(k => shareStatParts(k, r));
     const colW = contentW / 3;
     const { numSize, unitSize } = fitSharedStatSize(ctx, statsParts, colW * 0.84, 56, 38, 0.38);
     const statsLabelSize = 14;
