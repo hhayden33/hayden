@@ -32,6 +32,11 @@
 #   avgHr, maxHr, elevationM, vo2Max, trainingLoad, trainingEffectLabel, name
 #   splits (optional): [{ distanceM, durationSec, avgHr, maxHr,
 #     elevationGainM, cadence, avgPower }, ...] — per-km/mile laps
+#   startLatitude, startLongitude (optional): the run's GPS start point —
+#   reverse-geocoded here (Nominatim) into a short locality string, never
+#   stored as raw coordinates and never a street address. A treadmill/
+#   indoor activity naturally has neither field, so it just gets no
+#   location rather than a guess.
 # wellness.json: object merged as-is into run:garminSnapshot
 # pbs.json (optional): { fiveK, tenK, fifteenK, half, marathon, thirtyK,
 #   fiftyK } in seconds — only fills currently-empty run:pbs fields
@@ -75,6 +80,93 @@ def build_notes(a):
     return name
 
 
+# Share-overlay location: 'Suburb, STATE postcode' for Australia, and a
+# sensible 'locality, region, Country' shape elsewhere — never the raw
+# lat/lon and never a street address. Explicit formats for the countries
+# this account actually runs in; anything else falls through to the
+# generic city/region/country shape rather than being left blank.
+AU_STATE_ABBR = {
+    'Victoria': 'VIC', 'New South Wales': 'NSW', 'Queensland': 'QLD',
+    'South Australia': 'SA', 'Western Australia': 'WA', 'Tasmania': 'TAS',
+    'Northern Territory': 'NT', 'Australian Capital Territory': 'ACT',
+}
+
+
+def format_locality(addr, country_code):
+    def pick(*keys):
+        for k in keys:
+            v = addr.get(k)
+            if v:
+                return v
+        return None
+
+    cc = (country_code or '').lower()
+
+    if cc == 'au':
+        suburb = pick('suburb', 'town', 'city_district', 'village', 'city')
+        state_full = addr.get('state')
+        state = AU_STATE_ABBR.get(state_full, state_full)
+        postcode = addr.get('postcode')
+        state_line = (state + ' ' + postcode) if (state and postcode) else (state or postcode)
+        parts = [p for p in [suburb, state_line] if p]
+        return ', '.join(parts) if parts else None
+
+    if cc == 'jp':
+        ward = pick('city_district', 'suburb', 'city', 'town')
+        prefecture = addr.get('state')
+        parts = [p for p in [ward, prefecture, 'Japan'] if p]
+        return ', '.join(parts) if len(parts) >= 2 else None
+
+    if cc == 'cn':
+        city = pick('city', 'county', 'town')
+        province = addr.get('state')
+        parts = [p for p in [city, province, 'China'] if p]
+        return ', '.join(parts) if len(parts) >= 2 else None
+
+    if cc == 'vn':
+        district = pick('city_district', 'suburb', 'county')
+        city = pick('city', 'state')
+        parts = [p for p in [district, city, 'Vietnam'] if p]
+        return ', '.join(parts) if len(parts) >= 2 else None
+
+    if cc == 'th':
+        district = pick('city_district', 'suburb', 'county')
+        city = pick('city', 'state')
+        parts = [p for p in [district, city, 'Thailand'] if p]
+        return ', '.join(parts) if len(parts) >= 2 else None
+
+    # Generic fallback — city/town, region, country.
+    city = pick('city', 'town', 'village', 'municipality')
+    region = addr.get('state')
+    country = addr.get('country')
+    parts = [p for p in [city, region, country] if p]
+    return ', '.join(parts) if parts else None
+
+
+def reverse_geocode(lat, lon):
+    # Nominatim's usage policy caps this at 1 request/second and asks for
+    # an identifying User-Agent — both honoured here. Called at most once
+    # per activity (main() reuses a prior sync's result rather than
+    # re-geocoding every 30 minutes), so this never runs more than a
+    # handful of times per sync.
+    try:
+        url = (
+            'https://nominatim.openstreetmap.org/reverse?format=jsonv2'
+            f'&lat={lat}&lon={lon}&zoom=16&addressdetails=1'
+        )
+        req = urllib.request.Request(url, headers={
+            'User-Agent': '88YYDS-personal-dashboard/1.0 (garmin-sync automation)',
+        })
+        with _urlopen_with_retry(req, attempts=2, backoff_sec=1) as resp:
+            data = json.loads(resp.read())
+        addr = data.get('address') or {}
+        return format_locality(addr, addr.get('country_code'))
+    except Exception:
+        return None
+    finally:
+        time.sleep(1)
+
+
 def to_run_entry(a):
     # startTimeLocal is 'YYYY-MM-DD HH:MM:SS' — keep the time part so runs on
     # the same calendar date (common with Garmin: warmup/main/cooldown often
@@ -103,6 +195,16 @@ def to_run_entry(a):
         # none for this activity (e.g. a very short run) rather than absent,
         # so a consumer can always safely iterate it.
         'splits': a.get('splits') or [],
+        # Reverse-geocoded from the GPS start point — None for an indoor
+        # activity with no coordinates, or if the lookup itself fails.
+        # main() overwrites this with a prior sync's cached result when
+        # present, so this only actually calls out to Nominatim once per
+        # activity, not on every 30-minute sync.
+        'location': (
+            reverse_geocode(a['startLatitude'], a['startLongitude'])
+            if a.get('startLatitude') is not None and a.get('startLongitude') is not None
+            else None
+        ),
     }
 
 
@@ -217,11 +319,18 @@ def main():
     added, updated = 0, 0
     for a in activities:
         aid = a['garminActivityId']
-        if aid in by_activity_id:
+        prev = by_activity_id.get(aid)
+        if prev:
             updated += 1
         else:
             added += 1
-        by_activity_id[aid] = to_run_entry(a)  # Garmin is authoritative for its own entries — always refresh
+        entry = to_run_entry(a)  # Garmin is authoritative for its own entries — always refresh
+        # Reuse a prior sync's already-geocoded location instead of
+        # hitting Nominatim again for an activity this script has seen
+        # before — same activity, same GPS start point, same answer.
+        if not entry.get('location') and prev and prev.get('location'):
+            entry['location'] = prev['location']
+        by_activity_id[aid] = entry
 
     runs = manual + list(by_activity_id.values())
     runs.sort(key=lambda r: r['date'] + ' ' + (r.get('time') or '00:00:00'))

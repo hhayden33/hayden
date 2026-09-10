@@ -437,13 +437,13 @@ body::after {
   display: flex; gap: 8px; margin-bottom: 16px;
 }
 .run-share-loc-field { margin-bottom: 16px; }
-.run-share-loc-field input {
+.run-share-loc-value {
   width: 100%; padding: 10px 12px;
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary);
-  font-family: inherit; font-size: 14px; outline: none;
+  border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-secondary);
+  font-family: inherit; font-size: 14px;
 }
-.run-share-loc-field input::placeholder { color: var(--text-tertiary); }
+.run-share-loc-value .run-share-loc-pin { opacity: 0.6; margin-right: 6px; }
 .run-share-layout-btn {
   flex: 1;
   padding: 9px 10px;
@@ -844,10 +844,13 @@ body::after {
       </div>
       <div class="run-share-loc-toggle" role="tablist" aria-label="Show location">
         <button class="run-share-layout-btn run-share-loc-btn active" type="button" data-loc="off" role="tab" aria-selected="true">No Location</button>
-        <button class="run-share-layout-btn run-share-loc-btn" type="button" data-loc="on" role="tab" aria-selected="false">Location</button>
+        <button class="run-share-layout-btn run-share-loc-btn" type="button" data-loc="on" role="tab" aria-selected="false" id="runShareLocBtn">Location</button>
       </div>
+      <!-- Read-only — location is detected from the run's own GPS start
+           point and formatted for its country (see js/geo.js), never
+           typed in and never showing a precise street address. -->
       <div class="run-share-loc-field" id="runShareLocField" style="display:none">
-        <input type="text" id="runShareLocInput" placeholder="e.g. Merri Creek Trail" maxlength="32">
+        <div class="run-share-loc-value" id="runShareLocValue"><span class="run-share-loc-pin">📍</span><span id="runShareLocText"></span></div>
       </div>
       <div class="run-share-canvas-wrap">
         <canvas id="runShareCanvas" width="1080" height="1920"></canvas>
@@ -2206,7 +2209,11 @@ body::after {
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    document.getElementById('runShareLocField').style.display = on ? '' : 'none';
+    const field = document.getElementById('runShareLocField');
+    field.style.display = (on && shareActiveRun && shareActiveRun.location) ? '' : 'none';
+    if (shareActiveRun) {
+      document.getElementById('runShareLocText').textContent = shareActiveRun.location || '';
+    }
     renderShareCanvas();
   }
 
@@ -2280,8 +2287,16 @@ body::after {
     splitsBtn.title = hasSplits ? '' : 'No split data for this run';
     setShareLayout('minimal');
     setShareTheme('dark');
-    document.getElementById('runShareLocInput').value = r.location || '';
-    setShareLocation(!!(r.location && r.location.trim()));
+    // Location is detected from the run's own GPS (see js/geo.js /
+    // garmin-sync.py) — never typed in, so there's nothing to prefill;
+    // the toggle just disables itself when a run has none. Defaults to
+    // off every time regardless of availability, so sharing a location
+    // is always an explicit choice, not an opt-out.
+    const locBtn = document.getElementById('runShareLocBtn');
+    const hasLocation = !!(r.location && r.location.trim());
+    locBtn.disabled = !hasLocation;
+    locBtn.title = hasLocation ? '' : 'No location detected for this run';
+    setShareLocation(false);
     openModal(runShareModalBg);
   }
 
@@ -2293,22 +2308,6 @@ body::after {
   });
   document.querySelectorAll('.run-share-loc-btn').forEach(btn => {
     btn.addEventListener('click', () => setShareLocation(btn.dataset.loc === 'on'));
-  });
-  // Live-updates the overlay as you type; only persisted back to the run
-  // (and pushed by sync.js) once you stop, not on every keystroke.
-  const runShareLocInput = document.getElementById('runShareLocInput');
-  runShareLocInput.addEventListener('input', () => {
-    if (!shareActiveRun) return;
-    shareActiveRun.location = runShareLocInput.value;
-    renderShareCanvas();
-  });
-  runShareLocInput.addEventListener('change', () => {
-    if (!shareActiveRun) return;
-    const list = runs();
-    const idx = list.findIndex(x => x.id === shareActiveRun.id);
-    if (idx === -1) return;
-    list[idx] = Object.assign({}, list[idx], { location: runShareLocInput.value });
-    save('run:runs', list);
   });
   document.getElementById('runShareCloseX').addEventListener('click', () => closeModal(runShareModalBg));
   document.getElementById('runShareCancel').addEventListener('click', () => closeModal(runShareModalBg));
