@@ -461,6 +461,10 @@ body::after {
   background: var(--gradient-primary, linear-gradient(135deg, #0E5C78 0%, #2C6B72 45%, #4A3068 75%, #6B3E72 100%));
   border-color: transparent; color: var(--text-primary);
 }
+.run-share-layout-btn:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.run-share-layout-btn:disabled:hover { background: var(--surface-hover, #202B35); }
 .run-share-canvas-wrap {
   position: relative;
   /* Sized off available *height* (not width) — on a short mobile modal
@@ -832,6 +836,7 @@ body::after {
       <div class="run-share-layout-toggle" role="tablist" aria-label="Share layout">
         <button class="run-share-layout-btn active" type="button" data-layout="minimal" role="tab" aria-selected="true">Minimal</button>
         <button class="run-share-layout-btn" type="button" data-layout="full" role="tab" aria-selected="false">Full Stats</button>
+        <button class="run-share-layout-btn" type="button" data-layout="splits" id="runShareSplitsBtn" role="tab" aria-selected="false">Splits</button>
       </div>
       <div class="run-share-theme-toggle" role="tablist" aria-label="Overlay theme">
         <button class="run-share-layout-btn run-share-theme-btn active" type="button" data-theme="dark" role="tab" aria-selected="true">Dark</button>
@@ -1710,7 +1715,8 @@ body::after {
   const SHARE_FONT = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
   const SHARE_LAYOUTS = {
     minimal: { label: 'Minimal', stats: ['distance', 'pace', 'time'] },
-    full:    { label: 'Full Stats', stats: ['distance', 'pace', 'time', 'elevation', 'calories', 'avgHr'] }
+    full:    { label: 'Full Stats', stats: ['distance', 'pace', 'time', 'elevation', 'calories', 'avgHr'] },
+    splits:  { label: 'Splits', stats: [] }
   };
   // The overlay is a transparent PNG meant to sit on top of whatever
   // photo you post — "dark" (white text, dark scrim) reads on any photo
@@ -1890,12 +1896,115 @@ body::after {
     return { numSize, unitSize: Math.round(numSize * unitRatio) };
   }
 
+  // Splits table — a different shape of content from the stat-tile
+  // layouts (rows of real per-km data instead of a handful of big
+  // numbers), so it gets its own draw path rather than forcing it
+  // through fitSharedStatSize/drawStatValue. Row height is solved for
+  // from the split count the same way stat size is solved for above:
+  // start from a comfortable max and shrink only as far as the number
+  // of rows actually requires, so a 5K reads big and a half marathon
+  // still fits without spilling off the canvas.
+  function renderSplitsCanvas(ctx, theme, r) {
+    const splits = r.splits || [];
+    const panelX = 64, panelW = SHARE_W - panelX * 2;
+    const pad = 56;
+    const contentX = panelX + pad, contentW = panelW - pad * 2, contentRight = contentX + contentW;
+
+    const locationText = (shareShowLocation && r.location && r.location.trim()) ? r.location.trim() : '';
+    const locationLineGap = 34;
+    const headerToDivider = 46 + (locationText ? locationLineGap : 0);
+    const topMargin = 90, bottomMargin = 54;
+    const tableTopGap = 40, colHeaderH = 34, colHeaderToRows = 22;
+
+    const n = Math.max(1, splits.length);
+    const fixedOverhead = topMargin + headerToDivider + tableTopGap + colHeaderH + colHeaderToRows + bottomMargin;
+    const panelBottom = 1650;
+    const maxPanelH = panelBottom - 140;
+    const rowH = Math.max(20, Math.min(58, (maxPanelH - fixedOverhead) / n));
+    const panelH = Math.min(maxPanelH, fixedOverhead + rowH * n);
+    const panelY = panelBottom - panelH;
+
+    drawRoundedRectPath(ctx, panelX, panelY, panelW, panelH, 44);
+    ctx.fillStyle = theme.panelFill;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = theme.panelStroke;
+    ctx.stroke();
+
+    ctx.shadowColor = theme.textShadow; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+
+    const headerBaselineY = panelY + topMargin;
+    drawWordmark(ctx, contentX, headerBaselineY, theme);
+    const eyebrow = ((r.type || 'Run') + ' · ' + fmtDate(r.date)).toUpperCase();
+    drawTrackedText(ctx, eyebrow, contentRight, headerBaselineY, { size: 20, weight: 700, color: theme.eyebrow, spacing: 3, align: 'right' });
+    if (locationText) {
+      drawTrackedText(ctx, locationText.toUpperCase(), contentRight, headerBaselineY + locationLineGap, { size: 15, weight: 600, color: theme.labelColor, spacing: 2, align: 'right' });
+    }
+
+    const dividerY = headerBaselineY + headerToDivider;
+    ctx.strokeStyle = theme.dividerMain;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(contentX, dividerY); ctx.lineTo(contentRight, dividerY); ctx.stroke();
+
+    // Column layout: KM left-aligned, the rest right-aligned within
+    // their own band so the numbers themselves line up like a real
+    // splits table rather than drifting per row.
+    const col1End = contentX + contentW * 0.50;
+    const col2End = contentX + contentW * 0.75;
+    const col3End = contentRight;
+
+    const colHeaderBaselineY = dividerY + tableTopGap + colHeaderH * 0.6;
+    const headerLabelOpts = { size: 15, weight: 700, color: theme.labelColor, spacing: 2, align: 'right' };
+    drawTrackedText(ctx, 'KM', contentX, colHeaderBaselineY, Object.assign({}, headerLabelOpts, { align: 'left' }));
+    drawTrackedText(ctx, 'PACE', col1End, colHeaderBaselineY, headerLabelOpts);
+    drawTrackedText(ctx, 'TIME', col2End, colHeaderBaselineY, headerLabelOpts);
+    drawTrackedText(ctx, 'HR', col3End, colHeaderBaselineY, headerLabelOpts);
+
+    const rowsHeaderRuleY = colHeaderBaselineY + 14;
+    ctx.strokeStyle = theme.dividerSecondary;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(contentX, rowsHeaderRuleY); ctx.lineTo(contentRight, rowsHeaderRuleY); ctx.stroke();
+
+    const rowsTopY = rowsHeaderRuleY + colHeaderToRows;
+    const rowFontSize = Math.max(13, Math.min(24, Math.round(rowH * 0.44)));
+    ctx.font = '700 ' + rowFontSize + 'px ' + SHARE_FONT;
+    ctx.fillStyle = theme.statColor;
+
+    splits.forEach((s, i) => {
+      const baselineY = rowsTopY + rowH * i + rowH * 0.68;
+      const kmLabel = s.partial ? s.cumulativeKm.toFixed(2) : String(s.km);
+      const paceLabel = fmtPace(s.paceSecPerKm);
+      const timeLabel = fmtDuration(s.elapsedSec);
+      const hrLabel = (s.avgHr != null) ? String(s.avgHr) : '—';
+
+      ctx.textAlign = 'left'; ctx.fillText(kmLabel, contentX, baselineY);
+      ctx.textAlign = 'right';
+      ctx.fillText(paceLabel, col1End, baselineY);
+      ctx.fillText(timeLabel, col2End, baselineY);
+      ctx.fillText(hrLabel, col3End, baselineY);
+
+      if (i < splits.length - 1) {
+        const ruleY = rowsTopY + rowH * (i + 1);
+        ctx.strokeStyle = theme.dividerSecondary;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(contentX, ruleY); ctx.lineTo(contentRight, ruleY); ctx.stroke();
+      }
+    });
+
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  }
+
   function renderShareCanvas() {
     if (!shareActiveRun) return;
     const r = shareActiveRun;
     const ctx = shareCtx;
     const theme = SHARE_THEMES[shareTheme] || SHARE_THEMES.dark;
     ctx.clearRect(0, 0, SHARE_W, SHARE_H);
+
+    if (shareLayout === 'splits') {
+      if (r.splits && r.splits.length) renderSplitsCanvas(ctx, theme, r);
+      return;
+    }
 
     const isFull = shareLayout === 'full';
     const panelX = 64, panelW = SHARE_W - panelX * 2;
@@ -2092,6 +2201,10 @@ body::after {
     document.getElementById('runShareHint').textContent = CLIPBOARD_IMAGE_SUPPORTED
       ? 'Transparent 1080×1920 PNG. Copy, then paste into Instagram Stories — if paste isn’t offered there, tap Save Image and add it as a sticker from Photos instead.'
       : 'Transparent 1080×1920 PNG. Tap Save Image, then in Instagram Stories add it as a sticker from Photos.';
+    const splitsBtn = document.getElementById('runShareSplitsBtn');
+    const hasSplits = !!(r.splits && r.splits.length);
+    splitsBtn.disabled = !hasSplits;
+    splitsBtn.title = hasSplits ? '' : 'No split data for this run';
     setShareLayout('minimal');
     setShareTheme('dark');
     document.getElementById('runShareLocInput').value = r.location || '';
