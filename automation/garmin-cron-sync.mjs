@@ -95,17 +95,44 @@ function toSlimActivity(a) {
 // an 'INTERVAL' lap Garmin auto-marks at each distance unit) — distinct
 // from get_activities' own splitSummaries, which are just aggregate
 // stand/run/walk totals, not a per-km breakdown.
+//
+// Two field sets on each split, both populated from the same lap:
+//  - distanceM/durationSec/maxHr/elevationGainM/cadence/avgPower: this
+//    pipeline's own raw fields.
+//  - km/paceSecPerKm/elapsedSec/partial/cumulativeKm: what
+//    life/running.html's share-overlay splits table (commit 17c83dc)
+//    already reads directly off each split with no transform — matching
+//    that existing contract here instead of only the raw shape is what
+//    makes PACE/TIME stop showing "undefined" there (HR already matched
+//    by coincidence, both sides call it avgHr).
+//  A lap under 950m is the final partial km (e.g. a 5.12km run's 6th
+//  lap) — Garmin's own laps are ~1000m for full splits, consistently
+//  short only for that trailing remainder.
 function toSlimSplits(splitsResult) {
   const laps = splitsResult?.lapDTOs || [];
-  return laps.map((lap) => ({
-    distanceM: Math.round((lap.distance || 0) * 10) / 10,
-    durationSec: Math.round((lap.duration || 0) * 10) / 10,
-    avgHr: lap.averageHR ?? null,
-    maxHr: lap.maxHR ?? null,
-    elevationGainM: lap.elevationGain ?? null,
-    cadence: lap.averageRunCadence != null ? Math.round(lap.averageRunCadence) : null,
-    avgPower: lap.averagePower ?? null,
-  }));
+  let cumulativeM = 0;
+  let fullSplitCount = 0;
+  return laps.map((lap) => {
+    const distanceM = Math.round((lap.distance || 0) * 10) / 10;
+    const durationSec = Math.round((lap.duration || 0) * 10) / 10;
+    cumulativeM += distanceM;
+    const partial = distanceM < 950;
+    if (!partial) fullSplitCount += 1;
+    return {
+      distanceM,
+      durationSec,
+      avgHr: lap.averageHR ?? null,
+      maxHr: lap.maxHR ?? null,
+      elevationGainM: lap.elevationGain ?? null,
+      cadence: lap.averageRunCadence != null ? Math.round(lap.averageRunCadence) : null,
+      avgPower: lap.averagePower ?? null,
+      km: partial ? null : fullSplitCount,
+      paceSecPerKm: distanceM > 0 ? Math.round((durationSec / (distanceM / 1000)) * 10) / 10 : null,
+      elapsedSec: durationSec,
+      partial,
+      cumulativeKm: partial ? Math.round((cumulativeM / 1000) * 100) / 100 : null,
+    };
+  });
 }
 
 // Garmin's personal-record typeIds are stable/well-known: 3=5K, 4=10K,
