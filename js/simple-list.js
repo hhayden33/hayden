@@ -22,7 +22,14 @@
 //                                         // 'stage' (forward-only + push button)
 //     editable: true,                    // click text to edit in place
 //     showTimestamp: true,               // relative "createdAt" next to text
-//     searchInputEl: el                  // optional — filters the list live
+//     searchInputEl: el,                 // optional — filters the list live
+//     filterFn: item => !item.done,      // optional — e.g. a compact
+//                                         // "Today" preview that only
+//                                         // shows pending items; edits
+//                                         // still write back to the
+//                                         // right index in the full list
+//     limit: 5                           // optional — cap how many of
+//                                         // the (filtered) items render
 //   });
 // =============================================================
 (function () {
@@ -218,7 +225,15 @@
     function render() {
       const items = getItems();
       const term = searchInputEl ? searchInputEl.value.trim().toLowerCase() : '';
-      const visible = term ? items.filter(function (it) { return it.text.toLowerCase().indexOf(term) !== -1; }) : items;
+      // filterFn narrows which items show (e.g. only pending ones for a
+      // compact "Today" preview) — applied before the search term, and
+      // before limit, so limit always caps the *filtered* set, not the
+      // whole list. Indices for edit/delete/toggle are still resolved
+      // against the full `items` array below, so a filtered/limited
+      // view never writes to the wrong item.
+      let visible = opts.filterFn ? items.filter(opts.filterFn) : items;
+      if (term) visible = visible.filter(function (it) { return it.text.toLowerCase().indexOf(term) !== -1; });
+      const limited = (typeof opts.limit === 'number') ? visible.slice(0, opts.limit) : visible;
 
       listEl.innerHTML = '';
       if (!items.length) {
@@ -226,11 +241,15 @@
         return;
       }
       if (!visible.length) {
-        if (emptyEl) { emptyEl.dataset.defaultText = emptyEl.dataset.defaultText || emptyEl.textContent; emptyEl.style.display = ''; emptyEl.textContent = 'No notes match your search.'; }
+        if (emptyEl) {
+          emptyEl.dataset.defaultText = emptyEl.dataset.defaultText || emptyEl.textContent;
+          emptyEl.style.display = '';
+          emptyEl.textContent = term ? 'No notes match your search.' : emptyEl.dataset.defaultText;
+        }
         return;
       }
       if (emptyEl) emptyEl.style.display = 'none';
-      visible.forEach(function (item) {
+      limited.forEach(function (item) {
         const idx = items.indexOf(item);
         listEl.appendChild(buildRow(item, idx));
       });

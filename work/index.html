@@ -16,6 +16,7 @@
 <script src="/js/greeting.js" defer></script>
 <script src="/js/weather.js" defer></script>
 <script src="/js/work-ring.js" defer></script>
+<script src="/js/simple-list.js" defer></script>
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="/main.css">
 <link rel="stylesheet" href="/bento.css">
@@ -171,30 +172,22 @@
 </div>
 
 <script>
-(function () {
-  'use strict';
-  function storeGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
-  function render() {
-    const tasks = storeGet('work:tasks:v1') || [];
-    const pending = tasks.filter(function (t) { return !t.done; });
-    const listEl = document.getElementById('workTodayList');
-    const emptyEl = document.getElementById('workTodayEmpty');
-    listEl.innerHTML = '';
-    if (!pending.length) { emptyEl.style.display = ''; return; }
-    emptyEl.style.display = 'none';
-    pending.slice(0, 5).forEach(function (t) {
-      const li = document.createElement('li');
-      li.className = 'gm-row';
-      const span = document.createElement('span');
-      span.className = 'gm-text';
-      span.textContent = t.text;
-      li.appendChild(span);
-      listEl.appendChild(li);
-    });
-  }
-  render();
-  window.addEventListener('storage', render);
-})();
+document.addEventListener('DOMContentLoaded', function () {
+  // Same 'work:tasks:v1' store work/tasks.html's own list manages —
+  // this is just a compact, top-5-pending preview of it, but now a
+  // real initSimpleList instance (checkbox, click-to-edit, delete)
+  // instead of a read-only render, so you don't have to leave the
+  // dashboard just to tick something off.
+  initSimpleList({
+    storageKey: 'work:tasks:v1',
+    listEl: document.getElementById('workTodayList'),
+    emptyEl: document.getElementById('workTodayEmpty'),
+    useDone: true,
+    editable: true,
+    filterFn: function (item) { return !item.done; },
+    limit: 5
+  });
+});
 </script>
 
 <script>
